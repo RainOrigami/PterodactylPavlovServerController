@@ -8,6 +8,8 @@ Update map rotation from google drive sheets.
 
 # Prerequisites
 
+dotnet 6
+
 Pterodactyl with a Pavlov VR egg.
 
 A google sheets sheet with a very specific format and optionally a macro:
