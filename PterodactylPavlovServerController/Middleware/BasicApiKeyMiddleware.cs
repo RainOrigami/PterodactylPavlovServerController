@@ -22,6 +22,12 @@ namespace PterodactylPavlovServerController.Middleware
                 return Task.CompletedTask;
             }
 
+            if (!context.Request.Headers.TryGetValue("x-pterodactyl-api-key", out StringValues pterodactylApiKeyValues) || pterodactylApiKeyValues.Count != 1)
+            {
+                context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
+                return Task.CompletedTask;
+            }
+
             return this.next.Invoke(context);
         }
     }

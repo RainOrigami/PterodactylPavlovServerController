@@ -7,9 +7,44 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Remove="buoyant-imagery-255718-b7158a794e35.json" />
+    <Content Remove="steambans.json" />
+    <Content Remove="steamprofiles.json" />
+    <Content Remove="workshopmapscache.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="buoyant-imagery-255718-b7158a794e35.json">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
+    <None Include="steambans.json">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
+    <None Include="steamprofiles.json">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
+    <None Include="workshopmapscache.json">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="GoogleSheetsWrapper" Version="1.0.37" />
+    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="6.0.10" />
     <PackageReference Include="RestSharp" Version="108.0.2" />
+    <PackageReference Include="SteamWebAPI2" Version="4.4.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\PavlovVR-Rcon\PavlovVR-Rcon\PavlovVR-Rcon.csproj" />
+    <ProjectReference Include="..\PterodactylPavlovServerDomain\PterodactylPavlovServerDomain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="RustRconReplies.txt">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

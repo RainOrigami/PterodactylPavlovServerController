@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using PterodactylPavlovServerController.Exceptions;
 using PterodactylPavlovServerController.Models;
 using PterodactylPavlovServerController.Services;
+using System.Text.RegularExpressions;
 
 namespace PterodactylPavlovServerController.Controllers
 {
@@ -12,11 +13,13 @@ namespace PterodactylPavlovServerController.Controllers
     {
         private readonly ServerControlService serverControlService;
         private readonly GoogleSheetService googleSheetService;
+        private readonly SteamWorkshopService steamWorkshopService;
 
-        public MapsController(ServerControlService serverControlService, GoogleSheetService googleSheetService)
+        public MapsController(ServerControlService serverControlService, GoogleSheetService googleSheetService, SteamWorkshopService steamWorkshopService)
         {
             this.serverControlService = serverControlService;
             this.googleSheetService = googleSheetService;
+            this.steamWorkshopService = steamWorkshopService;
         }
 
         [HttpPost("update")]
@@ -51,6 +54,44 @@ namespace PterodactylPavlovServerController.Controllers
             }
 
             return Ok(mapRows);
+        }
+
+        internal static readonly Regex mapIdRegex = new Regex(@"(?<id>\d+)");
+
+        [HttpGet("details")]
+        public IActionResult GetDetails(string mapId)
+        {
+            Match mapIdMatch = mapIdRegex.Match(mapId);
+            if (!mapIdMatch.Success)
+            {
+                return ValidationProblem("Map id must be in format UGC0000000000 or 0000000000");
+            }
+
+            try
+            {
+                return Ok(steamWorkshopService.GetMapDetail(long.Parse(mapIdMatch.Groups["id"].Value)));
+            }
+            catch (SteamWorkshopException)
+            {
+                return Problem("Error while retrieving map details from steam workshop");
+            }
+            catch (Exception e)
+            {
+                return Problem(e.Message);
+            }
+        }
+
+        [HttpGet("current")]
+        public IActionResult GetRotation(string serverId)
+        {
+            try
+            {
+                return Ok(serverControlService.GetCurrentMapRotation(serverId));
+            }
+            catch (Exception e)
+            {
+                return Problem(e.Message);
+            }
         }
     }
 }

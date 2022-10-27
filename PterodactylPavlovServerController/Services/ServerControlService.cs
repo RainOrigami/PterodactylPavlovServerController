@@ -1,5 +1,6 @@
 ﻿using PterodactylPavlovServerController.Exceptions;
 using PterodactylPavlovServerController.Models;
+using System.Text.RegularExpressions;
 
 namespace PterodactylPavlovServerController.Services
 {
@@ -21,13 +22,21 @@ namespace PterodactylPavlovServerController.Services
                 throw new InvalidMapsException(mapRows.Where(r => !r.IsValid).ToArray());
             }
 
-            string mapRotationList = String.Join(Environment.NewLine, mapRows.Select(m => m.MapRotationString));
+            string mapRotationList = String.Join('\n', mapRows.Select(m => m.MapRotationString));
 
-            List<string> gameIniContent = pterodactylService.ReadFile(serverId, configuration["pavlov_gameinipath"]).Split(Environment.NewLine).Where(l => !l.StartsWith("MapRotation=")).ToList();
+            List<string> gameIniContent = pterodactylService.ReadFile(serverId, configuration["pavlov_gameinipath"]).Split('\n').Select(l => l.Trim('\r')).Where(l => !l.StartsWith("MapRotation=")).ToList();
             gameIniContent.AddRange(mapRows.Select(r => r.MapRotationString));
-            pterodactylService.WriteFile(serverId, configuration["pavlov_gameinipath"], String.Join(Environment.NewLine, gameIniContent));
+            pterodactylService.WriteFile(serverId, configuration["pavlov_gameinipath"], String.Join('\n', gameIniContent));
 
             return mapRows;
+        }
+
+        //MapRotation=(MapId="UGC2362993920", GameMode="SND")
+        private static readonly Regex mapRotationLineRegex = new Regex(@"^MapRotation=\(MapId=""UGC(?<id>\d+)"", GameMode=""(?<gamemode>[^""]+)""\)$");
+
+        public MapRowModel[] GetCurrentMapRotation(string serverId)
+        {
+            return pterodactylService.ReadFile(serverId, configuration["pavlov_gameinipath"]).Split('\n').Select(l => l.Trim('\r')).Where(l => l.StartsWith("MapRotation=")).Select(l => mapRotationLineRegex.Match(l)).Where(m => m.Success).Select(m => new MapRowModel() { GameMode = m.Groups["gamemode"].Value, URL = $"https://steamcommunity.com/sharedfiles/filedetails/?id={m.Groups["id"].Value}", MapName = String.Empty, PageTitle = String.Empty }).ToArray();
         }
     }
 }
