@@ -71,16 +71,17 @@ namespace PterodactylPavlovRconClient
             updateValues(this.playerModel);
         }
 
-        private void PlayerControl_Load(object sender, EventArgs e)
+        private async void PlayerControl_Load(object sender, EventArgs e)
         {
-            RefreshPlayer();
-            updateSteamBans();
+            await RefreshPlayer();
+            await updateSteamBans();
         }
 
-        private void updateSteamBans()
+        private async Task updateSteamBans()
         {
+            pbLoading.Visible = true;
             RestRequest steamBanRequest = new RestRequest($"steam/bans?steamId={uniqueId}");
-            RestResponse<PlayerBansModel[]> steamBanResponse = restClient.Execute<PlayerBansModel[]>(steamBanRequest);
+            RestResponse<PlayerBansModel[]> steamBanResponse = await restClient.ExecuteAsync<PlayerBansModel[]>(steamBanRequest);
             if (!steamBanResponse.IsSuccessful)
             {
                 Console.WriteLine($"Could not get steam bans for user {uniqueId}");
@@ -133,17 +134,20 @@ namespace PterodactylPavlovRconClient
             {
                 lblDaysSinceLastBan.ForeColor = Color.Red;
             }
+            pbLoading.Visible = false;
         }
 
-        public void RefreshPlayer()
+        public async Task RefreshPlayer()
         {
             if (Banned || Disconnected)
             {
                 return;
             }
 
+            pbLoading.Visible = true;
+
             RestRequest playerInfoRequest = new RestRequest($"rcon/player?serverId={server.ServerId}&uniqueId={uniqueId}");
-            RestResponse<PlayerModel> playerInfoResponse = restClient.Execute<PlayerModel>(playerInfoRequest);
+            RestResponse<PlayerModel> playerInfoResponse = await restClient.ExecuteAsync<PlayerModel>(playerInfoRequest);
             if (!playerInfoResponse.IsSuccessful)
             {
                 updateValues(null);
@@ -153,6 +157,7 @@ namespace PterodactylPavlovRconClient
                 playerModel = playerInfoResponse.Data!;
                 updateValues(playerModel);
             }
+            pbLoading.Visible = false;
         }
 
         private void updateValues(PlayerModel? player)
@@ -187,10 +192,10 @@ namespace PterodactylPavlovRconClient
             Process.Start(new ProcessStartInfo($"http://steamcommunity.com/profiles/{uniqueId}/") { UseShellExecute = true });
         }
 
-        private void btnKick_Click(object sender, EventArgs e)
+        private async void btnKick_Click(object sender, EventArgs e)
         {
             RestRequest kickRequest = new RestRequest($"rcon/kick?serverId={server.ServerId}&uniqueId={uniqueId}", Method.Post);
-            RestResponse kickResponse = restClient.Execute(kickRequest);
+            RestResponse kickResponse = await restClient.ExecuteAsync(kickRequest);
             if (!kickResponse.IsSuccessful)
             {
                 MessageBox.Show($"Kick failed: {kickResponse.Content}");
@@ -198,12 +203,12 @@ namespace PterodactylPavlovRconClient
             }
         }
 
-        private void btnBan_Click(object sender, EventArgs e)
+        private async void btnBan_Click(object sender, EventArgs e)
         {
             if (Banned)
             {
                 RestRequest unbanRequest = new RestRequest($"rcon/unban?serverId={server.ServerId}&uniqueId={uniqueId}", Method.Post);
-                RestResponse unbanResponse = restClient.Execute(unbanRequest);
+                RestResponse unbanResponse = await restClient.ExecuteAsync(unbanRequest);
                 if (!unbanResponse.IsSuccessful)
                 {
                     MessageBox.Show($"Unban failed: {unbanResponse.StatusCode} {unbanResponse.Content}");
@@ -214,7 +219,7 @@ namespace PterodactylPavlovRconClient
             else
             {
                 RestRequest banRequest = new RestRequest($"rcon/ban?serverId={server.ServerId}&uniqueId={uniqueId}", Method.Post);
-                RestResponse banResponse = restClient.Execute(banRequest);
+                RestResponse banResponse = await restClient.ExecuteAsync(banRequest);
                 if (!banResponse.IsSuccessful)
                 {
                     MessageBox.Show($"Ban failed: {banResponse.StatusCode} {banResponse.Content}");

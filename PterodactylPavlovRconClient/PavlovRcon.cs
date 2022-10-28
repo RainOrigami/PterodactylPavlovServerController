@@ -17,15 +17,21 @@ namespace PterodactylPavlovRconClient
 
         RestClient restClient;
 
-        private void PavlovRcon_Load(object sender, EventArgs e)
+        private async void PavlovRcon_Load(object sender, EventArgs e)
         {
+            PavlovRcon_Resize(sender, e);
+
             RestRequest serverListRequest = new RestRequest("server/list");
-            RestResponse serverListResponse = restClient.Execute(serverListRequest);
+            RestResponse serverListResponse = await restClient.ExecuteAsync(serverListRequest);
             if (serverListResponse.StatusCode is not System.Net.HttpStatusCode.OK)
             {
                 MessageBox.Show(serverListResponse.Content, serverListResponse.StatusCode.ToString(), MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                 return;
             }
+
+            pbLoading.Visible = false;
+            this.Controls.Remove(pbLoading);
+            pbLoading = null;
 
             foreach (PterodactylServerModel server in JsonConvert.DeserializeObject<PterodactylServerModel[]>(serverListResponse.Content!)!)
             {
@@ -36,6 +42,16 @@ namespace PterodactylPavlovRconClient
                 });
                 tabControl1.TabPages.Add(tabPage);
             }
+        }
+
+        private void PavlovRcon_Resize(object sender, EventArgs e)
+        {
+            if (pbLoading is null)
+            {
+                return;
+            }
+
+            pbLoading.Location = new Point((this.Width / 2) - (pbLoading.Width / 2), (this.Height / 2) - (pbLoading.Height / 2));
         }
     }
 }

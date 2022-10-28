@@ -1,8 +1,10 @@
 ﻿using Newtonsoft.Json;
 using PavlovVR_Rcon;
 using PterodactylPavlovRconClient.Models;
+using PterodactylPavlovRconClient.Properties;
 using PterodactylPavlovServerController.Models;
 using RestSharp;
+using System.Text.Json;
 using Timer = System.Windows.Forms.Timer;
 
 namespace PterodactylPavlovRconClient
@@ -11,6 +13,19 @@ namespace PterodactylPavlovRconClient
     {
         private readonly RestClient restClient;
         private readonly PterodactylServerModel server;
+        Timer serverRefresh;
+
+        private bool serverState = false;
+        private bool ServerState
+        {
+            get => serverState; set
+            {
+                serverState = value;
+                pbServerStatus.Image = serverState ? Resources.signal_online : Resources.signal_offline;
+                btnSwitchMap.Enabled = serverState;
+                btnSkipToNextMap.Enabled = serverState;
+            }
+        }
 
         public ServerControl(RestClient restClient, PterodactylServerModel server)
         {
@@ -18,34 +33,65 @@ namespace PterodactylPavlovRconClient
             this.restClient = restClient;
             this.server = server;
 
-            Timer serverRefresh = new Timer();
+            serverRefresh = new Timer();
             serverRefresh.Interval = 2000;
             serverRefresh.Tick += this.ServerRefresh_Tick;
             serverRefresh.Start();
         }
 
-        private void ServerRefresh_Tick(object? sender, EventArgs e)
+        private async void ServerRefresh_Tick(object? sender, EventArgs e)
         {
-            refreshServerAndActivePlayers();
+            pbLoading.Visible = true;
+            await refreshServerAndActivePlayers();
+            pbLoading.Visible = false;
         }
 
-        private void ServerControl_Load(object sender, EventArgs e)
+        private async void ServerControl_Load(object sender, EventArgs e)
         {
             cbGameMode.Items.AddRange(Enum.GetNames<PavlovGameMode>());
-            refreshAll();
+            pbLoading.Visible = true;
+            await refreshAll();
+            pbLoading.Visible = false;
         }
 
-        private void refreshAll()
+        private async Task refreshAll()
         {
-            refreshMaps();
-            refreshServerAndActivePlayers();
-            refreshBanlist();
+            await refreshMaps();
+            await refreshServerAndActivePlayers();
+            await refreshBanlist();
         }
 
-        private void refreshServerInfo()
+        public static bool GetServerState(RestResponseBase restResponse)
+        {
+            if (restResponse.StatusCode != System.Net.HttpStatusCode.InternalServerError)
+            {
+                return true;
+            }
+
+            try
+            {
+                return JsonDocument.Parse(restResponse.Content!).RootElement.GetProperty("detail").GetString() != "No server connection available.";
+            }
+            catch (Exception)
+            {
+                return true;
+            }
+        }
+
+        private bool isServerOffline(RestResponseBase restResponse)
+        {
+            ServerState = GetServerState(restResponse);
+            return !ServerState;
+        }
+
+        private async Task refreshServerInfo()
         {
             RestRequest serverInfoRequest = new RestRequest($"rcon/serverinfo?serverId={server.ServerId}");
-            RestResponse serverInfoResponse = restClient.Execute(serverInfoRequest);
+            RestResponse serverInfoResponse = await restClient.ExecuteAsync(serverInfoRequest);
+            if (isServerOffline(serverInfoResponse))
+            {
+                return;
+            }
 
             if (serverInfoResponse.StatusCode is not System.Net.HttpStatusCode.OK)
             {
@@ -71,10 +117,14 @@ namespace PterodactylPavlovRconClient
 
         private Dictionary<string, PlayerControl> playerControls = new();
 
-        private void refreshPlayerControls()
+        private async Task refreshPlayerControls()
         {
             RestRequest playerListRequest = new RestRequest($"rcon/playerlist?serverId={server.ServerId}");
-            RestResponse<PlayerListPlayerModel[]> playerListResponse = restClient.Execute<PlayerListPlayerModel[]>(playerListRequest);
+            RestResponse<PlayerListPlayerModel[]> playerListResponse = await restClient.ExecuteAsync<PlayerListPlayerModel[]>(playerListRequest);
+            if (isServerOffline(playerListResponse))
+            {
+                return;
+            }
 
             if (!playerListResponse.IsSuccessful)
             {
@@ -107,23 +157,28 @@ namespace PterodactylPavlovRconClient
                 }
                 else
                 {
-                    playerControl.RefreshPlayer();
+                    await playerControl.RefreshPlayer();
                 }
 
                 assignPlayerControlToCorrespondingPanel(playerControl);
             }
         }
 
-        private void refreshServerAndActivePlayers()
+        private async Task refreshServerAndActivePlayers()
         {
-            refreshPlayerControls();
-            refreshServerInfo();
+            await refreshPlayerControls();
+            await refreshServerInfo();
         }
 
-        private void refreshBanlist()
+        private async Task refreshBanlist()
         {
             RestRequest banlistRequest = new RestRequest($"rcon/banlist?serverId={server.ServerId}");
-            RestResponse<string[]> banlistResponse = restClient.Execute<string[]>(banlistRequest);
+            RestResponse<string[]> banlistResponse = await restClient.ExecuteAsync<string[]>(banlistRequest);
+            if (isServerOffline(banlistResponse))
+            {
+                return;
+            }
+
             if (!banlistResponse.IsSuccessful)
             {
                 Console.WriteLine(banlistResponse.Content);
@@ -134,7 +189,7 @@ namespace PterodactylPavlovRconClient
             foreach (string bannedSteamId in bannedSteamIds)
             {
                 RestRequest steamUserNameRequest = new RestRequest($"steam/username?steamid={bannedSteamId}");
-                RestResponse<string> steamUserNameResponse = restClient.Execute<string>(steamUserNameRequest);
+                RestResponse<string> steamUserNameResponse = await restClient.ExecuteAsync<string>(steamUserNameRequest);
                 if (!steamUserNameResponse.IsSuccessStatusCode)
                 {
                     Console.WriteLine(banlistResponse.Content);
@@ -189,10 +244,10 @@ namespace PterodactylPavlovRconClient
             targetPanel.Controls.Add(playerControl);
         }
 
-        private void refreshMaps()
+        private async Task refreshMaps()
         {
             RestRequest mapRotationRequest = new RestRequest($"maps/current?serverId={server.ServerId}");
-            RestResponse<MapRowModel[]> mapRotationResponse = restClient.Execute<MapRowModel[]>(mapRotationRequest);
+            RestResponse<MapRowModel[]> mapRotationResponse = await restClient.ExecuteAsync<MapRowModel[]>(mapRotationRequest);
 
             if (!mapRotationResponse.IsSuccessful)
             {
@@ -205,7 +260,7 @@ namespace PterodactylPavlovRconClient
             foreach (MapRowModel mapRow in mapRotationResponse.Data!)
             {
                 RestRequest mapDetailRequest = new RestRequest($"maps/details?mapId={mapRow.MapId}");
-                RestResponse<MapDetailModel> mapDetailResponse = restClient.Execute<MapDetailModel>(mapDetailRequest);
+                RestResponse<MapDetailModel> mapDetailResponse = await restClient.ExecuteAsync<MapDetailModel>(mapDetailRequest);
 
                 if (!mapDetailResponse.IsSuccessful || mapDetailResponse.Data is null)
                 {
@@ -233,7 +288,7 @@ namespace PterodactylPavlovRconClient
             cbMapList.Items.AddRange(maps.ToArray());
         }
 
-        private void btnSwitchMap_Click(object sender, EventArgs e)
+        private async void btnSwitchMap_Click(object sender, EventArgs e)
         {
             string mapId;
             string gameMode;
@@ -270,7 +325,11 @@ namespace PterodactylPavlovRconClient
             }
 
             RestRequest mapChangeRequest = new RestRequest($"rcon/switchMap?serverId={server.ServerId}&mapId={mapId}&gamemode={gameMode}", Method.Post);
-            RestResponse mapChangeResponse = restClient.Execute(mapChangeRequest);
+            RestResponse mapChangeResponse = await restClient.ExecuteAsync(mapChangeRequest);
+            if (isServerOffline(mapChangeResponse))
+            {
+                return;
+            }
             if (!mapChangeResponse.IsSuccessful)
             {
                 MessageBox.Show($"Failed to change map:{Environment.NewLine}{mapChangeResponse.Content}", mapChangeResponse.StatusCode.ToString(), MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
@@ -278,20 +337,31 @@ namespace PterodactylPavlovRconClient
             }
         }
 
-        private void btnRefresh_Click(object sender, EventArgs e)
+        private async void btnRefresh_Click(object sender, EventArgs e)
         {
-            refreshAll();
+            pbLoading.Visible = true;
+            await refreshAll();
+            pbLoading.Visible = false;
         }
 
-        private void btnSkipToNextMap_Click(object sender, EventArgs e)
+        private async void btnSkipToNextMap_Click(object sender, EventArgs e)
         {
             RestRequest skipMapRequest = new RestRequest($"rcon/rotateMap?serverId={server.ServerId}", Method.Post);
-            RestResponse skipMapResponse = restClient.Execute(skipMapRequest);
+            RestResponse skipMapResponse = await restClient.ExecuteAsync(skipMapRequest);
+            if (isServerOffline(skipMapResponse))
+            {
+                return;
+            }
             if (!skipMapResponse.IsSuccessful)
             {
                 MessageBox.Show($"Failed to skip to next map:{Environment.NewLine}{skipMapResponse.Content}", skipMapResponse.StatusCode.ToString(), MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                 return;
             }
+        }
+
+        private void nudRefreshInterval_ValueChanged(object sender, EventArgs e)
+        {
+            serverRefresh.Interval = (int)nudRefreshInterval.Value;
         }
     }
 }

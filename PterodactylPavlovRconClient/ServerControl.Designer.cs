@@ -43,6 +43,10 @@
             this.flpOfflinePlayers = new PterodactylPavlovRconClient.ForceVerticalScrollFlowLayoutPanel();
             this.label3 = new System.Windows.Forms.Label();
             this.btnSkipToNextMap = new System.Windows.Forms.Button();
+            this.pbLoading = new System.Windows.Forms.PictureBox();
+            this.nudRefreshInterval = new System.Windows.Forms.NumericUpDown();
+            this.lblRefreshInterval = new System.Windows.Forms.Label();
+            this.pbServerStatus = new System.Windows.Forms.PictureBox();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
             this.splitContainer1.Panel2.SuspendLayout();
@@ -51,6 +55,9 @@
             this.splitContainer2.Panel1.SuspendLayout();
             this.splitContainer2.Panel2.SuspendLayout();
             this.splitContainer2.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.pbLoading)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.nudRefreshInterval)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.pbServerStatus)).BeginInit();
             this.SuspendLayout();
             // 
             // cbMapList
@@ -96,6 +103,7 @@
             this.flpTeam0.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.flpTeam0.AutoScroll = true;
             this.flpTeam0.Location = new System.Drawing.Point(-2, 77);
             this.flpTeam0.Name = "flpTeam0";
             this.flpTeam0.Size = new System.Drawing.Size(828, 475);
@@ -118,6 +126,7 @@
             this.flpTeam1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.flpTeam1.AutoScroll = true;
             this.flpTeam1.Location = new System.Drawing.Point(0, 77);
             this.flpTeam1.Name = "flpTeam1";
             this.flpTeam1.Size = new System.Drawing.Size(878, 475);
@@ -198,6 +207,7 @@
             this.flpOfflinePlayers.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.flpOfflinePlayers.AutoScroll = true;
             this.flpOfflinePlayers.Location = new System.Drawing.Point(0, 77);
             this.flpOfflinePlayers.Name = "flpOfflinePlayers";
             this.flpOfflinePlayers.Size = new System.Drawing.Size(1711, 256);
@@ -225,10 +235,70 @@
             this.btnSkipToNextMap.UseVisualStyleBackColor = true;
             this.btnSkipToNextMap.Click += new System.EventHandler(this.btnSkipToNextMap_Click);
             // 
+            // pbLoading
+            // 
+            this.pbLoading.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.pbLoading.Image = global::PterodactylPavlovRconClient.Properties.Resources.spin;
+            this.pbLoading.Location = new System.Drawing.Point(1392, 3);
+            this.pbLoading.Name = "pbLoading";
+            this.pbLoading.Size = new System.Drawing.Size(23, 23);
+            this.pbLoading.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
+            this.pbLoading.TabIndex = 9;
+            this.pbLoading.TabStop = false;
+            // 
+            // nudRefreshInterval
+            // 
+            this.nudRefreshInterval.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.nudRefreshInterval.Location = new System.Drawing.Point(1545, 3);
+            this.nudRefreshInterval.Maximum = new decimal(new int[] {
+            30000,
+            0,
+            0,
+            0});
+            this.nudRefreshInterval.Minimum = new decimal(new int[] {
+            500,
+            0,
+            0,
+            0});
+            this.nudRefreshInterval.Name = "nudRefreshInterval";
+            this.nudRefreshInterval.Size = new System.Drawing.Size(85, 23);
+            this.nudRefreshInterval.TabIndex = 10;
+            this.nudRefreshInterval.Value = new decimal(new int[] {
+            2000,
+            0,
+            0,
+            0});
+            this.nudRefreshInterval.ValueChanged += new System.EventHandler(this.nudRefreshInterval_ValueChanged);
+            // 
+            // lblRefreshInterval
+            // 
+            this.lblRefreshInterval.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.lblRefreshInterval.AutoSize = true;
+            this.lblRefreshInterval.Location = new System.Drawing.Point(1421, 7);
+            this.lblRefreshInterval.Name = "lblRefreshInterval";
+            this.lblRefreshInterval.Size = new System.Drawing.Size(118, 15);
+            this.lblRefreshInterval.TabIndex = 11;
+            this.lblRefreshInterval.Text = "Refresh interval (ms):";
+            // 
+            // pbServerStatus
+            // 
+            this.pbServerStatus.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.pbServerStatus.Image = global::PterodactylPavlovRconClient.Properties.Resources.signal_online;
+            this.pbServerStatus.Location = new System.Drawing.Point(1363, 3);
+            this.pbServerStatus.Name = "pbServerStatus";
+            this.pbServerStatus.Size = new System.Drawing.Size(23, 23);
+            this.pbServerStatus.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
+            this.pbServerStatus.TabIndex = 12;
+            this.pbServerStatus.TabStop = false;
+            // 
             // ServerControl
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.Controls.Add(this.pbServerStatus);
+            this.Controls.Add(this.lblRefreshInterval);
+            this.Controls.Add(this.nudRefreshInterval);
+            this.Controls.Add(this.pbLoading);
             this.Controls.Add(this.btnSkipToNextMap);
             this.Controls.Add(this.splitContainer2);
             this.Controls.Add(this.btnRefresh);
@@ -248,6 +318,9 @@
             this.splitContainer2.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer2)).EndInit();
             this.splitContainer2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.pbLoading)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.nudRefreshInterval)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.pbServerStatus)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -270,5 +343,9 @@
         private ForceVerticalScrollFlowLayoutPanel flpTeam1;
         private ForceVerticalScrollFlowLayoutPanel flpOfflinePlayers;
         private Button btnSkipToNextMap;
+        private PictureBox pbLoading;
+        private NumericUpDown nudRefreshInterval;
+        private Label lblRefreshInterval;
+        private PictureBox pbServerStatus;
     }
 }

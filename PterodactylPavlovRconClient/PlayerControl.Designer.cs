@@ -51,9 +51,11 @@
             this.lblVacBans = new System.Windows.Forms.Label();
             this.lblGameBans = new System.Windows.Forms.Label();
             this.lblDaysSinceLastBan = new System.Windows.Forms.Label();
+            this.pbLoading = new System.Windows.Forms.PictureBox();
             ((System.ComponentModel.ISupportInitialize)(this.pbConnection)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pbPlayerState)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pbBanned)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.pbLoading)).BeginInit();
             this.SuspendLayout();
             // 
             // lblPlayerName
@@ -273,11 +275,22 @@
             this.lblDaysSinceLastBan.TabIndex = 22;
             this.lblDaysSinceLastBan.Text = "Last: 10000 days ago";
             // 
+            // pbLoading
+            // 
+            this.pbLoading.Image = global::PterodactylPavlovRconClient.Properties.Resources.spin;
+            this.pbLoading.Location = new System.Drawing.Point(3, 3);
+            this.pbLoading.Name = "pbLoading";
+            this.pbLoading.Size = new System.Drawing.Size(32, 32);
+            this.pbLoading.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
+            this.pbLoading.TabIndex = 23;
+            this.pbLoading.TabStop = false;
+            // 
             // PlayerControl
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.Controls.Add(this.pbLoading);
             this.Controls.Add(this.lblDaysSinceLastBan);
             this.Controls.Add(this.lblGameBans);
             this.Controls.Add(this.lblVacBans);
@@ -307,6 +320,7 @@
             ((System.ComponentModel.ISupportInitialize)(this.pbConnection)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.pbPlayerState)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.pbBanned)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.pbLoading)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -337,5 +351,6 @@
         private Label lblVacBans;
         private Label lblGameBans;
         private Label lblDaysSinceLastBan;
+        private PictureBox pbLoading;
     }
 }
