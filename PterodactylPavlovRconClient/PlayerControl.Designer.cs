@@ -70,7 +70,7 @@
             // 
             // btnKick
             // 
-            this.btnKick.BackColor = System.Drawing.Color.Orange;
+            this.btnKick.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(128)))), ((int)(((byte)(64)))), ((int)(((byte)(64)))));
             this.btnKick.Location = new System.Drawing.Point(541, 3);
             this.btnKick.Name = "btnKick";
             this.btnKick.Size = new System.Drawing.Size(135, 45);
@@ -81,7 +81,7 @@
             // 
             // btnBan
             // 
-            this.btnBan.BackColor = System.Drawing.Color.Red;
+            this.btnBan.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(64)))), ((int)(((byte)(0)))), ((int)(((byte)(0)))));
             this.btnBan.Location = new System.Drawing.Point(541, 54);
             this.btnBan.Name = "btnBan";
             this.btnBan.Size = new System.Drawing.Size(135, 45);
@@ -220,12 +220,14 @@
             // 
             // btnOpenProfile
             // 
+            this.btnOpenProfile.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(35)))), ((int)(((byte)(35)))), ((int)(((byte)(35)))));
+            this.btnOpenProfile.ForeColor = System.Drawing.Color.LightGray;
             this.btnOpenProfile.Location = new System.Drawing.Point(312, 3);
             this.btnOpenProfile.Name = "btnOpenProfile";
             this.btnOpenProfile.Size = new System.Drawing.Size(117, 23);
             this.btnOpenProfile.TabIndex = 17;
             this.btnOpenProfile.Text = "Open steam profile";
-            this.btnOpenProfile.UseVisualStyleBackColor = true;
+            this.btnOpenProfile.UseVisualStyleBackColor = false;
             this.btnOpenProfile.Click += new System.EventHandler(this.btnOpenProfile_Click);
             // 
             // pbBanned
@@ -289,6 +291,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(35)))), ((int)(((byte)(35)))), ((int)(((byte)(35)))));
             this.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.Controls.Add(this.pbLoading);
             this.Controls.Add(this.lblDaysSinceLastBan);
@@ -314,6 +317,7 @@
             this.Controls.Add(this.btnBan);
             this.Controls.Add(this.btnKick);
             this.Controls.Add(this.lblPlayerName);
+            this.ForeColor = System.Drawing.Color.LightGray;
             this.Name = "PlayerControl";
             this.Size = new System.Drawing.Size(679, 102);
             this.Load += new System.EventHandler(this.PlayerControl_Load);

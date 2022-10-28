@@ -62,6 +62,8 @@
             // 
             // cbMapList
             // 
+            this.cbMapList.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(35)))), ((int)(((byte)(35)))), ((int)(((byte)(35)))));
+            this.cbMapList.ForeColor = System.Drawing.Color.LightGray;
             this.cbMapList.FormattingEnabled = true;
             this.cbMapList.Location = new System.Drawing.Point(3, 3);
             this.cbMapList.Name = "cbMapList";
@@ -70,12 +72,14 @@
             // 
             // btnSwitchMap
             // 
+            this.btnSwitchMap.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(35)))), ((int)(((byte)(35)))), ((int)(((byte)(35)))));
+            this.btnSwitchMap.ForeColor = System.Drawing.Color.LightGray;
             this.btnSwitchMap.Location = new System.Drawing.Point(321, 3);
             this.btnSwitchMap.Name = "btnSwitchMap";
             this.btnSwitchMap.Size = new System.Drawing.Size(91, 23);
             this.btnSwitchMap.TabIndex = 1;
             this.btnSwitchMap.Text = "Switch map";
-            this.btnSwitchMap.UseVisualStyleBackColor = true;
+            this.btnSwitchMap.UseVisualStyleBackColor = false;
             this.btnSwitchMap.Click += new System.EventHandler(this.btnSwitchMap_Click);
             // 
             // splitContainer1
@@ -111,10 +115,10 @@
             // 
             // label1
             // 
-            this.label1.BackColor = System.Drawing.Color.RoyalBlue;
+            this.label1.BackColor = System.Drawing.Color.Navy;
             this.label1.Dock = System.Windows.Forms.DockStyle.Top;
             this.label1.Font = new System.Drawing.Font("Segoe UI", 36F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.label1.ForeColor = System.Drawing.Color.White;
+            this.label1.ForeColor = System.Drawing.Color.LightGray;
             this.label1.Location = new System.Drawing.Point(0, 0);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(826, 74);
@@ -134,10 +138,10 @@
             // 
             // label2
             // 
-            this.label2.BackColor = System.Drawing.Color.Firebrick;
+            this.label2.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(64)))), ((int)(((byte)(0)))), ((int)(((byte)(0)))));
             this.label2.Dock = System.Windows.Forms.DockStyle.Top;
             this.label2.Font = new System.Drawing.Font("Segoe UI", 36F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.label2.ForeColor = System.Drawing.Color.White;
+            this.label2.ForeColor = System.Drawing.Color.LightGray;
             this.label2.Location = new System.Drawing.Point(0, 0);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(876, 74);
@@ -164,6 +168,8 @@
             // 
             // cbGameMode
             // 
+            this.cbGameMode.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(35)))), ((int)(((byte)(35)))), ((int)(((byte)(35)))));
+            this.cbGameMode.ForeColor = System.Drawing.Color.LightGray;
             this.cbGameMode.FormattingEnabled = true;
             this.cbGameMode.Location = new System.Drawing.Point(168, 3);
             this.cbGameMode.Name = "cbGameMode";
@@ -173,12 +179,14 @@
             // btnRefresh
             // 
             this.btnRefresh.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnRefresh.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(35)))), ((int)(((byte)(35)))), ((int)(((byte)(35)))));
+            this.btnRefresh.ForeColor = System.Drawing.Color.LightGray;
             this.btnRefresh.Location = new System.Drawing.Point(1636, 3);
             this.btnRefresh.Name = "btnRefresh";
             this.btnRefresh.Size = new System.Drawing.Size(78, 23);
             this.btnRefresh.TabIndex = 6;
             this.btnRefresh.Text = "Refresh all";
-            this.btnRefresh.UseVisualStyleBackColor = true;
+            this.btnRefresh.UseVisualStyleBackColor = false;
             this.btnRefresh.Click += new System.EventHandler(this.btnRefresh_Click);
             // 
             // splitContainer2
@@ -215,10 +223,10 @@
             // 
             // label3
             // 
-            this.label3.BackColor = System.Drawing.Color.DimGray;
+            this.label3.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(64)))), ((int)(((byte)(64)))), ((int)(((byte)(64)))));
             this.label3.Dock = System.Windows.Forms.DockStyle.Top;
             this.label3.Font = new System.Drawing.Font("Segoe UI", 36F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
-            this.label3.ForeColor = System.Drawing.Color.White;
+            this.label3.ForeColor = System.Drawing.Color.LightGray;
             this.label3.Location = new System.Drawing.Point(0, 0);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(1714, 74);
@@ -227,12 +235,14 @@
             // 
             // btnSkipToNextMap
             // 
+            this.btnSkipToNextMap.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(35)))), ((int)(((byte)(35)))), ((int)(((byte)(35)))));
+            this.btnSkipToNextMap.ForeColor = System.Drawing.Color.LightGray;
             this.btnSkipToNextMap.Location = new System.Drawing.Point(418, 3);
             this.btnSkipToNextMap.Name = "btnSkipToNextMap";
             this.btnSkipToNextMap.Size = new System.Drawing.Size(109, 23);
             this.btnSkipToNextMap.TabIndex = 8;
             this.btnSkipToNextMap.Text = "Skip to next map";
-            this.btnSkipToNextMap.UseVisualStyleBackColor = true;
+            this.btnSkipToNextMap.UseVisualStyleBackColor = false;
             this.btnSkipToNextMap.Click += new System.EventHandler(this.btnSkipToNextMap_Click);
             // 
             // pbLoading
@@ -249,6 +259,8 @@
             // nudRefreshInterval
             // 
             this.nudRefreshInterval.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.nudRefreshInterval.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(35)))), ((int)(((byte)(35)))), ((int)(((byte)(35)))));
+            this.nudRefreshInterval.ForeColor = System.Drawing.Color.LightGray;
             this.nudRefreshInterval.Location = new System.Drawing.Point(1545, 3);
             this.nudRefreshInterval.Maximum = new decimal(new int[] {
             30000,
@@ -274,6 +286,7 @@
             // 
             this.lblRefreshInterval.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.lblRefreshInterval.AutoSize = true;
+            this.lblRefreshInterval.ForeColor = System.Drawing.Color.LightGray;
             this.lblRefreshInterval.Location = new System.Drawing.Point(1421, 7);
             this.lblRefreshInterval.Name = "lblRefreshInterval";
             this.lblRefreshInterval.Size = new System.Drawing.Size(118, 15);
@@ -295,6 +308,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(35)))), ((int)(((byte)(35)))), ((int)(((byte)(35)))));
             this.Controls.Add(this.pbServerStatus);
             this.Controls.Add(this.lblRefreshInterval);
             this.Controls.Add(this.nudRefreshInterval);
@@ -307,6 +321,7 @@
             this.Controls.Add(this.lblPlayers);
             this.Controls.Add(this.btnSwitchMap);
             this.Controls.Add(this.cbMapList);
+            this.ForeColor = System.Drawing.Color.LightGray;
             this.Name = "ServerControl";
             this.Size = new System.Drawing.Size(1717, 941);
             this.Load += new System.EventHandler(this.ServerControl_Load);
