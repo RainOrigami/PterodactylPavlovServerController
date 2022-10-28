@@ -74,14 +74,13 @@ namespace PterodactylPavlovRconClient
         private async void PlayerControl_Load(object sender, EventArgs e)
         {
             await RefreshPlayer();
-            await updateSteamBans();
+            await RefreshSteamBans();
         }
 
-        private async Task updateSteamBans()
+        public async Task RefreshSteamBans()
         {
             pbLoading.Visible = true;
-            RestRequest steamBanRequest = new RestRequest($"steam/bans?steamId={uniqueId}");
-            RestResponse<PlayerBansModel[]> steamBanResponse = await restClient.ExecuteAsync<PlayerBansModel[]>(steamBanRequest);
+            RestResponse<PlayerBansModel[]> steamBanResponse = await restClient.ExecuteAsync<PlayerBansModel[]>(new RestRequest($"steam/bans?steamId={uniqueId}"));
             if (!steamBanResponse.IsSuccessful)
             {
                 Console.WriteLine($"Could not get steam bans for user {uniqueId}");
@@ -146,8 +145,7 @@ namespace PterodactylPavlovRconClient
 
             pbLoading.Visible = true;
 
-            RestRequest playerInfoRequest = new RestRequest($"rcon/player?serverId={server.ServerId}&uniqueId={uniqueId}");
-            RestResponse<PlayerModel> playerInfoResponse = await restClient.ExecuteAsync<PlayerModel>(playerInfoRequest);
+            RestResponse<PlayerModel> playerInfoResponse = await restClient.ExecuteAsync<PlayerModel>(new RestRequest($"rcon/player?serverId={server.ServerId}&uniqueId={uniqueId}"));
             if (!playerInfoResponse.IsSuccessful)
             {
                 updateValues(null);
@@ -194,8 +192,7 @@ namespace PterodactylPavlovRconClient
 
         private async void btnKick_Click(object sender, EventArgs e)
         {
-            RestRequest kickRequest = new RestRequest($"rcon/kick?serverId={server.ServerId}&uniqueId={uniqueId}", Method.Post);
-            RestResponse kickResponse = await restClient.ExecuteAsync(kickRequest);
+            RestResponse kickResponse = await restClient.ExecuteAsync(new RestRequest($"rcon/kick?serverId={server.ServerId}&uniqueId={uniqueId}", Method.Post));
             if (!kickResponse.IsSuccessful)
             {
                 MessageBox.Show($"Kick failed: {kickResponse.Content}");
@@ -207,8 +204,7 @@ namespace PterodactylPavlovRconClient
         {
             if (Banned)
             {
-                RestRequest unbanRequest = new RestRequest($"rcon/unban?serverId={server.ServerId}&uniqueId={uniqueId}", Method.Post);
-                RestResponse unbanResponse = await restClient.ExecuteAsync(unbanRequest);
+                RestResponse unbanResponse = await restClient.ExecuteAsync(new RestRequest($"rcon/unban?serverId={server.ServerId}&uniqueId={uniqueId}", Method.Post));
                 if (!unbanResponse.IsSuccessful)
                 {
                     MessageBox.Show($"Unban failed: {unbanResponse.StatusCode} {unbanResponse.Content}");
@@ -218,8 +214,7 @@ namespace PterodactylPavlovRconClient
             }
             else
             {
-                RestRequest banRequest = new RestRequest($"rcon/ban?serverId={server.ServerId}&uniqueId={uniqueId}", Method.Post);
-                RestResponse banResponse = await restClient.ExecuteAsync(banRequest);
+                RestResponse banResponse = await restClient.ExecuteAsync(new RestRequest($"rcon/ban?serverId={server.ServerId}&uniqueId={uniqueId}", Method.Post));
                 if (!banResponse.IsSuccessful)
                 {
                     MessageBox.Show($"Ban failed: {banResponse.StatusCode} {banResponse.Content}");

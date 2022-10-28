@@ -29,8 +29,7 @@ namespace PterodactylPavlovServerController.Services
 
         public void WriteFile(string serverId, string path, string content)
         {
-            RestRequest textBodyRequest = new RestRequest($"client/servers/{serverId}/files/write?file={path}");
-            textBodyRequest.Method = Method.Post;
+            RestRequest textBodyRequest = new RestRequest($"client/servers/{serverId}/files/write?file={path}", Method.Post);
             textBodyRequest.AddHeader("Content-Type", "text/plain");
 
             executeRestRequest(textBodyRequest, content);

@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 using PterodactylPavlovServerController.Models;
 using RestSharp;
+using Timer = System.Windows.Forms.Timer;
 
 namespace PterodactylPavlovRconClient
 {
@@ -13,6 +14,11 @@ namespace PterodactylPavlovRconClient
             restClient = new RestClient(Properties.Settings.Default.ppsc_basepath);
             restClient.AddDefaultHeader("x-api-key", Properties.Settings.Default.ppsc_apikey);
             restClient.AddDefaultHeader("x-pterodactyl-api-key", Properties.Settings.Default.ppsc_pterodactyl_key);
+
+            Timer garbageCollectHttpClients = new Timer();
+            garbageCollectHttpClients.Interval = 5000;
+            garbageCollectHttpClients.Tick += (s, e) => GC.Collect();
+            garbageCollectHttpClients.Start();
         }
 
         RestClient restClient;
@@ -21,8 +27,7 @@ namespace PterodactylPavlovRconClient
         {
             PavlovRcon_Resize(sender, e);
 
-            RestRequest serverListRequest = new RestRequest("server/list");
-            RestResponse serverListResponse = await restClient.ExecuteAsync(serverListRequest);
+            RestResponse serverListResponse = await restClient.ExecuteAsync(new RestRequest("server/list"));
             if (serverListResponse.StatusCode is not System.Net.HttpStatusCode.OK)
             {
                 MessageBox.Show(serverListResponse.Content, serverListResponse.StatusCode.ToString(), MessageBoxButtons.OK, MessageBoxIcon.Exclamation);

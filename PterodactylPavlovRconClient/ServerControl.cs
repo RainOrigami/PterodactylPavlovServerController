@@ -59,6 +59,15 @@ namespace PterodactylPavlovRconClient
             await refreshMaps();
             await refreshServerAndActivePlayers();
             await refreshBanlist();
+            await refreshPlayerBans();
+        }
+
+        private async Task refreshPlayerBans()
+        {
+            foreach (PlayerControl playerControl in playerControls.Values)
+            {
+                await playerControl.RefreshSteamBans();
+            }
         }
 
         public static bool GetServerState(RestResponseBase restResponse)
@@ -86,8 +95,7 @@ namespace PterodactylPavlovRconClient
 
         private async Task refreshServerInfo()
         {
-            RestRequest serverInfoRequest = new RestRequest($"rcon/serverinfo?serverId={server.ServerId}");
-            RestResponse serverInfoResponse = await restClient.ExecuteAsync(serverInfoRequest);
+            RestResponse serverInfoResponse = await restClient.ExecuteAsync(new RestRequest($"rcon/serverinfo?serverId={server.ServerId}"));
             if (isServerOffline(serverInfoResponse))
             {
                 return;
@@ -100,7 +108,6 @@ namespace PterodactylPavlovRconClient
             }
 
             ServerInfoModel serverInfo = JsonConvert.DeserializeObject<ServerInfoModel>(serverInfoResponse.Content!)!;
-
             cbMapList.SelectedItem = cbMapList.Items.OfType<MapModel>().FirstOrDefault(m => $"UGC{m.Id}" == serverInfo.MapLabel);
             if (cbMapList.SelectedItem is null)
             {
@@ -119,8 +126,7 @@ namespace PterodactylPavlovRconClient
 
         private async Task refreshPlayerControls()
         {
-            RestRequest playerListRequest = new RestRequest($"rcon/playerlist?serverId={server.ServerId}");
-            RestResponse<PlayerListPlayerModel[]> playerListResponse = await restClient.ExecuteAsync<PlayerListPlayerModel[]>(playerListRequest);
+            RestResponse<PlayerListPlayerModel[]> playerListResponse = await restClient.ExecuteAsync<PlayerListPlayerModel[]>(new RestRequest($"rcon/playerlist?serverId={server.ServerId}"));
             if (isServerOffline(playerListResponse))
             {
                 return;
@@ -162,6 +168,7 @@ namespace PterodactylPavlovRconClient
 
                 assignPlayerControlToCorrespondingPanel(playerControl);
             }
+
         }
 
         private async Task refreshServerAndActivePlayers()
@@ -172,8 +179,7 @@ namespace PterodactylPavlovRconClient
 
         private async Task refreshBanlist()
         {
-            RestRequest banlistRequest = new RestRequest($"rcon/banlist?serverId={server.ServerId}");
-            RestResponse<string[]> banlistResponse = await restClient.ExecuteAsync<string[]>(banlistRequest);
+            RestResponse<string[]> banlistResponse = await restClient.ExecuteAsync<string[]>(new RestRequest($"rcon/banlist?serverId={server.ServerId}"));
             if (isServerOffline(banlistResponse))
             {
                 return;
@@ -188,8 +194,7 @@ namespace PterodactylPavlovRconClient
             string[] bannedSteamIds = banlistResponse.Data!;
             foreach (string bannedSteamId in bannedSteamIds)
             {
-                RestRequest steamUserNameRequest = new RestRequest($"steam/username?steamid={bannedSteamId}");
-                RestResponse<string> steamUserNameResponse = await restClient.ExecuteAsync<string>(steamUserNameRequest);
+                RestResponse<string> steamUserNameResponse = await restClient.ExecuteAsync<string>(new RestRequest($"steam/username?steamid={bannedSteamId}"));
                 if (!steamUserNameResponse.IsSuccessStatusCode)
                 {
                     Console.WriteLine(banlistResponse.Content);
@@ -206,7 +211,6 @@ namespace PterodactylPavlovRconClient
                     bannedPlayerControl = new PlayerControl(restClient, server, bannedSteamId, new PlayerModel() { UniqueId = bannedSteamId, PlayerName = steamUserNameResponse.Data! });
                     playerControls.Add(bannedSteamId, bannedPlayerControl);
                 }
-
                 bannedPlayerControl.Banned = true;
                 bannedPlayerControl.Disconnected = true;
 
@@ -246,8 +250,7 @@ namespace PterodactylPavlovRconClient
 
         private async Task refreshMaps()
         {
-            RestRequest mapRotationRequest = new RestRequest($"maps/current?serverId={server.ServerId}");
-            RestResponse<MapRowModel[]> mapRotationResponse = await restClient.ExecuteAsync<MapRowModel[]>(mapRotationRequest);
+            RestResponse<MapRowModel[]> mapRotationResponse = await restClient.ExecuteAsync<MapRowModel[]>(new RestRequest($"maps/current?serverId={server.ServerId}"));
 
             if (!mapRotationResponse.IsSuccessful)
             {
@@ -259,8 +262,7 @@ namespace PterodactylPavlovRconClient
 
             foreach (MapRowModel mapRow in mapRotationResponse.Data!)
             {
-                RestRequest mapDetailRequest = new RestRequest($"maps/details?mapId={mapRow.MapId}");
-                RestResponse<MapDetailModel> mapDetailResponse = await restClient.ExecuteAsync<MapDetailModel>(mapDetailRequest);
+                RestResponse<MapDetailModel> mapDetailResponse = await restClient.ExecuteAsync<MapDetailModel>(new RestRequest($"maps/details?mapId={mapRow.MapId}"));
 
                 if (!mapDetailResponse.IsSuccessful || mapDetailResponse.Data is null)
                 {
@@ -283,7 +285,6 @@ namespace PterodactylPavlovRconClient
                     GameMode = mapRow.GameMode != null ? Enum.Parse<PavlovGameMode>(mapRow.GameMode) : PavlovGameMode.SND
                 });
             }
-
             cbMapList.Items.Clear();
             cbMapList.Items.AddRange(maps.ToArray());
         }
@@ -324,8 +325,7 @@ namespace PterodactylPavlovRconClient
                 return;
             }
 
-            RestRequest mapChangeRequest = new RestRequest($"rcon/switchMap?serverId={server.ServerId}&mapId={mapId}&gamemode={gameMode}", Method.Post);
-            RestResponse mapChangeResponse = await restClient.ExecuteAsync(mapChangeRequest);
+            RestResponse mapChangeResponse = await restClient.ExecuteAsync(new RestRequest($"rcon/switchMap?serverId={server.ServerId}&mapId={mapId}&gamemode={gameMode}", Method.Post));
             if (isServerOffline(mapChangeResponse))
             {
                 return;
@@ -346,8 +346,7 @@ namespace PterodactylPavlovRconClient
 
         private async void btnSkipToNextMap_Click(object sender, EventArgs e)
         {
-            RestRequest skipMapRequest = new RestRequest($"rcon/rotateMap?serverId={server.ServerId}", Method.Post);
-            RestResponse skipMapResponse = await restClient.ExecuteAsync(skipMapRequest);
+            RestResponse skipMapResponse = await restClient.ExecuteAsync(new RestRequest($"rcon/rotateMap?serverId={server.ServerId}", Method.Post));
             if (isServerOffline(skipMapResponse))
             {
                 return;
