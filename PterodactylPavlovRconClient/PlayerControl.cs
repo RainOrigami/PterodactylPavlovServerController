@@ -19,21 +19,18 @@ namespace PterodactylPavlovRconClient
         {
             get => disconnected; set
             {
-                if (this.InvokeRequired)
+                conditionalInvoke(() =>
                 {
-                    this.Invoke(() => Disconnected = value);
-                    return;
-                }
+                    disconnected = value;
 
-                disconnected = value;
+                    btnKick.Visible = !disconnected;
 
-                btnKick.Visible = !disconnected;
-
-                if (disconnected)
-                {
-                    this.pbConnection.Image = Resources.signal_offline;
-                    this.pbPlayerState.Image = null;
-                }
+                    if (disconnected)
+                    {
+                        this.pbConnection.Image = Resources.signal_offline;
+                        this.pbPlayerState.Image = null;
+                    }
+                });
             }
         }
         public string UniqueId => uniqueId;
@@ -44,16 +41,26 @@ namespace PterodactylPavlovRconClient
         {
             get => banned; set
             {
-                if (this.InvokeRequired)
+                conditionalInvoke(() =>
                 {
-                    this.Invoke(() => Banned = value);
-                    return;
-                }
 
-                banned = value;
+                    banned = value;
 
-                pbBanned.Image = banned ? Resources.ban : null;
-                btnBan.Text = banned ? "Unban" : "Ban";
+                    pbBanned.Image = banned ? Resources.ban : null;
+                    btnBan.Text = banned ? "Unban" : "Ban";
+                });
+            }
+        }
+
+        private void conditionalInvoke(Action method)
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(method);
+            }
+            else
+            {
+                method();
             }
         }
 
@@ -71,16 +78,16 @@ namespace PterodactylPavlovRconClient
             updateValues(this.playerModel);
         }
 
-        private async void PlayerControl_Load(object sender, EventArgs e)
+        private void PlayerControl_Load(object sender, EventArgs e)
         {
-            await RefreshPlayer();
-            await RefreshSteamBans();
+            //RefreshPlayer();
+            Task.Run(() => RefreshSteamBans());
         }
 
-        public async Task RefreshSteamBans()
+        public void RefreshSteamBans()
         {
-            pbLoading.Visible = true;
-            RestResponse<PlayerBansModel[]> steamBanResponse = await restClient.ExecuteAsync<PlayerBansModel[]>(new RestRequest($"steam/bans?steamId={uniqueId}"));
+            conditionalInvoke(() => pbLoading.Visible = true);
+            RestResponse<PlayerBansModel[]> steamBanResponse = restClient.Execute<PlayerBansModel[]>(new RestRequest($"steam/bans?steamId={uniqueId}"));
             if (!steamBanResponse.IsSuccessful)
             {
                 Console.WriteLine($"Could not get steam bans for user {uniqueId}");
@@ -111,41 +118,44 @@ namespace PterodactylPavlovRconClient
                 }
             }
 
-            lblVacBans.Text = $"VAC: {vacBans}x";
-            lblGameBans.Text = $"Games: {gameBans}x";
-            lblDaysSinceLastBan.Text = $"Last: {(daysSinceLastBan == -1 ? "never" : $"{daysSinceLastBan} days ago")}";
+            conditionalInvoke(() =>
+            {
+                lblVacBans.Text = $"VAC: {vacBans}x";
+                lblGameBans.Text = $"Games: {gameBans}x";
+                lblDaysSinceLastBan.Text = $"Last: {(daysSinceLastBan == -1 ? "never" : $"{daysSinceLastBan} days ago")}";
 
-            if (currentlyVacBanned)
-            {
-                lblVacBans.ForeColor = Color.Red;
-            }
-            else if (vacBans > 0)
-            {
-                lblVacBans.ForeColor = Color.Blue;
-            }
+                if (currentlyVacBanned)
+                {
+                    lblVacBans.ForeColor = Color.Red;
+                }
+                else if (vacBans > 0)
+                {
+                    lblVacBans.ForeColor = Color.Blue;
+                }
 
-            if (gameBans > 0)
-            {
-                lblGameBans.ForeColor = Color.Red;
-            }
+                if (gameBans > 0)
+                {
+                    lblGameBans.ForeColor = Color.Red;
+                }
 
-            if (daysSinceLastBan != -1)
-            {
-                lblDaysSinceLastBan.ForeColor = Color.Red;
-            }
-            pbLoading.Visible = false;
+                if (daysSinceLastBan != -1)
+                {
+                    lblDaysSinceLastBan.ForeColor = Color.Red;
+                }
+                pbLoading.Visible = false;
+            });
         }
 
-        public async Task RefreshPlayer()
+        public void RefreshPlayer()
         {
             if (Banned || Disconnected)
             {
                 return;
             }
 
-            pbLoading.Visible = true;
+            conditionalInvoke(() => pbLoading.Visible = true);
 
-            RestResponse<PlayerModel> playerInfoResponse = await restClient.ExecuteAsync<PlayerModel>(new RestRequest($"rcon/player?serverId={server.ServerId}&uniqueId={uniqueId}"));
+            RestResponse<PlayerModel> playerInfoResponse = restClient.Execute<PlayerModel>(new RestRequest($"rcon/player?serverId={server.ServerId}&uniqueId={uniqueId}"));
             if (!playerInfoResponse.IsSuccessful)
             {
                 updateValues(null);
@@ -155,34 +165,33 @@ namespace PterodactylPavlovRconClient
                 playerModel = playerInfoResponse.Data!;
                 updateValues(playerModel);
             }
-            pbLoading.Visible = false;
+
+            conditionalInvoke(() => pbLoading.Visible = false);
         }
 
         private void updateValues(PlayerModel? player)
         {
-            if (InvokeRequired)
+            conditionalInvoke(() =>
             {
-                Invoke(() => updateValues(player));
-                return;
-            }
 
-            if (player is null)
-            {
-                this.pbConnection.Image = Resources.signal_unstable;
-                this.pbPlayerState.Image = null;
-                return;
-            }
+                if (player is null)
+                {
+                    this.pbConnection.Image = Resources.signal_unstable;
+                    this.pbPlayerState.Image = null;
+                    return;
+                }
 
-            this.lblPlayerName.Text = player.PlayerName;
-            this.lblKills.Text = player.Kills.ToString();
-            this.lblDeaths.Text = player.Deaths.ToString();
-            this.lblAssists.Text = player.Assists.ToString();
-            this.lblCash.Text = $"${player.Cash}";
-            this.lblScore.Text = player.Score.ToString();
-            this.lblSteamId.Text = player.UniqueId.ToString();
+                this.lblPlayerName.Text = player.PlayerName;
+                this.lblKills.Text = player.Kills.ToString();
+                this.lblDeaths.Text = player.Deaths.ToString();
+                this.lblAssists.Text = player.Assists.ToString();
+                this.lblCash.Text = $"${player.Cash}";
+                this.lblScore.Text = player.Score.ToString();
+                this.lblSteamId.Text = player.UniqueId.ToString();
 
-            this.pbPlayerState.Image = player.Dead ? Resources.skull : Resources.heart;
-            this.pbConnection.Image = Resources.signal_online;
+                this.pbPlayerState.Image = player.Dead ? Resources.skull : Resources.heart;
+                this.pbConnection.Image = Resources.signal_online;
+            });
         }
 
         private void btnOpenProfile_Click(object sender, EventArgs e)
@@ -190,9 +199,9 @@ namespace PterodactylPavlovRconClient
             Process.Start(new ProcessStartInfo($"http://steamcommunity.com/profiles/{uniqueId}/") { UseShellExecute = true });
         }
 
-        private async void btnKick_Click(object sender, EventArgs e)
+        private void btnKick_Click(object sender, EventArgs e)
         {
-            RestResponse kickResponse = await restClient.ExecuteAsync(new RestRequest($"rcon/kick?serverId={server.ServerId}&uniqueId={uniqueId}", Method.Post));
+            RestResponse kickResponse = restClient.Execute(new RestRequest($"rcon/kick?serverId={server.ServerId}&uniqueId={uniqueId}", Method.Post));
             if (!kickResponse.IsSuccessful)
             {
                 MessageBox.Show($"Kick failed: {kickResponse.Content}");
@@ -200,11 +209,11 @@ namespace PterodactylPavlovRconClient
             }
         }
 
-        private async void btnBan_Click(object sender, EventArgs e)
+        private void btnBan_Click(object sender, EventArgs e)
         {
             if (Banned)
             {
-                RestResponse unbanResponse = await restClient.ExecuteAsync(new RestRequest($"rcon/unban?serverId={server.ServerId}&uniqueId={uniqueId}", Method.Post));
+                RestResponse unbanResponse = restClient.Execute(new RestRequest($"rcon/unban?serverId={server.ServerId}&uniqueId={uniqueId}", Method.Post));
                 if (!unbanResponse.IsSuccessful)
                 {
                     MessageBox.Show($"Unban failed: {unbanResponse.StatusCode} {unbanResponse.Content}");
@@ -214,7 +223,7 @@ namespace PterodactylPavlovRconClient
             }
             else
             {
-                RestResponse banResponse = await restClient.ExecuteAsync(new RestRequest($"rcon/ban?serverId={server.ServerId}&uniqueId={uniqueId}", Method.Post));
+                RestResponse banResponse = restClient.Execute(new RestRequest($"rcon/ban?serverId={server.ServerId}&uniqueId={uniqueId}", Method.Post));
                 if (!banResponse.IsSuccessful)
                 {
                     MessageBox.Show($"Ban failed: {banResponse.StatusCode} {banResponse.Content}");
