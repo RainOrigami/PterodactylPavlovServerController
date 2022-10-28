@@ -41,9 +41,11 @@ namespace PterodactylPavlovRconClient
 
         private async void ServerRefresh_Tick(object? sender, EventArgs e)
         {
+            serverRefresh.Stop();
             pbLoading.Visible = true;
             await refreshServerAndActivePlayers();
             pbLoading.Visible = false;
+            serverRefresh.Start();
         }
 
         private async void ServerControl_Load(object sender, EventArgs e)
