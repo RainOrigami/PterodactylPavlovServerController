@@ -42,7 +42,7 @@ namespace PterodactylPavlovRconClient
             foreach (PterodactylServerModel server in serverListResponse.Data!)
             {
                 TabPage tabPage = new TabPage(server.Name);
-                tabPage.Controls.Add(new ServerControl(pterodactylAPIService, server, logger)
+                tabPage.Controls.Add(new Controls.ServerControl(pterodactylAPIService, server, logger)
                 {
                     Dock = DockStyle.Fill
                 });

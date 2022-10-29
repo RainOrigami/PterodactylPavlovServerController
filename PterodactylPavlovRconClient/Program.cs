@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using NReco.Logging.File;
 using PterodactylPavlovRconClient.Services;
 
 namespace PterodactylPavlovRconClient
@@ -44,26 +43,40 @@ namespace PterodactylPavlovRconClient
             services.AddScoped<PavlovRcon>();
 
             services.AddSingleton<PterodactylAPIService>();
-
-            services.AddLogging(configure =>
-            {
-                configure.AddFile("logs/pavlovRcon_{0:yyyy}-{0:MM}-{0:dd}.log", opts =>
-                {
-                    opts.Append = true;
-                    opts.MinLevel = LogLevel.Trace;
-                    opts.FormatLogFileName = fName => String.Format(fName, DateTime.Now);
-                });
-            });
-
-            using (ServiceProvider serviceProvider = services.BuildServiceProvider())
-            {
-                services.AddSingleton<ILogger>(serviceProvider.GetRequiredService<ILogger<FileLogger>>());
-            }
+            services.AddSingleton<ILogger, FileLogger>();
 
             using (ServiceProvider serviceProvider = services.BuildServiceProvider())
             {
                 PavlovRcon pavlovRcon = serviceProvider.GetRequiredService<PavlovRcon>();
                 Application.Run(pavlovRcon);
+            }
+        }
+    }
+
+    class FileLogger : ILogger, IDisposable
+    {
+        public LogLevel MinimumLevel { get; set; } = LogLevel.Error;
+        private static String lockMe = String.Empty;
+        public IDisposable BeginScope<TState>(TState state) => this;
+        public void Dispose() { }
+        public bool IsEnabled(LogLevel logLevel) => true;
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            if (logLevel < MinimumLevel)
+            {
+                return;
+            }
+
+            lock (lockMe)
+            {
+                try
+                {
+                    File.AppendAllText(String.Format("logs/pavlovRcon_{0:yyyy}-{0:MM}-{0:dd}.log", DateTime.Now), String.Format("[{0:HH}:{0:mm}:{0:ss}][{1}] {2}{3}", DateTime.Now, logLevel.ToString(), state!.ToString(), Environment.NewLine));
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.Message);
+                }
             }
         }
     }

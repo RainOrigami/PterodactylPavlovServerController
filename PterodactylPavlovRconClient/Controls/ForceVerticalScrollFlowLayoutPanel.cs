@@ -1,4 +1,4 @@
-﻿namespace PterodactylPavlovRconClient
+﻿namespace PterodactylPavlovRconClient.Controls
 {
     internal class ForceVerticalScrollFlowLayoutPanel : FlowLayoutPanel
     {

@@ -189,5 +189,108 @@ namespace PterodactylPavlovServerController.Controllers
                 return Problem(e.Message);
             }
         }
+
+
+        public IActionResult GiveItem(string serverId, string uniqueId, string item)
+        {
+            try
+            {
+                pavlovRconService.GiveItem(serverId, uniqueId, item);
+                return Ok();
+            }
+            catch (RconException)
+            {
+                return Problem("Failed to execute RCON command.");
+            }
+            catch (Exception e)
+            {
+                return Problem(e.Message);
+            }
+        }
+
+        public IActionResult GiveCash(string serverId, string uniqueId, int amount)
+        {
+            try
+            {
+                pavlovRconService.GiveCash(serverId, uniqueId, amount);
+                return Ok();
+            }
+            catch (RconException)
+            {
+                return Problem("Failed to execute RCON command.");
+            }
+            catch (Exception e)
+            {
+                return Problem(e.Message);
+            }
+        }
+
+        public IActionResult GiveVehicle(string serverId, string uniqueId, string vehicle)
+        {
+            try
+            {
+                pavlovRconService.GiveVehicle(serverId, uniqueId, vehicle);
+                return Ok();
+            }
+            catch (RconException)
+            {
+                return Problem("Failed to execute RCON command.");
+            }
+            catch (Exception e)
+            {
+                return Problem(e.Message);
+            }
+        }
+
+        public IActionResult SetSkin(string serverId, string uniqueId, string skin)
+        {
+            try
+            {
+                pavlovRconService.SetSkin(serverId, uniqueId, skin);
+                return Ok();
+            }
+            catch (RconException)
+            {
+                return Problem("Failed to execute RCON command.");
+            }
+            catch (Exception e)
+            {
+                return Problem(e.Message);
+            }
+        }
+
+        public IActionResult DoSlap(string serverId, string uniqueId, int amount)
+        {
+            try
+            {
+                pavlovRconService.Slap(serverId, uniqueId, amount);
+                return Ok();
+            }
+            catch (RconException)
+            {
+                return Problem("Failed to execute RCON command.");
+            }
+            catch (Exception e)
+            {
+                return Problem(e.Message);
+            }
+        }
+
+        public IActionResult SwitchTeam(string serverId, string uniqueId, int team)
+        {
+            try
+            {
+                pavlovRconService.SwitchTeam(serverId, uniqueId, team);
+                return Ok();
+            }
+            catch (RconException)
+            {
+                return Problem("Failed to execute RCON command.");
+            }
+            catch (Exception e)
+            {
+                return Problem(e.Message);
+            }
+        }
     }
 }

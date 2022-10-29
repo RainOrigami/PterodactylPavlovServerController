@@ -1,4 +1,4 @@
-﻿namespace PterodactylPavlovRconClient
+﻿namespace PterodactylPavlovRconClient.Controls
 {
     partial class PlayerControl
     {
@@ -52,6 +52,7 @@
             this.lblGameBans = new System.Windows.Forms.Label();
             this.lblDaysSinceLastBan = new System.Windows.Forms.Label();
             this.pbLoading = new System.Windows.Forms.PictureBox();
+            this.btnCheatsMenu = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.pbConnection)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pbPlayerState)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.pbBanned)).BeginInit();
@@ -287,12 +288,24 @@
             this.pbLoading.TabIndex = 23;
             this.pbLoading.TabStop = false;
             // 
+            // btnCheatsMenu
+            // 
+            this.btnCheatsMenu.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(35)))), ((int)(((byte)(35)))), ((int)(((byte)(35)))));
+            this.btnCheatsMenu.Location = new System.Drawing.Point(312, 29);
+            this.btnCheatsMenu.Name = "btnCheatsMenu";
+            this.btnCheatsMenu.Size = new System.Drawing.Size(117, 23);
+            this.btnCheatsMenu.TabIndex = 24;
+            this.btnCheatsMenu.Text = "Cheats";
+            this.btnCheatsMenu.UseVisualStyleBackColor = false;
+            this.btnCheatsMenu.Click += new System.EventHandler(this.btnCheatsMenu_Click);
+            // 
             // PlayerControl
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(35)))), ((int)(((byte)(35)))), ((int)(((byte)(35)))));
             this.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.Controls.Add(this.btnCheatsMenu);
             this.Controls.Add(this.pbLoading);
             this.Controls.Add(this.lblDaysSinceLastBan);
             this.Controls.Add(this.lblGameBans);
@@ -356,5 +369,6 @@
         private Label lblGameBans;
         private Label lblDaysSinceLastBan;
         private PictureBox pbLoading;
+        private Button btnCheatsMenu;
     }
 }

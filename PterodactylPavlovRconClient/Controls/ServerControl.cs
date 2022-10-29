@@ -4,8 +4,9 @@ using PterodactylPavlovRconClient.Models;
 using PterodactylPavlovRconClient.Properties;
 using PterodactylPavlovRconClient.Services;
 using PterodactylPavlovServerController.Models;
+using Control = System.Windows.Forms.Control;
 
-namespace PterodactylPavlovRconClient
+namespace PterodactylPavlovRconClient.Controls
 {
     public partial class ServerControl : UserControl
     {
@@ -26,6 +27,9 @@ namespace PterodactylPavlovRconClient
                 });
             }
         }
+
+        private MapModel? currentMap;
+        int currentRound = -1;
 
         public ServerControl(PterodactylAPIService pterodactylAPIService, PterodactylServerModel server, ILogger logger)
         {
@@ -137,10 +141,15 @@ namespace PterodactylPavlovRconClient
 
             conditionalInvoke(() =>
             {
-                cbMapList.SelectedItem = cbMapList.Items.OfType<MapModel>().FirstOrDefault(m => $"UGC{m.Id}" == serverInfo.MapLabel);
-                if (cbMapList.SelectedItem is null)
+                currentMap = cbMapList.Items.OfType<MapModel>().FirstOrDefault(m => $"UGC{m.Id}" == serverInfo.MapLabel);
+
+                if ((currentRound != 0 && serverInfo.Round == 0) || currentRound == -1)
                 {
-                    cbMapList.Text = serverInfo.MapLabel;
+                    cbMapList.SelectedItem = currentMap;
+                    if (cbMapList.SelectedItem is null)
+                    {
+                        cbMapList.Text = serverInfo.MapLabel;
+                    }
                     cbGameMode.SelectedItem = serverInfo.GameMode;
                     if (cbGameMode.SelectedItem is null)
                     {
@@ -148,7 +157,14 @@ namespace PterodactylPavlovRconClient
                     }
                 }
 
+                currentRound = serverInfo.Round;
+
                 lblPlayerCount.Text = $"{playerControls.Count(c => !c.Value.Disconnected)} of {serverInfo.MaximumPlayerCount}";
+
+                lblRound.Text = $"{serverInfo.Round} ({serverInfo.RoundState})";
+
+                lblBlueTeam.Text = $"Blue Team ({serverInfo.Team0Score})";
+                lblRedTeam.Text = $"Red Team ({serverInfo.Team1Score})";
             });
         }
 
@@ -380,6 +396,24 @@ namespace PterodactylPavlovRconClient
                 MessageBox.Show($"Failed to skip to next map: {skipMapResponse.ErrorMessage}", "Map rotation failed", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                 return;
             }
+        }
+
+        private void btnToggleOfflinePlayers_Click(object sender, EventArgs e)
+        {
+            this.scTeamsAndOffline.Panel2Collapsed = !this.scTeamsAndOffline.Panel2Collapsed;
+        }
+
+        private void cbMapList_DrawItem(object sender, DrawItemEventArgs e)
+        {
+            MapModel item = (MapModel)((ComboBox)sender).Items[e.Index];
+            Brush backBrush = currentMap != null && currentMap.Id == item.Id && currentMap.GameMode == item.GameMode ? Brushes.DarkOliveGreen : new SolidBrush(e.BackColor);
+            e.Graphics.FillRectangle(backBrush, e.Bounds);
+            e.Graphics.DrawString(((ComboBox)sender).Items[e.Index].ToString(), ((Control)sender).Font, new SolidBrush(e.ForeColor), e.Bounds.X, e.Bounds.Y);
+        }
+
+        private void cbMapList_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            cbGameMode.SelectedItem = (((ComboBox)sender).SelectedItem as MapModel)?.GameMode.ToString();
         }
     }
 }

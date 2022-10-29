@@ -5,7 +5,7 @@ using PterodactylPavlovServerController.Models;
 using Steam.Models.SteamCommunity;
 using System.Diagnostics;
 
-namespace PterodactylPavlovRconClient
+namespace PterodactylPavlovRconClient.Controls
 {
     public partial class PlayerControl : UserControl
     {
@@ -24,6 +24,7 @@ namespace PterodactylPavlovRconClient
                     disconnected = value;
 
                     btnKick.Visible = !disconnected;
+                    btnCheatsMenu.Visible = !disconnected;
 
                     if (disconnected)
                     {
@@ -235,5 +236,10 @@ namespace PterodactylPavlovRconClient
         }
 
         internal void UpdateUsername(string username) => this.playerModel.PlayerName = username;
+
+        private void btnCheatsMenu_Click(object sender, EventArgs e)
+        {
+            new PlayerCheatMenu(pterodactylAPIService, server, playerModel).Show();
+        }
     }
 }

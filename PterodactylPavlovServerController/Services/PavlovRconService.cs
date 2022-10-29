@@ -108,5 +108,67 @@ namespace PterodactylPavlovServerController.Services
 
             return pavlovRconConnections[serverId];
         }
+
+        internal void GiveItem(string serverId, string uniqueId, string item)
+        {
+            PavlovRcon pavlovRcon = openConnection(serverId);
+            JsonElement result = JsonDocument.Parse(pavlovRcon.SendCommand(RconCommandType.GiveItem, uniqueId, item)).RootElement;
+            if (!result.GetProperty("Successful").GetBoolean())
+            {
+                throw new RconException();
+
+            }
+        }
+
+        internal void GiveCash(string serverId, string uniqueId, int amount)
+        {
+            PavlovRcon pavlovRcon = openConnection(serverId);
+            JsonElement result = JsonDocument.Parse(pavlovRcon.SendCommand(RconCommandType.GiveCash, uniqueId, amount.ToString())).RootElement;
+            if (!result.GetProperty("Successful").GetBoolean())
+            {
+                throw new RconException();
+
+            }
+        }
+        internal void GiveVehicle(string serverId, string uniqueId, string vehicle)
+        {
+            PavlovRcon pavlovRcon = openConnection(serverId);
+            JsonElement result = JsonDocument.Parse(pavlovRcon.SendCommand(RconCommandType.GiveVehicle, uniqueId, vehicle)).RootElement;
+            if (!result.GetProperty("Successful").GetBoolean())
+            {
+                throw new RconException();
+
+            }
+        }
+        internal void SetSkin(string serverId, string uniqueId, string skin)
+        {
+            PavlovRcon pavlovRcon = openConnection(serverId);
+            JsonElement result = JsonDocument.Parse(pavlovRcon.SendCommand(RconCommandType.SetPlayerSkin, uniqueId, skin)).RootElement;
+            if (!result.GetProperty("Successful").GetBoolean())
+            {
+                throw new RconException();
+
+            }
+        }
+        internal void Slap(string serverId, string uniqueId, int amount)
+        {
+            PavlovRcon pavlovRcon = openConnection(serverId);
+            JsonElement result = JsonDocument.Parse(pavlovRcon.SendCommand(RconCommandType.Slap, uniqueId, amount.ToString())).RootElement;
+            if (!result.GetProperty("Successful").GetBoolean())
+            {
+                throw new RconException();
+
+            }
+        }
+        internal void SwitchTeam(string serverId, string uniqueId, int team)
+        {
+            PavlovRcon pavlovRcon = openConnection(serverId);
+            JsonElement result = JsonDocument.Parse(pavlovRcon.SendCommand(RconCommandType.SwitchTeam, uniqueId, team.ToString())).RootElement;
+            if (!result.GetProperty("Successful").GetBoolean())
+            {
+                throw new RconException();
+
+            }
+        }
     }
 }
