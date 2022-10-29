@@ -280,7 +280,6 @@
             0,
             0,
             0});
-            this.nudRefreshInterval.ValueChanged += new System.EventHandler(this.nudRefreshInterval_ValueChanged);
             // 
             // lblRefreshInterval
             // 

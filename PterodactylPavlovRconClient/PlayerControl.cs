@@ -1,7 +1,7 @@
 ﻿using PterodactylPavlovRconClient.Models;
 using PterodactylPavlovRconClient.Properties;
+using PterodactylPavlovRconClient.Services;
 using PterodactylPavlovServerController.Models;
-using RestSharp;
 using Steam.Models.SteamCommunity;
 using System.Diagnostics;
 
@@ -9,7 +9,7 @@ namespace PterodactylPavlovRconClient
 {
     public partial class PlayerControl : UserControl
     {
-        private readonly RestClient restClient;
+        private readonly PterodactylAPIService pterodactylAPIService;
         private readonly PterodactylServerModel server;
         private readonly string uniqueId;
         private PlayerModel playerModel;
@@ -64,10 +64,10 @@ namespace PterodactylPavlovRconClient
             }
         }
 
-        public PlayerControl(RestClient restClient, PterodactylServerModel server, string uniqueId, PlayerModel? playerModel = null)
+        public PlayerControl(PterodactylAPIService pterodactylAPIService, PterodactylServerModel server, string uniqueId, PlayerModel? playerModel = null)
         {
             InitializeComponent();
-            this.restClient = restClient;
+            this.pterodactylAPIService = pterodactylAPIService;
             this.server = server;
             this.uniqueId = uniqueId;
 
@@ -87,10 +87,9 @@ namespace PterodactylPavlovRconClient
         public void RefreshSteamBans()
         {
             conditionalInvoke(() => pbLoading.Visible = true);
-            RestResponse<PlayerBansModel[]> steamBanResponse = restClient.Execute<PlayerBansModel[]>(new RestRequest($"steam/bans?steamId={uniqueId}"));
-            if (!steamBanResponse.IsSuccessful)
+            ApiResponse<PlayerBansModel[]> steamBanResponse = this.pterodactylAPIService.GetPlayerBans(uniqueId);
+            if (!steamBanResponse.Success)
             {
-                Console.WriteLine($"Could not get steam bans for user {uniqueId}");
                 lblVacBans.Text = "Steam unreachable";
                 lblGameBans.Text = "Steam unreachable";
                 lblDaysSinceLastBan.Text = "Steam unreachable";
@@ -102,7 +101,9 @@ namespace PterodactylPavlovRconClient
             int daysSinceLastBan = -1;
             bool currentlyVacBanned = false;
 
-            foreach (PlayerBansModel playerBans in steamBanResponse.Data!)
+            PlayerBansModel[] playerBansModels = steamBanResponse.Data!;
+
+            foreach (PlayerBansModel playerBans in playerBansModels)
             {
                 if ((playerBans.NumberOfVACBans > 0 || playerBans.NumberOfGameBans > 0 || playerBans.DaysSinceLastBan > 0) && (daysSinceLastBan == -1 || daysSinceLastBan < playerBans.DaysSinceLastBan))
                 {
@@ -155,8 +156,8 @@ namespace PterodactylPavlovRconClient
 
             conditionalInvoke(() => pbLoading.Visible = true);
 
-            RestResponse<PlayerModel> playerInfoResponse = restClient.Execute<PlayerModel>(new RestRequest($"rcon/player?serverId={server.ServerId}&uniqueId={uniqueId}"));
-            if (!playerInfoResponse.IsSuccessful)
+            ApiResponse<PlayerModel> playerInfoResponse = this.pterodactylAPIService.GetPlayerInfo(server.ServerId, uniqueId);
+            if (!playerInfoResponse.Success)
             {
                 updateValues(null);
             }
@@ -201,10 +202,10 @@ namespace PterodactylPavlovRconClient
 
         private void btnKick_Click(object sender, EventArgs e)
         {
-            RestResponse kickResponse = restClient.Execute(new RestRequest($"rcon/kick?serverId={server.ServerId}&uniqueId={uniqueId}", Method.Post));
-            if (!kickResponse.IsSuccessful)
+            ApiResponse kickResponse = this.pterodactylAPIService.DoKickPlayer(server.ServerId, uniqueId);
+            if (!kickResponse.Success)
             {
-                MessageBox.Show($"Kick failed: {kickResponse.Content}");
+                MessageBox.Show($"Kick failed: {kickResponse.ErrorMessage}", "Could not kick player", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                 return;
             }
         }
@@ -213,24 +214,26 @@ namespace PterodactylPavlovRconClient
         {
             if (Banned)
             {
-                RestResponse unbanResponse = restClient.Execute(new RestRequest($"rcon/unban?serverId={server.ServerId}&uniqueId={uniqueId}", Method.Post));
-                if (!unbanResponse.IsSuccessful)
+                ApiResponse unbanResponse = this.pterodactylAPIService.DoUnbanPlayer(server.ServerId, uniqueId);
+                if (!unbanResponse.Success)
                 {
-                    MessageBox.Show($"Unban failed: {unbanResponse.StatusCode} {unbanResponse.Content}");
+                    MessageBox.Show($"Unban failed: {unbanResponse.ErrorMessage}", "Could not unban player", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                     return;
                 }
                 Banned = false;
             }
             else
             {
-                RestResponse banResponse = restClient.Execute(new RestRequest($"rcon/ban?serverId={server.ServerId}&uniqueId={uniqueId}", Method.Post));
-                if (!banResponse.IsSuccessful)
+                ApiResponse banResponse = this.pterodactylAPIService.DoBanPlayer(server.ServerId, uniqueId);
+                if (!banResponse.Success)
                 {
-                    MessageBox.Show($"Ban failed: {banResponse.StatusCode} {banResponse.Content}");
+                    MessageBox.Show($"Ban failed: {banResponse.ErrorMessage}", "Could not ban player", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                     return;
                 }
                 Banned = true;
             }
         }
+
+        internal void UpdateUsername(string username) => this.playerModel.PlayerName = username;
     }
 }

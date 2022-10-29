@@ -1,19 +1,18 @@
-using Newtonsoft.Json;
+using Microsoft.Extensions.Logging;
+using PterodactylPavlovRconClient.Services;
 using PterodactylPavlovServerController.Models;
-using RestSharp;
 using Timer = System.Windows.Forms.Timer;
 
 namespace PterodactylPavlovRconClient
 {
     public partial class PavlovRcon : Form
     {
-        public PavlovRcon()
+        public PavlovRcon(PterodactylAPIService pterodactylAPIService, ILogger logger)
         {
             InitializeComponent();
 
-            restClient = new RestClient(Properties.Settings.Default.ppsc_basepath);
-            restClient.AddDefaultHeader("x-api-key", Properties.Settings.Default.ppsc_apikey);
-            restClient.AddDefaultHeader("x-pterodactyl-api-key", Properties.Settings.Default.ppsc_pterodactyl_key);
+            this.pterodactylAPIService = pterodactylAPIService;
+            this.logger = logger;
 
             Timer garbageCollectHttpClients = new Timer();
             garbageCollectHttpClients.Interval = 5000;
@@ -21,16 +20,18 @@ namespace PterodactylPavlovRconClient
             garbageCollectHttpClients.Start();
         }
 
-        RestClient restClient;
+        private readonly PterodactylAPIService pterodactylAPIService;
+        private readonly ILogger logger;
 
-        private async void PavlovRcon_Load(object sender, EventArgs e)
+        private void PavlovRcon_Load(object sender, EventArgs e)
         {
             PavlovRcon_Resize(sender, e);
 
-            RestResponse serverListResponse = await restClient.ExecuteAsync(new RestRequest("server/list"));
-            if (serverListResponse.StatusCode is not System.Net.HttpStatusCode.OK)
+            ApiResponse<PterodactylServerModel[]> serverListResponse = pterodactylAPIService.GetServers();
+
+            if (!serverListResponse.Success)
             {
-                MessageBox.Show(serverListResponse.Content, serverListResponse.StatusCode.ToString(), MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                MessageBox.Show(serverListResponse.ErrorMessage, "Failed to retrieve server list", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                 return;
             }
 
@@ -38,10 +39,10 @@ namespace PterodactylPavlovRconClient
             this.Controls.Remove(pbLoading);
             pbLoading = null;
 
-            foreach (PterodactylServerModel server in JsonConvert.DeserializeObject<PterodactylServerModel[]>(serverListResponse.Content!)!)
+            foreach (PterodactylServerModel server in serverListResponse.Data!)
             {
                 TabPage tabPage = new TabPage(server.Name);
-                tabPage.Controls.Add(new ServerControl(restClient, server)
+                tabPage.Controls.Add(new ServerControl(pterodactylAPIService, server, logger)
                 {
                     Dock = DockStyle.Fill
                 });
