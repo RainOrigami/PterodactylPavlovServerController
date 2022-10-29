@@ -226,13 +226,11 @@
             // 
             // flpOfflinePlayers
             // 
-            this.flpOfflinePlayers.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
             this.flpOfflinePlayers.AutoScroll = true;
-            this.flpOfflinePlayers.Location = new System.Drawing.Point(0, 77);
+            this.flpOfflinePlayers.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.flpOfflinePlayers.Location = new System.Drawing.Point(0, 74);
             this.flpOfflinePlayers.Name = "flpOfflinePlayers";
-            this.flpOfflinePlayers.Size = new System.Drawing.Size(1711, 246);
+            this.flpOfflinePlayers.Size = new System.Drawing.Size(1714, 249);
             this.flpOfflinePlayers.TabIndex = 3;
             // 
             // label3
@@ -243,7 +241,7 @@
             this.label3.ForeColor = System.Drawing.Color.LightGray;
             this.label3.Location = new System.Drawing.Point(0, 0);
             this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(150, 74);
+            this.label3.Size = new System.Drawing.Size(1714, 74);
             this.label3.TabIndex = 2;
             this.label3.Text = "Banned / Previous players";
             // 
