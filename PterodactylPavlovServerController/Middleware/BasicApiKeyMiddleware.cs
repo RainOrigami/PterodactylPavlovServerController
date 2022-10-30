@@ -16,16 +16,20 @@ namespace PterodactylPavlovServerController.Middleware
 
         public Task Invoke(HttpContext context)
         {
-            if (!context.Request.Headers.TryGetValue("x-api-key", out StringValues apiKeyValues) || apiKeyValues.Count != 1 || apiKeyValues.First() != configuration["apikey"])
+            PathString path = context.Request.Path;
+            if (path != "/api/Stats")
             {
-                context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
-                return Task.CompletedTask;
-            }
+                if (!context.Request.Headers.TryGetValue("x-api-key", out StringValues apiKeyValues) || apiKeyValues.Count != 1 || apiKeyValues.First() != configuration["apikey"])
+                {
+                    context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
+                    return Task.CompletedTask;
+                }
 
-            if (!context.Request.Headers.TryGetValue("x-pterodactyl-api-key", out StringValues pterodactylApiKeyValues) || pterodactylApiKeyValues.Count != 1)
-            {
-                context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
-                return Task.CompletedTask;
+                if (!context.Request.Headers.TryGetValue("x-pterodactyl-api-key", out StringValues pterodactylApiKeyValues) || pterodactylApiKeyValues.Count != 1)
+                {
+                    context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
+                    return Task.CompletedTask;
+                }
             }
 
             return this.next.Invoke(context);

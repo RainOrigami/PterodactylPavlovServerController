@@ -27,13 +27,16 @@ namespace PterodactylPavlovServerController.Services
 
         public MapDetailModel GetMapDetail(long mapId)
         {
-            if (!mapDetailCache.ContainsKey(mapId))
+            lock (mapDetailCache)
             {
-                mapDetailCache.Add(mapId, loadMapDetail(mapId));
-                File.WriteAllText(configuration["workshop_mapscache"], JsonConvert.SerializeObject(mapDetailCache));
-            }
+                if (!mapDetailCache.ContainsKey(mapId))
+                {
+                    mapDetailCache.Add(mapId, loadMapDetail(mapId));
+                    File.WriteAllText(configuration["workshop_mapscache"], JsonConvert.SerializeObject(mapDetailCache));
+                }
 
-            return mapDetailCache[mapId];
+                return mapDetailCache[mapId];
+            }
         }
 
         private MapDetailModel loadMapDetail(long mapId)
@@ -44,6 +47,11 @@ namespace PterodactylPavlovServerController.Services
             IHtmlDocument mapPageDocument = mapPageParser.ParseDocument(new HttpClient().GetStreamAsync(mapUrl).GetAwaiter().GetResult());
 
             string? mapImageUrl = mapPageDocument.QuerySelector("img#previewImageMain")?.GetAttribute("src");
+            if (mapImageUrl is null)
+            {
+                mapImageUrl = mapPageDocument.QuerySelector("img#previewImage")?.GetAttribute("src");
+            }
+
             if (mapImageUrl is not null)
             {
                 mapImageUrl = mapImageUrl.Substring(0, mapImageUrl.IndexOf('?'));

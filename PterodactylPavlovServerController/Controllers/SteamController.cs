@@ -39,5 +39,18 @@ namespace PterodactylPavlovServerController.Controllers
                 return Problem("Failed to retrieve user bans");
             }
         }
+
+        [HttpGet("summary")]
+        public IActionResult GetUserSummary(ulong steamId)
+        {
+            try
+            {
+                return Ok(steamService.GetPlayerSummary(steamId));
+            }
+            catch (Exception)
+            {
+                return Problem("Failed to retrieve user summary");
+            }
+        }
     }
 }

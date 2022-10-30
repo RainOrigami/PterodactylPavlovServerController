@@ -1,3 +1,4 @@
+using PavlovStatsReader;
 using PterodactylPavlovServerController.Middleware;
 using PterodactylPavlovServerController.Services;
 
@@ -7,16 +8,21 @@ builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddScoped<GoogleSheetService>();
-builder.Services.AddScoped<PterodactylService>();
+builder.Services.AddSingleton<PterodactylService>();
 builder.Services.AddScoped<ServerControlService>();
 builder.Services.AddScoped<PavlovRconService>();
 builder.Services.AddSingleton<SteamWorkshopService>();
 builder.Services.AddSingleton<SteamService>();
+builder.Services.AddSingleton<StatsContext>();
+builder.Services.AddSingleton<StatsCalculator>();
+builder.Services.AddSingleton<PavlovStatisticsService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+app.Services.GetRequiredService<PavlovStatisticsService>().RunStatsReader();
 
 if (app.Environment.IsDevelopment())
 {
@@ -28,9 +34,11 @@ app.UseHttpsRedirection();
 
 app.MapControllers();
 
-if (app.Environment.IsDevelopment())
+if (!app.Environment.IsDevelopment())
 {
     app.UseMiddleware<BasicApiKeyMiddleware>();
 }
 
 app.Run();
+
+app.Services.GetRequiredService<PavlovStatisticsService>().StopStatsReader();

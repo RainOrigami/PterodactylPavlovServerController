@@ -128,12 +128,12 @@ namespace PterodactylPavlovRconClient.Services
         public ApiResponse DoKickPlayer(string serverId, string steamId) => send($"rcon/kick?serverId={serverId}&uniqueId={steamId}", HttpMethod.Post);
         public ApiResponse DoUnbanPlayer(string serverId, string steamId) => send($"rcon/unban?serverId={serverId}&uniqueId={steamId}", HttpMethod.Post);
         public ApiResponse DoBanPlayer(string serverId, string steamId) => send($"rcon/ban?serverId={serverId}&uniqueId={steamId}", HttpMethod.Post);
-        internal ApiResponse DoGiveItem(string serverId, string uniqueId, string itemName) => send($"rcon/giveItem?serverId={serverId}&uniqueId={uniqueId}&item={itemName}");
-        internal ApiResponse DoGiveCash(string serverId, string uniqueId, int amount) => send($"rcon/giveCash?serverId={serverId}&uniqueId={uniqueId}&amount={amount}");
-        internal ApiResponse DoGiveVehicle(string serverId, string uniqueId, string vehicleName) => send($"rcon/giveVehicle?serverId={serverId}&uniqueId={uniqueId}&vehicle={vehicleName}");
-        internal ApiResponse DoSetSkin(string serverId, string uniqueId, string skinName) => send($"rcon/setSkin?serverId={serverId}&uniqueId={uniqueId}&skin={skinName}");
-        internal ApiResponse DoSlap(string serverId, string uniqueId, int amount) => send($"rcon/slap?serverId={serverId}&uniqueId={uniqueId}&amount={amount}");
-        internal ApiResponse DoSwitchTeam(string serverId, string uniqueId, int targetTeam) => send($"rcon/giveItem?serverId={serverId}&uniqueId={uniqueId}&team={targetTeam}");
+        public ApiResponse DoGiveItem(string serverId, string uniqueId, string itemName) => send($"rcon/giveItem?serverId={serverId}&uniqueId={uniqueId}&item={itemName}", HttpMethod.Post);
+        public ApiResponse DoGiveCash(string serverId, string uniqueId, int amount) => send($"rcon/giveCash?serverId={serverId}&uniqueId={uniqueId}&amount={amount}", HttpMethod.Post);
+        public ApiResponse DoGiveVehicle(string serverId, string uniqueId, string vehicleName) => send($"rcon/giveVehicle?serverId={serverId}&uniqueId={uniqueId}&vehicle={vehicleName}", HttpMethod.Post);
+        public ApiResponse DoSetSkin(string serverId, string uniqueId, string skinName) => send($"rcon/setSkin?serverId={serverId}&uniqueId={uniqueId}&skin={skinName}", HttpMethod.Post);
+        public ApiResponse DoSlap(string serverId, string uniqueId, int amount) => send($"rcon/slap?serverId={serverId}&uniqueId={uniqueId}&amount={amount}", HttpMethod.Post);
+        public ApiResponse DoSwitchTeam(string serverId, string uniqueId, int targetTeam) => send($"rcon/switchTeam?serverId={serverId}&uniqueId={uniqueId}&team={targetTeam}", HttpMethod.Post);
     }
 
     public class ApiResponse

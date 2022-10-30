@@ -190,7 +190,7 @@ namespace PterodactylPavlovServerController.Controllers
             }
         }
 
-
+        [HttpPost("giveItem")]
         public IActionResult GiveItem(string serverId, string uniqueId, string item)
         {
             try
@@ -208,6 +208,7 @@ namespace PterodactylPavlovServerController.Controllers
             }
         }
 
+        [HttpPost("giveCash")]
         public IActionResult GiveCash(string serverId, string uniqueId, int amount)
         {
             try
@@ -225,6 +226,7 @@ namespace PterodactylPavlovServerController.Controllers
             }
         }
 
+        [HttpPost("giveVehicle")]
         public IActionResult GiveVehicle(string serverId, string uniqueId, string vehicle)
         {
             try
@@ -242,6 +244,7 @@ namespace PterodactylPavlovServerController.Controllers
             }
         }
 
+        [HttpPost("setSkin")]
         public IActionResult SetSkin(string serverId, string uniqueId, string skin)
         {
             try
@@ -259,6 +262,7 @@ namespace PterodactylPavlovServerController.Controllers
             }
         }
 
+        [HttpPost("slap")]
         public IActionResult DoSlap(string serverId, string uniqueId, int amount)
         {
             try
@@ -276,6 +280,7 @@ namespace PterodactylPavlovServerController.Controllers
             }
         }
 
+        [HttpPost("switchTeam")]
         public IActionResult SwitchTeam(string serverId, string uniqueId, int team)
         {
             try

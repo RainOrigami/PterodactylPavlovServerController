@@ -38,6 +38,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\PavlovVR-Rcon\PavlovVR-Rcon\PavlovVR-Rcon.csproj" />
+    <ProjectReference Include="..\PavlovStatsReader\PavlovStatsReader.csproj" />
     <ProjectReference Include="..\PterodactylPavlovServerDomain\PterodactylPavlovServerDomain.csproj" />
   </ItemGroup>
 
