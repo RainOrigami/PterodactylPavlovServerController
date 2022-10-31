@@ -13,5 +13,7 @@
         public int BombsDefused { get; set; }
         public int TotalScore { get; set; }
         public double AverageScore { get; set; }
+        public string? MostKillsWithGun { get; set; }
+        public int MostKillsWithGunAmount { get; set; }
     }
 }
