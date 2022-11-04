@@ -154,9 +154,16 @@ namespace PavlovStatsReader
                     int totalScore = playerGrouping.Sum(p => calculatePlayerScore(p));
                     double averageScore = playerGrouping.Average(p => calculatePlayerScore(p));
 
+                    int suicides = statsContext.KillData.Count(k => k.Killer == playerGrouping.Key && (k.KilledBy == "None" || k.KilledBy == "killvolume"));
+
                     var playerKillsGroup = statsContext.KillData.Where(d => d.Killer == playerGrouping.Key).GroupBy(k => k.KilledBy).Select(g => new { Gun = g.Key, Count = g.Count() }).OrderByDescending(g => g.Count).FirstOrDefault();
                     string? mostKillsWith = playerKillsGroup?.Gun;
                     int mostKillsWithAmount = playerKillsGroup?.Count ?? 0;
+
+                    var playerMapAverageScoreGroup = playerGrouping.Select(g => g.EndOfMapStats).GroupBy(m => new { Map = m.MapLabel, GameMode = m.GameMode }).Select(g => new { Map = g.Key.Map, GameMode = g.Key.GameMode, AverageScore = g.Average(m => calculatePlayerScore(m.PlayerStats.First(p => p.UniqueId == playerGrouping.Key))) }).OrderByDescending(g => g.AverageScore).FirstOrDefault();
+                    string? bestMap = playerMapAverageScoreGroup?.Map;
+                    string? bestMapGameMode = playerMapAverageScoreGroup?.GameMode;
+                    double bestMapAverageScore = playerMapAverageScoreGroup?.AverageScore ?? 0;
 
                     lock (playerStats)
                     {
@@ -169,12 +176,16 @@ namespace PavlovStatsReader
                             Assists = assists,
                             TeamKills = teamKills,
                             Headshots = headshots,
+                            Suicides = suicides,
                             BombsPlanted = bombsPlanted,
                             BombsDefused = bombsDefused,
                             TotalScore = totalScore,
                             AverageScore = averageScore,
                             MostKillsWithGun = mostKillsWith,
-                            MostKillsWithGunAmount = mostKillsWithAmount
+                            MostKillsWithGunAmount = mostKillsWithAmount,
+                            BestMap = bestMap,
+                            BestMapGameMode = bestMapGameMode,
+                            BestMapAverageScore = bestMapAverageScore
                         });
                     }
                 }

@@ -12,6 +12,9 @@ namespace PterodactylPavlovServerController.Services
 {
     public class PavlovStatisticsService
     {
+        private const int CARD_WIDTH = 300;
+        private const int CARDS_PER_ROW = 4;
+
         private readonly IConfiguration configuration;
         private readonly StatsContext statsContext;
         private readonly PterodactylService pterodactylService;
@@ -192,17 +195,32 @@ namespace PterodactylPavlovServerController.Services
             {
                 StringBuilder serverStatsBuilder = new StringBuilder();
 
+                string serverName = (pterodactylService.ReadFile(server.ServerId, "/Pavlov/Saved/Config/LinuxServer/Game.ini").Split('\n').FirstOrDefault(l => l.StartsWith("ServerName=")) ?? $"ServerName={server.Name}").Replace("ServerName=", "");
+
+
                 serverStatsBuilder.AppendLine($@"<!doctype html>
 <html lang=""en"">
 <head>
     <meta charset=""utf-8"">
     <meta name=""viewport"" content=""width=device-width, initial-scale=1"">
-    <title>{server.Name} server statistics</title>
+    <title>{serverName} server statistics</title>
     <link href=""https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"" rel=""stylesheet"" integrity=""sha384-Zenh87qX5JnK2Jl0vWa8Ck2rdkQ2Bzep5IDxbcnCeuOxjzrPF/et3URy9Bv1WTRi"" crossorigin=""anonymous"">
+    <style>
+        .row-alternating {{
+            background: #f0f0f0;
+        }}
+        .row-alternating:nth-child(2n) {{
+            background: #fcfcfc;
+        }}
+        a:link {{ text-decoration: none; }}
+        a:visited {{ text-decoration: none; }}
+        a:hover {{ text-decoration: none; }}
+        a:active {{ text-decoration: none; }}
+    </style>
 </head>
 <body>
-    <div class=""container-lg"">
-        <h1>{server.Name} server statistics</h1>
+    <div class=""container-xxl"">
+        <h1>{serverName} server statistics</h1>
 
         <h2>Table of contents</h2>
         <ol>
@@ -274,17 +292,17 @@ namespace PterodactylPavlovServerController.Services
 
                     lock (mapsStatsContent)
                     {
-                        mapsStatsContent.Add(mapStats, createStatsCard($"{mapStats.MapId}-{mapStats.GameMode}",
+                        mapsStatsContent.Add(mapStats, createStatsCard($"map-{mapStats.MapId}-{mapStats.GameMode}",
                             mapDetail.URL,
                             true,
-                            $"{mapDetail.ImageURL}/?imw=256&imh=256&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true",
+                            $"{mapDetail.ImageURL}/?imw={CARD_WIDTH}&imh={CARD_WIDTH}&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true",
 
                             $"{mapDetail.Name} ({mapStats.GameMode})", new Dictionary<string, string>()
                             {
                                 { "Played",  $"{mapStats.PlayCount} time{(mapStats.PlayCount != 1 ? "s" : "")}" },
                                 { "Wins",  $"Blue {mapStats.Team0Wins}, Red {mapStats.Team1Wins}" },
                                 { "Rounds", $"{mapStats.AverageRounds} avg, {mapStats.MaxRounds} max, {mapStats.MinRounds} min" },
-                                { "Best player", $"{(mapStats.BestPlayer == null ? "Nobody" : $@"<a href=""#player-{mapStats.BestPlayer}"">{bestPlayerUsername}</a> ({mapStats.MaxAveragePlayerScore} average score)")}" }
+                                { "Best player", $"{(mapStats.BestPlayer == null ? "Nobody" : $@"<a href=""#player-{mapStats.BestPlayer}"">{bestPlayerUsername}</a><br/>{mapStats.MaxAveragePlayerScore} avg score")}" }
                             }));
                     }
                 });
@@ -310,8 +328,8 @@ namespace PterodactylPavlovServerController.Services
                         new()
                         {
                             { "Kills", $"{gunStats.Kills} ({Math.Round(calculateSafePercent(gunStats.Kills, serverStats.TotalKills), 1)}%)" },
-                            { "Headshots", $"{gunStats.Headshots} ({Math.Round(calculateSafePercent(gunStats.Headshots, gunStats.Kills))}% of own kills)" },
-                            { "Best player", $"{(gunStats.BestPlayer == null ? "Nobody" : $@"<a href=""#player-{gunStats.BestPlayer}"">{bestPlayerUsername}</a> ({gunStats.BestPlayerKills} kills)")}" }
+                            { "Headshots", $"{gunStats.Headshots} ({Math.Round(calculateSafePercent(gunStats.Headshots, gunStats.Kills))}%<a href=\"#asterix-own-kills\">*</a>)" },
+                            { "Best player", $"{(gunStats.BestPlayer == null ? "Nobody" : $@"<a href=""#player-{gunStats.BestPlayer}"">{bestPlayerUsername}</a> ({gunStats.BestPlayerKills}&nbsp;kills)")}" }
                         }));
                 }
                 serverStatsBuilder.AppendLine(splitInRows(gunCards.ToArray()));
@@ -333,11 +351,11 @@ namespace PterodactylPavlovServerController.Services
                         new()
                         {
                             { "Kills", $"{teamStats.TotalKills} ({Math.Round(calculateSafePercent(teamStats.TotalKills, serverStats.TotalKills), 1)}%)" },
-                            { "HS kills", $"{teamStats.TotalHeadshots} ({Math.Round(calculateSafePercent(teamStats.TotalHeadshots, teamStats.TotalKills), 1)}% of own kills)" },
+                            { "HS kills", $"{teamStats.TotalHeadshots} ({Math.Round(calculateSafePercent(teamStats.TotalHeadshots, teamStats.TotalKills), 1)}%<a href=\"#asterix-own-kills\">*</a>)" },
                             { "Assists", $"{teamStats.TotalAssists} ({Math.Round(calculateSafePercent(teamStats.TotalAssists, serverStats.TotalAssists), 1)}%)" },
                             { "Teamkills", $"{teamStats.TotalTeamkills} ({Math.Round(calculateSafePercent(teamStats.TotalTeamkills, serverStats.TotalTeamkills), 1)}%)" },
                             { "Victories", teamStats.TotalVictories.ToString() },
-                            { "Best player", $"{(teamStats.BestPlayer == null ? "Nobody" : $@"<a href=""#player-{teamStats.BestPlayer}"">{bestPlayerUsername}</a> ({teamStats.BestPlayerAvgScore} avg score)")}" },
+                            { "Best player", $"{(teamStats.BestPlayer == null ? "Nobody" : $@"<a href=""#player-{teamStats.BestPlayer}"">{bestPlayerUsername}</a><br />{teamStats.BestPlayerAvgScore} avg score")}" },
                             { "Best gun", $"{(teamStats.BestGun == null ? "None" : $@"<a href=""#gun-{teamStats.BestGun}"">{(gunMap.ContainsKey(teamStats.BestGun) ? gunMap[teamStats.BestGun] : teamStats.BestGun)}</a> ({teamStats.BestGunKillCount} kills)")}" }
                         }));
                 }
@@ -390,6 +408,12 @@ namespace PterodactylPavlovServerController.Services
                                 vacCount += (int)playerBan.NumberOfVACBans;
                             }
 
+                            MapDetailModel? bestMap = null;
+                            if (playerStats.BestMap != null)
+                            {
+                                bestMap = steamWorkshopService.GetMapDetail(long.Parse(playerStats.BestMap[3..]));
+                            }
+
                             lock (playerStatsContent)
                             {
                                 playerStatsContent.Add(playerStats, createStatsCard($"player-{playerStats.UniqueId}",
@@ -403,12 +427,14 @@ namespace PterodactylPavlovServerController.Services
                                         {"Kills", $"{playerStats.Kills} ({Math.Round(calculateSafePercent(playerStats.Kills, totalKills), 1)}%)"},
                                         {"Deaths", $"{playerStats.Deaths} ({Math.Round(calculateSafePercent(playerStats.Deaths, totalDeaths), 1)}%)"},
                                         {"Assists", $"{playerStats.Assists} ({Math.Round(calculateSafePercent(playerStats.Assists, totalAssists), 1)}%)"},
-                                        {"Team kills", $"{playerStats.TeamKills} ({Math.Round(calculateSafePercent(playerStats.TeamKills, playerStats.Kills), 1)}% of own kills)"},
-                                        {"HS kills", $"{playerStats.Headshots} ({Math.Round(calculateSafePercent(playerStats.Headshots, playerStats.Kills), 1)}% of own kills)"},
+                                        {"Team kills", $"{playerStats.TeamKills} ({Math.Round(calculateSafePercent(playerStats.TeamKills, playerStats.Kills), 1)}%<a href=\"#asterix-own-kills\">*</a>)"},
+                                        {"HS kills", $"{playerStats.Headshots} ({Math.Round(calculateSafePercent(playerStats.Headshots, playerStats.Kills), 1)}%<a href=\"#asterix-own-kills\">*</a>)"},
+                                        {"Suicides", playerStats.Suicides.ToString() },
                                         {"Avg. points", $"{Math.Round(playerStats.AverageScore, 0)}"},
                                         {"Total points", $"{playerStats.TotalScore} ({Math.Round(calculateSafePercent(playerStats.TotalScore, totalScore), 1)}%)"},
                                         {"Bombs", $"{playerStats.BombsPlanted} planted, {playerStats.BombsDefused} defused"},
-                                        {"Best gun", $"{(playerStats.MostKillsWithGun == null ? "None" : $@"<a href=""#gun-{playerStats.MostKillsWithGun}"">{(gunMap.ContainsKey(playerStats.MostKillsWithGun) ? gunMap[playerStats.MostKillsWithGun] : playerStats.MostKillsWithGun)}</a>: {playerStats.MostKillsWithGunAmount} ({Math.Round(calculateSafePercent(playerStats.MostKillsWithGunAmount, playerStats.Kills), 1)}% of own kills)")}"},
+                                        {"Best gun", $"{(playerStats.MostKillsWithGun == null ? "None" : $@"<a href=""#gun-{playerStats.MostKillsWithGun}"">{(gunMap.ContainsKey(playerStats.MostKillsWithGun) ? gunMap[playerStats.MostKillsWithGun] : playerStats.MostKillsWithGun)}</a><br />{playerStats.MostKillsWithGunAmount} kills ({Math.Round(calculateSafePercent(playerStats.MostKillsWithGunAmount, playerStats.Kills), 1)}%<a href=""#asterix-own-kills"">*</a>)")}"},
+                                        {"Best map", $"{(playerStats.BestMap == null ? "None" : $@"<a href=""#map-{playerStats.BestMap}-{playerStats.BestMapGameMode}"">{bestMap!.Name}</a><br />{playerStats.BestMapAverageScore} avg score")}" },
                                         {"VAC", $"{(vacCount > 0 ? $@"<span class=""text-danger"">Yes, {vacCount}" : $@"<span class=""text-success"">No")}</span>"}
                                     }));
                             }
@@ -468,7 +494,7 @@ namespace PterodactylPavlovServerController.Services
                         honorableMentionsCards.Add(mostHeadshots);
                     }
 
-                    string? highestHSKR = getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.Kills > 10 ? (double)p.Headshots / p.Kills : 0, p => p.Kills, 1, false, "Highest headshot kill to kill ratio", "HSKR");
+                    string? highestHSKR = getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.Kills > 10 ? (double)p.Headshots / p.Kills : 0, p => p.Kills, 1, false, "Highest HS-kill to kill ratio", "HSKR");
                     if (highestHSKR != null)
                     {
                         honorableMentionsCards.Add(highestHSKR);
@@ -494,10 +520,16 @@ namespace PterodactylPavlovServerController.Services
                         dishonorableMentionsCards.Add(mostTeamKills);
                     }
 
-                    string? lowestHSKR = getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.Kills > 10 ? (double)p.Headshots / p.Kills : double.MaxValue, p => p.Kills, 1, true, "Lowest headshot kill to kill ratio", "HSKR");
+                    string? lowestHSKR = getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.Kills > 10 ? (double)p.Headshots / p.Kills : double.MaxValue, p => p.Kills, 1, true, "Lowest HS-kill to kill ratio", "HSKR");
                     if (lowestHSKR != null)
                     {
                         dishonorableMentionsCards.Add(lowestHSKR);
+                    }
+
+                    string? mostSuicides = getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.Kills > 10 ? p.Suicides : 0, p => p.Kills, 0, false, "Most suicides", "Suicides");
+                    if (mostSuicides != null)
+                    {
+                        dishonorableMentionsCards.Add(mostSuicides);
                     }
 
                     serverStatsBuilder.AppendLine(splitInRows(dishonorableMentionsCards.ToArray()));
@@ -511,6 +543,7 @@ namespace PterodactylPavlovServerController.Services
                 serverStatsBuilder.AppendLine("</div>");
 
                 serverStatsBuilder.AppendLine(@$"
+        <h3 id=""asterix-own-kills"">Percentages marked with * are calculated on own kill count, not total kill count</h3>
     </div>
     <footer class=""text-center text-lg-start bg-light text-muted"">
       <section class=""d-flex justify-content-center justify-content-lg-between p-4 border-bottom"">
@@ -546,7 +579,7 @@ namespace PterodactylPavlovServerController.Services
                 {
                     rowCards.AppendLine("<div class=\"row mt-3\">");
                 }
-                else if (i % 4 == 0)
+                else if (i % CARDS_PER_ROW == 0)
                 {
                     rowCards.AppendLine("</div>");
                     rowCards.AppendLine("<div class=\"row mt-3\">");
@@ -583,13 +616,13 @@ namespace PterodactylPavlovServerController.Services
 
             return createStatsCard(null,
                 $"#player-{highestValuePlayer.UniqueId}",
-                true,
+                false,
                 playerSummary.AvatarFullUrl,
                 title,
                 new()
                 {
                     { "Player", $"<a href=\"#player-{highestValuePlayer.UniqueId}\">{playerSummary.Nickname}</a>" },
-                    { statName, Math.Round(highestValue == -0 ? 0 : highestValue, round).ToString() }
+                    { statName, Math.Round(highestValue == -0 ? 0 : highestValue, round).ToString($"0{(round == 0 ? "" : ".".PadRight(round + 1, '0'))}") }
                 });
 
         }
@@ -601,15 +634,17 @@ namespace PterodactylPavlovServerController.Services
 
         private string createStatsCard(string? id, string? link, bool openInBlank, string imageURL, string title, Dictionary<string, string> values)
         {
-            return @$"<div class=""col""><div class=""card h-100"" style=""width: 256px"" {(id == null ? "" : $@"id=""{id}""")}>
+            return @$"<div class=""col""><div class=""card h-100"" style=""width: {CARD_WIDTH}px"" {(id == null ? "" : $@"id=""{id}""")}>
                 {(link == null ? "" : $@"<a href=""{link}""{(openInBlank ? " target=\"_blank\"" : "")}>")}
-                    <img class=""card-img-top"" src=""{imageURL}"" width=""256"" height=""256"" />
+                    <img class=""card-img-top"" src=""{imageURL}"" width=""{CARD_WIDTH}"" height=""{CARD_WIDTH}"" />
                 {(link == null ? "" : "</a>")}
                 <div class=""card-body"">
                     <h5 class=""card-title"">{(link == null ? "" : $@"<a href=""{link}""{(openInBlank ? " target=\"blank\"" : "")}>")}{title}{(link == null ? "" : $@"</a>")}</h5>
 
                     <p class=""card-text"">
-                        {String.Join(Environment.NewLine, values.Select(kvp => $"<b>{kvp.Key}:</b> {kvp.Value}<br />"))}
+                        <div class=""container px-0"">
+                            {String.Join(Environment.NewLine, values.Select(kvp => $"<div class=\"row row-alternating gx-0\"><div class=\"col-auto px-1\"><b>{kvp.Key}:</b></div><div class=\"col text-end px-1\">{kvp.Value}</div></div>"))}
+                        </div>
                     </p>
                 </div>
             </div></div>";
