@@ -2,6 +2,11 @@
 
 ASP.net web API (.net 6) for controlling aspects of Pavlov VR servers in Pterodactyl, highly specific to the use case of DE-Community "Hearthstrike" Pavlov VR servers
 
+Example of generated server, map, gun and player statistics: https://admin.bloodisgood.net/ppsc/api/stats?serverId=072fd1a7
+
+Screenshot RCON tool:
+![image](https://user-images.githubusercontent.com/51454971/199983104-7d4c243b-e89c-49be-9fbf-10cfdbbd007c.png)
+
 Contains a web api for interfacing with pterodactyl, pavlov rcon, steamapi, google sheets.
 Also contains a winforms pavlov rcon client that:
 - fetches pavlov servers automatically from pterodactyl
