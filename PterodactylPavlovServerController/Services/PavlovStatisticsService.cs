@@ -61,6 +61,7 @@ namespace PterodactylPavlovServerController.Services
             { "m9", "Beretta M9" },
             { "P90", "P90" },
             { "aug", "AUG A3" },
+            { "flash", "Flashbang (US)" }
         };
 
         public void RunStatsReader()
@@ -543,7 +544,19 @@ namespace PterodactylPavlovServerController.Services
                 serverStatsBuilder.AppendLine("</div>");
 
                 serverStatsBuilder.AppendLine(@$"
-        <h3 id=""asterix-own-kills"">Percentages marked with * are calculated on own kill count, not total kill count</h3>
+        <h3 id=""asterix-own-kills"">Percentages marked with *</h3>
+        <p>Percentages marked with * are calculated using own amounts (eg. own kills), not total kill count. Unmarked percentages are calculated using total amounts (eg. total kills).</p>
+        <h3>Score</h3>
+        <p>Score is calculated using the following formula:<br />
+        Kills * {StatsCalculator.SCORE_WEIGHT_KILL} +<br />
+        Deaths * {StatsCalculator.SCORE_WEIGHT_DEATH} +<br />
+        Assists * {StatsCalculator.SCORE_WEIGHT_ASSIST} +<br />
+        Headshots * {StatsCalculator.SCORE_WEIGHT_HEADSHOT} +<br />
+        Teamkills * {StatsCalculator.SCORE_WEIGHT_TEAMKILL} +<br />
+        Bomb Plants * {StatsCalculator.SCORE_WEIGHT_PLANT} +<br />
+        Bomb Defuses * {StatsCalculator.SCORE_WEIGHT_DEFUSE}</p>
+        <h3>Some values don't seem to add up</h3>
+        <p>You may notice that some values don't seem to add up, like Team Blue Kills + Team Red Kills is not equal to Total Kills. This is caused because some statistics have filters applied, like only counting matches with at least two players or with a combined Team Blue and Team Red score of at least 10 (draws and skipped maps). Prerounds often are omitted as well. Total kills however counts each single kill.</p>
     </div>
     <footer class=""text-center text-lg-start bg-light text-muted"">
       <section class=""d-flex justify-content-center justify-content-lg-between p-4 border-bottom"">

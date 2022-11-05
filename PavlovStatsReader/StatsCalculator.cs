@@ -234,13 +234,13 @@ namespace PavlovStatsReader
             return mapsStats.ToArray();
         }
 
-        private const int SCORE_WEIGHT_KILL = 10;
-        private const int SCORE_WEIGHT_DEATH = -1;
-        private const int SCORE_WEIGHT_ASSIST = 2;
-        private const int SCORE_WEIGHT_HEADSHOT = 5;
-        private const int SCORE_WEIGHT_TEAMKILL = -40;
-        private const int SCORE_WEIGHT_PLANT = 50;
-        private const int SCORE_WEIGHT_DEFUSE = 50;
+        public const int SCORE_WEIGHT_KILL = 10;
+        public const int SCORE_WEIGHT_DEATH = -1;
+        public const int SCORE_WEIGHT_ASSIST = 2;
+        public const int SCORE_WEIGHT_HEADSHOT = 5;
+        public const int SCORE_WEIGHT_TEAMKILL = -40;
+        public const int SCORE_WEIGHT_PLANT = 50;
+        public const int SCORE_WEIGHT_DEFUSE = 50;
 
         private int calculatePlayerScore(PlayerStats playerStats)
         {
