@@ -61,7 +61,17 @@ namespace PterodactylPavlovServerController.Services
             { "m9", "Beretta M9" },
             { "P90", "P90" },
             { "aug", "AUG A3" },
-            { "flash", "Flashbang (US)" }
+            { "flash", "Flashbang (US)" },
+            { "sock", "Glock 18C" },
+            { "awp", "AWM" },
+            { "AntiTank", "Barrett M99" },
+            { "AutoSniper", "G3SG1" },
+            { "akshorty", "Draco AK-47" },
+            { "AK", "PP-19 Bizon-2" },
+            { "SMG", "UMP-45" },
+            { "scur", "FN SCAR-20S" },
+            { "hunting", "Scout" },
+            { "vanas", "FAMAS F1" },
         };
 
         public void RunStatsReader()
@@ -69,7 +79,6 @@ namespace PterodactylPavlovServerController.Services
             new Thread(new ThreadStart(() => StatsReader())).Start();
         }
 
-        private static readonly Regex pavlovLineHeaderRegex = new(@"^\[\d{4}\.\d{2}\.\d{2}-\d{2}\.\d{2}\.\d{2}:\d+\]\[\d+\]", RegexOptions.Compiled);
         private static readonly Regex fileNameDateTimeRegex = new(@"(?<date>\d{4}\.\d{2}\.\d{2}-\d{2}\.\d{2}\.\d{2})", RegexOptions.Compiled);
 
         private PterodactylServerModel[] readStatsToDb()
