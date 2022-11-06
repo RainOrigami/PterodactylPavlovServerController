@@ -1,6 +1,6 @@
-﻿using PterodactylPavlovServerController.Models;
+﻿using PterodactylPavlovServerDomain.Models;
 
-namespace PterodactylPavlovServerController.Exceptions
+namespace PterodactylPavlovServerDomain.Exceptions
 {
     public class InvalidMapsException : Exception
     {

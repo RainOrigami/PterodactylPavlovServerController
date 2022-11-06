@@ -2,7 +2,7 @@
 using AngleSharp.Html.Parser;
 using Newtonsoft.Json;
 using PterodactylPavlovServerController.Exceptions;
-using PterodactylPavlovServerController.Models;
+using PterodactylPavlovServerDomain.Models;
 
 namespace PterodactylPavlovServerController.Services
 {

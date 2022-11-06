@@ -1,9 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
 using PavlovVR_Rcon;
-using PterodactylPavlovRconClient.Models;
 using PterodactylPavlovRconClient.Properties;
 using PterodactylPavlovRconClient.Services;
-using PterodactylPavlovServerController.Models;
+using PterodactylPavlovServerDomain.Models;
 using Control = System.Windows.Forms.Control;
 
 namespace PterodactylPavlovRconClient.Controls

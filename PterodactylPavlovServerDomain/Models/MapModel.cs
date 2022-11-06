@@ -1,6 +1,6 @@
 ﻿using PavlovVR_Rcon;
 
-namespace PterodactylPavlovRconClient.Models
+namespace PterodactylPavlovServerDomain.Models
 {
     public class MapModel
     {

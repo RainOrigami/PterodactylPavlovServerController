@@ -2,7 +2,7 @@
 using Newtonsoft.Json;
 using System.Text.RegularExpressions;
 
-namespace PterodactylPavlovServerController.Models
+namespace PterodactylPavlovServerDomain.Models
 {
     public class MapRowModel : BaseRecord
     {

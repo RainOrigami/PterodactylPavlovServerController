@@ -1,7 +1,7 @@
 ﻿using PterodactylPavlovServerController.Exceptions;
 using System.Text.RegularExpressions;
 
-namespace PterodactylPavlovServerController.Models
+namespace PterodactylPavlovServerDomain.Models
 {
     public class ServerInfoModel
     {

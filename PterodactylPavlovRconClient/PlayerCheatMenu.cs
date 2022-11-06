@@ -1,7 +1,6 @@
 ﻿using PavlovVR_Rcon;
-using PterodactylPavlovRconClient.Models;
 using PterodactylPavlovRconClient.Services;
-using PterodactylPavlovServerController.Models;
+using PterodactylPavlovServerDomain.Models;
 
 namespace PterodactylPavlovRconClient
 {

@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using PterodactylPavlovRconClient.Models;
-using PterodactylPavlovServerController.Models;
+using PterodactylPavlovServerDomain.Models;
 using Steam.Models.SteamCommunity;
 using System.Text.Json;
 

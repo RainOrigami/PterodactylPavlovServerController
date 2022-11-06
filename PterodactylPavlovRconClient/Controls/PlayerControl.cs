@@ -1,7 +1,6 @@
-﻿using PterodactylPavlovRconClient.Models;
-using PterodactylPavlovRconClient.Properties;
+﻿using PterodactylPavlovRconClient.Properties;
 using PterodactylPavlovRconClient.Services;
-using PterodactylPavlovServerController.Models;
+using PterodactylPavlovServerDomain.Models;
 using Steam.Models.SteamCommunity;
 using System.Diagnostics;
 

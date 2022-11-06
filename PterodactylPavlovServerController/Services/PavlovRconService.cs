@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json;
 using PavlovVR_Rcon;
 using PterodactylPavlovServerController.Exceptions;
-using PterodactylPavlovServerController.Models;
+using PterodactylPavlovServerDomain.Models;
 using System.Text.Json;
 
 namespace PterodactylPavlovServerController.Services

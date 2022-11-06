@@ -1,18 +1,23 @@
-﻿using PterodactylPavlovServerController.Exceptions;
-using PterodactylPavlovServerController.Models;
+﻿using PterodactylPavlovServerDomain.Exceptions;
+using PterodactylPavlovServerDomain.Models;
 using System.Text.RegularExpressions;
 
 namespace PterodactylPavlovServerController.Services
 {
-    public class ServerControlService
+    public class PavlovServerService
     {
-        private readonly IConfiguration configuration;
         private readonly PterodactylService pterodactylService;
+        private readonly IConfiguration configuration;
 
-        public ServerControlService(IConfiguration configuration, PterodactylService pterodactylService)
+        public PavlovServerService(PterodactylService pterodactylService, IConfiguration configuration)
         {
-            this.configuration = configuration;
             this.pterodactylService = pterodactylService;
+            this.configuration = configuration;
+        }
+
+        public string GetServerName(string serverId)
+        {
+            return pterodactylService.ReadFile(serverId, configuration["pavlov_gameinipath"]).Split('\n').FirstOrDefault(l => l.StartsWith("ServerName="))?.Replace("ServerName=", "") ?? "Unnamed server";
         }
 
         public MapRowModel[] UpdateMaps(string serverId, MapRowModel[] mapRows)
@@ -31,7 +36,6 @@ namespace PterodactylPavlovServerController.Services
             return mapRows;
         }
 
-        //MapRotation=(MapId="UGC2362993920", GameMode="SND")
         private static readonly Regex mapRotationLineRegex = new Regex(@"^MapRotation=\(MapId=""UGC(?<id>\d+)"", GameMode=""(?<gamemode>[^""]+)""\)$");
 
         public MapRowModel[] GetCurrentMapRotation(string serverId)

@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using PterodactylPavlovServerController.Services;
 
-namespace PterodactylPavlovServerController.Controllers
+namespace PterodactylPavlovServerController.Controllers.Api
 {
     [Route("api/[controller]")]
     [ApiController]

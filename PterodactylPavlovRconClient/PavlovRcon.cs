@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 using PterodactylPavlovRconClient.Services;
-using PterodactylPavlovServerController.Models;
+using PterodactylPavlovServerDomain.Models;
 using Timer = System.Windows.Forms.Timer;
 
 namespace PterodactylPavlovRconClient

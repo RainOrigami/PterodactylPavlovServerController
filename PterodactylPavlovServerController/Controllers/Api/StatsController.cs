@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace PterodactylPavlovServerController.Controllers
+namespace PterodactylPavlovServerController.Controllers.Api
 {
     [Route("api/[controller]")]
     [ApiController]

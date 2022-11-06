@@ -21,8 +21,9 @@ namespace PterodactylPavlovServerController.Services
         private readonly SteamService steamService;
         private readonly StatsCalculator statsCalculator;
         private readonly SteamWorkshopService steamWorkshopService;
+        private readonly PavlovServerService pavlovServerService;
 
-        public PavlovStatisticsService(IConfiguration configuration, StatsContext statsContext, PterodactylService pterodactylService, SteamService steamService, StatsCalculator statsCalculator, SteamWorkshopService steamWorkshopService)
+        public PavlovStatisticsService(IConfiguration configuration, StatsContext statsContext, PterodactylService pterodactylService, SteamService steamService, StatsCalculator statsCalculator, SteamWorkshopService steamWorkshopService, PavlovServerService pavlovServerService)
         {
             this.configuration = configuration;
             this.statsContext = statsContext;
@@ -30,6 +31,7 @@ namespace PterodactylPavlovServerController.Services
             this.steamService = steamService;
             this.statsCalculator = statsCalculator;
             this.steamWorkshopService = steamWorkshopService;
+            this.pavlovServerService = pavlovServerService;
             statsContext.Database.EnsureCreated();
         }
 
@@ -205,7 +207,7 @@ namespace PterodactylPavlovServerController.Services
             {
                 StringBuilder serverStatsBuilder = new StringBuilder();
 
-                string serverName = (pterodactylService.ReadFile(server.ServerId, "/Pavlov/Saved/Config/LinuxServer/Game.ini").Split('\n').FirstOrDefault(l => l.StartsWith("ServerName=")) ?? $"ServerName={server.Name}").Replace("ServerName=", "");
+                string serverName = pavlovServerService.GetServerName(server.ServerId);
 
 
                 serverStatsBuilder.AppendLine($@"<!doctype html>

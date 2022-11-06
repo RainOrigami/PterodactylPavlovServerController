@@ -7,10 +7,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
 
-builder.Services.AddScoped<GoogleSheetService>();
-builder.Services.AddSingleton<PterodactylService>();
-builder.Services.AddScoped<ServerControlService>();
 builder.Services.AddScoped<PavlovRconService>();
+builder.Services.AddSingleton<GoogleSheetService>();
+builder.Services.AddSingleton<PterodactylService>();
+builder.Services.AddSingleton<PavlovServerService>();
 builder.Services.AddSingleton<SteamWorkshopService>();
 builder.Services.AddSingleton<SteamService>();
 builder.Services.AddSingleton<StatsContext>();

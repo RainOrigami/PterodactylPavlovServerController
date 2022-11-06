@@ -1,4 +1,4 @@
-﻿namespace PterodactylPavlovServerController.Models
+﻿namespace PterodactylPavlovServerDomain.Models
 {
     public class MapDetailModel
     {

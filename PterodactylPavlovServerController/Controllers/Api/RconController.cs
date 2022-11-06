@@ -1,10 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using PterodactylPavlovServerController.Exceptions;
-using PterodactylPavlovServerController.Models;
 using PterodactylPavlovServerController.Services;
+using PterodactylPavlovServerDomain.Models;
 using System.Text.RegularExpressions;
 
-namespace PterodactylPavlovServerController.Controllers
+namespace PterodactylPavlovServerController.Controllers.Api
 {
     [Route("api/[controller]")]
     [ApiController]

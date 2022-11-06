@@ -1,4 +1,4 @@
-﻿namespace PterodactylPavlovRconClient.Models
+﻿namespace PterodactylPavlovServerDomain.Models
 {
     public class PlayerModel
     {

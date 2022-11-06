@@ -5,17 +5,17 @@ using PterodactylPavlovServerController.Models;
 using PterodactylPavlovServerController.Services;
 using System.Text.RegularExpressions;
 
-namespace PterodactylPavlovServerController.Controllers
+namespace PterodactylPavlovServerController.Controllers.Api
 {
     [Route("api/[controller]")]
     [ApiController]
     public class MapsController : ControllerBase
     {
-        private readonly ServerControlService serverControlService;
+        private readonly PavlovServerService serverControlService;
         private readonly GoogleSheetService googleSheetService;
         private readonly SteamWorkshopService steamWorkshopService;
 
-        public MapsController(ServerControlService serverControlService, GoogleSheetService googleSheetService, SteamWorkshopService steamWorkshopService)
+        public MapsController(PavlovServerService serverControlService, GoogleSheetService googleSheetService, SteamWorkshopService steamWorkshopService)
         {
             this.serverControlService = serverControlService;
             this.googleSheetService = googleSheetService;
