@@ -1,0 +1,55 @@
+﻿@using Fluxor
+@using Fluxor.Blazor.Web.Components
+@using PterodactylPavlovServerController.Services
+@using PterodactylPavlovServerController.Store.PavlovServers
+@using PterodactylPavlovServerController.Store.Servers
+@using PterodactylPavlovServerDomain.Models
+
+@inherits FluxorComponent
+@inject IDispatcher Dispatcher
+@inject IState<PterodactylServersState> PterodactylServersState
+@inject IState<PavlovServersState> PavlovServersState
+
+@if (PterodactylServersState.Value.Servers == null)
+{
+    <div>Loading...</div>
+    return;
+}
+
+@if (PterodactylServersState.Value.Servers.FirstOrDefault(s => s.ServerId == ServerId) is not PterodactylServerModel server)
+{
+    <div>Server does not exist</div>
+    return;
+}
+
+@{
+    ServerInfoModel? serverInfo = PavlovServersState.Value.Servers.FirstOrDefault(s => s.ServerId == ServerId);
+}
+
+<div>
+    <a href="/rcon/@server.ServerId">@server.Name (@(serverInfo == null ? (PavlovServersState.Value.ServerNamesFromGameIni.ContainsKey(server.ServerId) ? PavlovServersState.Value.ServerNamesFromGameIni[server.ServerId] : "...") : serverInfo.ServerName))</a>
+</div>
+
+<div>
+</div>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public string ServerId { get; set; }
+
+    protected override void OnInitialized()
+    {
+        if (PterodactylServersState.Value.Servers == null)
+        {
+            Dispatcher.Dispatch(new PterodactylServersLoadAction());
+        }
+
+        if (PavlovServersState.Value.Servers.All(s => s.ServerId != ServerId))
+        {
+            Dispatcher.Dispatch(new PavlovServersLoadAction(ServerId));
+        }
+
+        base.OnInitialized();
+    }
+}

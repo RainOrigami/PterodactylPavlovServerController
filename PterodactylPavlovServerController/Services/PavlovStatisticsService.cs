@@ -1,6 +1,5 @@
 ﻿using PavlovStatsReader;
 using PavlovStatsReader.Models;
-using PterodactylPavlovServerController.Models;
 using PterodactylPavlovServerDomain.Models;
 using Steam.Models.SteamCommunity;
 using Steam.Models.Utilities;

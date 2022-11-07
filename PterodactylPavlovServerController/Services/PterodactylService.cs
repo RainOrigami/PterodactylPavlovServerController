@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json;
 using PterodactylPavlovServerController.Exceptions;
-using PterodactylPavlovServerController.Models;
 using PterodactylPavlovServerDomain.Models;
 using RestSharp;
 using System.Text.Json;
@@ -127,7 +126,10 @@ namespace PterodactylPavlovServerController.Services
         {
             if (!startupVariableCache.ContainsKey(serverId))
             {
-                startupVariableCache.Add(serverId, JsonDocument.Parse(executeRestRequest($"client/servers/{serverId}/startup").Content!).RootElement.GetProperty("data").EnumerateArray().ToArray());
+                lock (startupVariableCache)
+                {
+                    startupVariableCache.Add(serverId, JsonDocument.Parse(executeRestRequest($"client/servers/{serverId}/startup").Content!).RootElement.GetProperty("data").EnumerateArray().ToArray());
+                }
             }
 
             return startupVariableCache[serverId].Select(v => v.GetProperty("attributes")).FirstOrDefault(v => v.GetProperty("env_variable").GetString() == envVariable).GetProperty("server_value").GetString() ?? throw new StartupVariableNotFoundException(envVariable);

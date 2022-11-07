@@ -7,6 +7,18 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="stats\**" />
+    <Content Remove="stats\**" />
+    <EmbeddedResource Remove="stats\**" />
+    <None Remove="stats\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Pages\Rcon\Server.razor.cs" />
+    <Compile Remove="Store\PterodactylServers\ServersFeature.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Remove="buoyant-imagery-255718-b7158a794e35.json" />
     <Content Remove="steambans.json" />
     <Content Remove="steamprofiles.json" />
@@ -29,6 +41,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Fluxor.Blazor.Web" Version="5.5.0" />
+    <PackageReference Include="Fluxor.Blazor.Web.ReduxDevTools" Version="5.5.0" />
     <PackageReference Include="GoogleSheetsWrapper" Version="1.0.37" />
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="6.0.10" />
     <PackageReference Include="RestSharp" Version="108.0.2" />

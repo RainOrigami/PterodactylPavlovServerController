@@ -1,8 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using PterodactylPavlovServerController.Exceptions;
-using PterodactylPavlovServerController.Models;
 using PterodactylPavlovServerController.Services;
+using PterodactylPavlovServerDomain.Exceptions;
+using PterodactylPavlovServerDomain.Models;
 using System.Text.RegularExpressions;
 
 namespace PterodactylPavlovServerController.Controllers.Api

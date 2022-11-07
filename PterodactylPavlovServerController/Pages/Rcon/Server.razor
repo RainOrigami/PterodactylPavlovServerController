@@ -1,0 +1,197 @@
+﻿@page "/rcon/{ServerId}"
+@using Fluxor
+@using Fluxor.Blazor.Web.Components
+@using PterodactylPavlovServerController.Store.Maps
+@using PterodactylPavlovServerController.Store.PavlovServers
+@using PterodactylPavlovServerController.Store.Servers
+@using PterodactylPavlovServerDomain.Models
+@inherits FluxorComponent
+
+@inject IDispatcher Dispatcher
+@inject IState<PterodactylServersState> PterodactylServersState
+@inject IState<PavlovServersState> PavlovServersState
+@inject IState<MapsState> MapsState
+
+@if (PterodactylServersState.Value.Servers == null)
+{
+    <div class="spinner-border text-info" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    return;
+}
+
+@{
+    PterodactylServerModel? server = PterodactylServersState.Value.Servers.FirstOrDefault(s => s.ServerId == ServerId);
+}
+
+@if (server == null)
+{
+    <div>Server does not exist</div>
+    return;
+}
+
+@{
+    ServerInfoModel? serverInfo = PavlovServersState.Value.Servers.FirstOrDefault(s => s.ServerId == ServerId);
+}
+
+<h1>@server.Name (@(serverInfo == null ? (PavlovServersState.Value.ServerNamesFromGameIni.ContainsKey(ServerId) ? PavlovServersState.Value.ServerNamesFromGameIni[ServerId] : "...") : serverInfo.ServerName))</h1>
+
+@if (serverInfo == null)
+{
+    <div>Server may be offline</div>
+
+    <div class="spinner-border text-info" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    return;
+}
+
+<p>Currently @serverInfo.CurrentPlayerCount out of @serverInfo.MaximumPlayerCount players online.</p>
+<p>Round #@serverInfo.Round (@serverInfo.RoundState)</p>
+
+@{
+    MapDetailModel? mapDetail = null;
+    if (serverInfo.MapLabel.StartsWith("UGC"))
+    {
+        long mapId = long.Parse(serverInfo.MapLabel.Substring(3));
+        mapDetail = MapsState.Value.MapDetails.FirstOrDefault(m => m.Id == mapId);
+
+        if (mapDetail == null)
+        {
+            Dispatcher.Dispatch(new MapsLoadAction(mapId));
+        }
+    }
+}
+
+<p>
+    Current map:
+    <br />
+    <div class="card" style="display: inline-block; width: 256px;">
+        <img class="card-img-top" src="@(mapDetail == null ? "" : mapDetail.ImageURL + "/?imw=128&imh=128&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true")" alt="@serverInfo.MapLabel" />
+        <div class="card-body">
+            <h5 class="card-title">@(mapDetail == null ? serverInfo.MapLabel : mapDetail.Name)</h5>
+            <p class="card-text">
+                <div class="container px-0">
+                    <div class="row gx-0"><div class="col-auto px-1"><b>GameMode:</b></div><div class="col text-end px-1">@serverInfo.GameMode</div></div>
+                    @if (mapDetail == null)
+                    {
+                        <div class="row gx-0"><div class="col-auto px-1">Loading...</div></div>
+                    }
+                </div>
+            </p>
+        </div>
+    </div>
+</p>
+
+<p>
+    Available maps:<br />
+    @if (!MapsState.Value.ServerMaps.ContainsKey(ServerId))
+    {
+        @:Loading...
+    }
+    else
+    {
+        foreach (MapRowModel mapRow in MapsState.Value.ServerMaps[ServerId])
+        {
+            MapDetailModel? serverMapsDetail = MapsState.Value.MapDetails.FirstOrDefault(m => m.Id == mapRow.MapId);
+
+            <div class="card" style="display: inline-block; width: 256px;">
+                <img class="card-img-top" src="@(serverMapsDetail == null ? "" : serverMapsDetail.ImageURL + "/?imw=128&imh=128&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true")" alt="@mapRow.MapId" />
+                <div class="card-body">
+                    <h5 class="card-title">@(serverMapsDetail == null ? mapRow.MapId : serverMapsDetail.Name)</h5>
+                    <p class="card-text">
+                        <div class="container px-0">
+                            <div class="row gx-0"><div class="col-auto px-1"><b>GameMode:</b></div><div class="col text-end px-1">@mapRow.GameMode</div></div>
+                            @if (serverMapsDetail == null)
+                            {
+                                <div class="row gx-0"><div class="col-auto px-1">Loading...</div></div>
+                            }
+                        </div>
+                    </p>
+                </div>
+            </div>
+        }
+    }
+</p>
+
+@code {
+    [Parameter]
+    public string ServerId { get; set; }
+
+    private ManualResetEvent serverUpdateActionReset = new ManualResetEvent(false);
+    private CancellationTokenSource serverUpdateCancellation = new CancellationTokenSource();
+
+    protected override void OnInitialized()
+    {
+        Dispatcher.ActionDispatched += actionDispatched;
+
+        if (PterodactylServersState.Value.Servers == null)
+        {
+            Dispatcher.Dispatch(new PterodactylServersLoadAction());
+        }
+
+        if (PavlovServersState.Value.Servers.All(s => s.ServerId != ServerId))
+        {
+            Dispatcher.Dispatch(new PavlovServersLoadAction(ServerId));
+        }
+
+        if (!MapsState.Value.ServerMaps.ContainsKey(ServerId))
+        {
+            Dispatcher.Dispatch(new MapsLoadServerAction(ServerId));
+        }
+
+        base.OnInitialized();
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Task.Run(refreshServerTask);
+        }
+
+        base.OnAfterRender(firstRender);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            serverUpdateCancellation.Cancel();
+        }
+        base.Dispose(disposing);
+    }
+
+    private void actionDispatched(object? sender, ActionDispatchedEventArgs eventArgs)
+    {
+        if (eventArgs.Action is PavlovServersLoadAction pavlovServersLoadAction && pavlovServersLoadAction.ServerId == ServerId)
+        {
+            serverUpdateActionReset.Set();
+        }
+
+        if (eventArgs.Action is MapsAddServerAction mapsAddServerAction && mapsAddServerAction.ServerId == ServerId)
+        {
+            foreach (MapRowModel map in mapsAddServerAction.Maps)
+            {
+                if (MapsState.Value.MapDetails.Any(m => m.Id == map.MapId))
+                {
+                    continue;
+                }
+
+                Dispatcher.Dispatch(new MapsLoadAction(map.MapId));
+            }
+        }
+    }
+
+    private async void refreshServerTask()
+    {
+        while (!serverUpdateCancellation.Token.IsCancellationRequested)
+        {
+            Dispatcher.Dispatch(new PavlovServersLoadAction(ServerId));
+
+            serverUpdateActionReset.WaitOne();
+            serverUpdateActionReset.Reset();
+            await Task.Delay(5000);
+        }
+    }
+}

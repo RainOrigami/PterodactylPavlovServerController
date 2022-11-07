@@ -1,0 +1,36 @@
+﻿@page "/"
+@inherits FluxorComponent
+
+@using Fluxor
+@using Fluxor.Blazor.Web.Components
+@using PterodactylPavlovServerController.Store.Test
+@using PterodactylPavlovServerDomain.Models
+
+@inject IDispatcher Dispatcher
+@inject IState<TestState> TestState
+
+<PageTitle>Index</PageTitle>
+
+<h1>Hello, world!</h1>
+
+Welcome to your new app.
+
+@*@if (TestState.Value.Value == null)
+{
+    <p>No value</p>
+}
+else
+{
+    foreach (PterodactylServerModel server in TestState.Value.Value)
+    {
+        <p>@server.Name</p>
+    }
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        Dispatcher.Dispatch(new TestLoadAction());
+        base.OnInitialized();
+    }
+}*@
