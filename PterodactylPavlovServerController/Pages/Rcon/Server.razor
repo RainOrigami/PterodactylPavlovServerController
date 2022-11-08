@@ -27,6 +27,7 @@
 
 @if (Rcon.GetServer(ServerId) is not PavlovRconConnection connection)
 {
+    Dispatcher.Dispatch(new PageTitleSetAction("Invalid server"));
     <div>Server does not exist</div>
     return;
 }
@@ -260,18 +261,23 @@
 
     protected override async Task OnParametersSetAsync()
     {
-
-        Dispatcher.ActionDispatched += DispatcherOnActionDispatched;
-        await loadMaps();
-        await base.OnParametersSetAsync();
-    }
-
-    private void DispatcherOnActionDispatched(object? sender, ActionDispatchedEventArgs e)
-    {
-        if (e.Action is PavlovServersSetErrorAction pavlovServersSetErrorAction && pavlovServersSetErrorAction.ServerId == ServerId && (Rcon.GetServer(ServerId)?.Online ?? false))
+        if (Rcon.GetServer(ServerId) is PavlovRconConnection connection)
         {
-            Toast.ShowError(pavlovServersSetErrorAction.Error);
+            connection.OnServerErrorRaised += (id, error) =>
+            {
+                bool? online = Rcon.GetServer(ServerId)?.Online;
+                if (!online.HasValue || !online.Value || id != ServerId)
+                {
+                    return;
+                }
+
+                Toast.ShowError(error, "Error");
+            };
+            Dispatcher.Dispatch(new PavlovServerLoadNameFromGameIniAction(ServerId));
+            await loadMaps();
         }
+
+        await base.OnParametersSetAsync();
     }
 
     protected override void OnInitialized()
@@ -291,12 +297,6 @@
         Rcon.OnServersUpdated -= refresh;
 
         base.Dispose(disposing);
-    }
-
-    protected override void OnParametersSet()
-    {
-        Dispatcher.Dispatch(new PavlovServerLoadNameFromGameIniAction(ServerId));
-        base.OnParametersSet();
     }
 
     private void changeMap(long mapId, string gameMode)
