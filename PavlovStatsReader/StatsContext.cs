@@ -25,7 +25,7 @@ namespace PavlovStatsReader
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            string connectionString = configuration.GetConnectionString("PavlovStats");
+            string connectionString = configuration.GetConnectionString("PavlovStats")!;
             switch (configuration["db_type"])
             {
                 case "sqlserver":

@@ -20,11 +20,10 @@ namespace PterodactylPavlovServerController.Store.Maps
         [EffectMethod]
         public async Task LoadMap(MapsLoadAction mapsLoadAction, IDispatcher dispatcher)
         {
-            if (mapsState.Value.MapDetails.Any(m => m.Id == mapsLoadAction.MapId))
+            if (mapsState.Value.MapDetails.ContainsKey(mapsLoadAction.MapId))
             {
                 return;
             }
-
             dispatcher.Dispatch(new MapsAddAction(steamWorkshopService.GetMapDetail(mapsLoadAction.MapId)));
 
             await Task.CompletedTask;
@@ -35,6 +34,16 @@ namespace PterodactylPavlovServerController.Store.Maps
         {
             MapRowModel[] mapRows = pavlovServerService.GetCurrentMapRotation(mapsLoadServerAction.ServerId);
             dispatcher.Dispatch(new MapsAddServerAction(mapsLoadServerAction.ServerId, mapRows));
+
+            foreach (MapRowModel map in mapRows)
+            {
+                if (mapsState.Value.MapDetails.ContainsKey(map.MapId))
+                {
+                    continue;
+                }
+
+                dispatcher.Dispatch(new MapsLoadAction(map.MapId));
+            }
 
             await Task.CompletedTask;
         }

@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <Compile Remove="Pages\Rcon\Server.razor.cs" />
+    <Compile Remove="Services\RconToFluxorForwarderService.cs" />
     <Compile Remove="Store\PterodactylServers\ServersFeature.cs" />
   </ItemGroup>
 
@@ -41,10 +42,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Blazored.Toast" Version="3.2.2" />
     <PackageReference Include="Fluxor.Blazor.Web" Version="5.5.0" />
     <PackageReference Include="Fluxor.Blazor.Web.ReduxDevTools" Version="5.5.0" />
     <PackageReference Include="GoogleSheetsWrapper" Version="1.0.37" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="7.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="7.0.0" />
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="6.0.10" />
+    <PackageReference Include="MySql.EntityFrameworkCore" Version="6.0.7" />
     <PackageReference Include="RestSharp" Version="108.0.2" />
     <PackageReference Include="SteamWebAPI2" Version="4.4.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />

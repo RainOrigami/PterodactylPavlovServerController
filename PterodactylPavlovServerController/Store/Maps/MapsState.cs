@@ -6,7 +6,7 @@ namespace PterodactylPavlovServerController.Store.Maps
     [FeatureState]
     public record MapsState
     {
-        public MapDetailModel[] MapDetails { get; init; } = Array.Empty<MapDetailModel>();
+        public IReadOnlyDictionary<long, MapDetailModel> MapDetails { get; init; } = new Dictionary<long, MapDetailModel>();
         public IReadOnlyDictionary<string, MapRowModel[]> ServerMaps { get; init; } = new Dictionary<string, MapRowModel[]>();
     }
 }

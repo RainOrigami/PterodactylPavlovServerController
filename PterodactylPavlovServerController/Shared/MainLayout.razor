@@ -1,15 +1,24 @@
-﻿@inherits LayoutComponentBase
+﻿@using Fluxor
+@using Fluxor.Blazor.Web.Components
+@using PterodactylPavlovServerController.Services
+@using PterodactylPavlovServerController.Store
+@inherits FluxorLayout
 
-<PageTitle>Pterodactyl Pavlov Server Controller</PageTitle>
+@inject IDispatcher Dispatcher
+@inject IState<PageTitleState> PageTitleState
+@inject PavlovRconConnectionService Rcon
+@*@inject RconToFluxorForwarderService Forwarder*@
+
+<PageTitle>@PageTitleState.Value.Title - PPSC</PageTitle>
 
 <div class="page">
-    <div class="sidebar">
+    <div class="sidebar col-12">
         <NavMenu />
     </div>
 
-    <main>
-        <div class="top-row px-4">
-            
+    <main class="bg-dark">
+        <div class="top-row navbar-dark px-4">
+            <h3 class="navbar-brand">@PageTitleState.Value.Title</h3>
         </div>
 
         <article class="content px-4">
@@ -17,3 +26,5 @@
         </article>
     </main>
 </div>
+
+<BlazoredToasts />

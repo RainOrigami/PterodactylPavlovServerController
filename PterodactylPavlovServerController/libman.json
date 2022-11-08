@@ -7,7 +7,8 @@
       "destination": "wwwroot/lib/bootstrap/",
       "files": [
         "css/bootstrap.min.css",
-        "css/bootstrap.min.css.map"
+        "css/bootstrap.min.css.map",
+        "js/bootstrap.min.js"
       ]
     },
     {
@@ -20,6 +21,28 @@
         "font/fonts/open-iconic.svg",
         "font/fonts/open-iconic.ttf",
         "font/fonts/open-iconic.woff"
+      ]
+    },
+    {
+      "library": "font-awesome@6.2.0",
+      "destination": "wwwroot/lib/font-awesome/",
+      "files": [
+        "css/all.min.css",
+        "webfonts/fa-brands-400.ttf",
+        "webfonts/fa-brands-400.woff2",
+        "webfonts/fa-regular-400.ttf",
+        "webfonts/fa-regular-400.woff2",
+        "webfonts/fa-solid-900.ttf",
+        "webfonts/fa-solid-900.woff2",
+        "webfonts/fa-v4compatibility.ttf",
+        "webfonts/fa-v4compatibility.woff2"
+      ]
+    },
+    {
+      "library": "jquery@3.6.1",
+      "destination": "wwwroot/lib/jquery/",
+      "files": [
+        "jquery.min.js"
       ]
     }
   ]

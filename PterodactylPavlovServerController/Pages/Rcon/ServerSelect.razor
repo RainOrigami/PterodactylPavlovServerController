@@ -4,15 +4,19 @@
 @using Fluxor
 @using Fluxor.Blazor.Web.Components
 @using PterodactylPavlovServerController.Services
+@using PterodactylPavlovServerController.Store
 @using PterodactylPavlovServerController.Store.Servers
 @using PterodactylPavlovServerDomain.Models
 
 @inject IDispatcher Dispatcher
-@inject IState<PterodactylServersState> ServersState
+@inject PavlovRconConnectionService Rcon
+@*@inject IState<PterodactylServersState> ServersState*@
 
-<h3>Select a server</h3>
+@{
+    Dispatcher.Dispatch(new PageTitleSetAction("Select a server"));
+}
 
-@if (ServersState.Value.Servers == null)
+@if (!Rcon.Initialised)
 {
     <div class="spinner-border text-info" role="status">
         <span class="visually-hidden">Loading...</span>
@@ -20,20 +24,30 @@
 }
 else
 {
-    @foreach (PterodactylServerModel server in ServersState.Value.Servers)
+    @foreach (string serverId in Rcon.GetAllConnections().OrderBy(c => c.PterodactylServer.Name).Select(c => c.ServerId))
     {
-        <ServerSelectorComponent ServerId="@server.ServerId" />
+        <ServerSelectorComponent ServerId="@serverId" />
     }
 }
 
-@code {
+@code
+{
     protected override void OnInitialized()
     {
-        if (ServersState.Value.Servers == null)
-        {
-            Dispatcher.Dispatch(new PterodactylServersLoadAction());
-        }
+        Rcon.OnServersUpdated += refresh;
 
         base.OnInitialized();
+    }
+
+    private async void refresh()
+    {
+        await InvokeAsync(StateHasChanged);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        Rcon.OnServersUpdated -= refresh;
+
+        base.Dispose(disposing);
     }
 }

@@ -1,5 +1,6 @@
 ﻿@using Fluxor
 @using Fluxor.Blazor.Web.Components
+@using PterodactylPavlovServerController.Models
 @using PterodactylPavlovServerController.Services
 @using PterodactylPavlovServerController.Store.PavlovServers
 @using PterodactylPavlovServerController.Store.Servers
@@ -7,23 +8,25 @@
 
 @inherits FluxorComponent
 @inject IDispatcher Dispatcher
-@inject IState<PterodactylServersState> PterodactylServersState
+@inject PavlovRconConnectionService Rcon
+@*@inject IState<PterodactylServersState> PterodactylServersState*@
 @inject IState<PavlovServersState> PavlovServersState
 
-@if (PterodactylServersState.Value.Servers == null)
+@if (!Rcon.Initialised)
 {
     <div>Loading...</div>
     return;
 }
 
-@if (PterodactylServersState.Value.Servers.FirstOrDefault(s => s.ServerId == ServerId) is not PterodactylServerModel server)
+@if (Rcon.GetServer(ServerId) is not PavlovRconConnection connection)
 {
     <div>Server does not exist</div>
     return;
 }
 
 @{
-    ServerInfoModel? serverInfo = PavlovServersState.Value.Servers.FirstOrDefault(s => s.ServerId == ServerId);
+    PterodactylServerModel server = connection.PterodactylServer;
+    ServerInfoModel? serverInfo = connection.ServerInfo;
 }
 
 <div>
@@ -40,16 +43,27 @@
 
     protected override void OnInitialized()
     {
-        if (PterodactylServersState.Value.Servers == null)
-        {
-            Dispatcher.Dispatch(new PterodactylServersLoadAction());
-        }
-
-        if (PavlovServersState.Value.Servers.All(s => s.ServerId != ServerId))
-        {
-            Dispatcher.Dispatch(new PavlovServersLoadAction(ServerId));
-        }
+        Rcon.OnServersUpdated += refresh;
 
         base.OnInitialized();
     }
+
+    private async void refresh()
+    {
+        await InvokeAsync(StateHasChanged);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        Rcon.OnServersUpdated -= refresh;
+
+        base.Dispose(disposing);
+    }
+
+    protected override void OnParametersSet()
+    {
+        Dispatcher.Dispatch(new PavlovServerLoadNameFromGameIniAction(ServerId));
+        base.OnParametersSet();
+    }
+
 }

@@ -1,16 +1,14 @@
-﻿using PterodactylPavlovServerDomain.Models;
-
-namespace PterodactylPavlovServerController.Store.Servers
+﻿namespace PterodactylPavlovServerController.Store.Servers
 {
-    public class PterodactylServersLoadAction { }
+    //public class PterodactylServersLoadAction { }
 
-    public class PterodactylServersSetAction
-    {
-        public PterodactylServerModel[] Servers { get; }
+    //public class PterodactylServersSetAction
+    //{
+    //    public PterodactylServerModel[] Servers { get; }
 
-        public PterodactylServersSetAction(PterodactylServerModel[] servers)
-        {
-            this.Servers = servers;
-        }
-    }
+    //    public PterodactylServersSetAction(PterodactylServerModel[] servers)
+    //    {
+    //        this.Servers = servers;
+    //    }
+    //}
 }

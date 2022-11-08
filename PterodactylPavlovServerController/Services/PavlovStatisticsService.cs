@@ -9,7 +9,7 @@ using System.Text.RegularExpressions;
 
 namespace PterodactylPavlovServerController.Services
 {
-    public class PavlovStatisticsService
+    public class PavlovStatisticsService : IDisposable
     {
         private const int CARD_WIDTH = 300;
         private const int CARDS_PER_ROW = 4;
@@ -75,9 +75,9 @@ namespace PterodactylPavlovServerController.Services
             { "vanas", "FAMAS F1" },
         };
 
-        public void RunStatsReader()
+        public void Run()
         {
-            new Thread(new ThreadStart(() => StatsReader())).Start();
+            Task.Run(StatsReader);
         }
 
         private static readonly Regex fileNameDateTimeRegex = new(@"(?<date>\d{4}\.\d{2}\.\d{2}-\d{2}\.\d{2}\.\d{2})", RegexOptions.Compiled);
@@ -89,7 +89,7 @@ namespace PterodactylPavlovServerController.Services
             {
                 Setting? lastStat = statsContext.Settings.FirstOrDefault(s => s.Name == "Last Read Statistic" && s.ServerId == server.ServerId);
 
-                DateTime lastReadStatistic = lastStat == null ? DateTime.MinValue : DateTimeOffset.FromUnixTimeSeconds(long.Parse(lastStat.Value)).LocalDateTime;
+                DateTime lastReadStatistic = lastStat == null ? DateTimeOffset.FromUnixTimeSeconds(0).LocalDateTime : DateTimeOffset.FromUnixTimeSeconds(long.Parse(lastStat.Value)).LocalDateTime;
 
                 PterodactylFile[] files = pterodactylService.GetFileList(server.ServerId, "/Pavlov/Saved/Logs");
                 List<string> filesToParse = new List<string>();
@@ -673,11 +673,13 @@ namespace PterodactylPavlovServerController.Services
             </div></div>";
         }
 
+        private readonly CancellationTokenSource statsCancellationTokenSource = new();
+
         public void StatsReader()
         {
             DateTime lastGenerated = DateTime.MinValue;
 
-            while (running)
+            while (!statsCancellationTokenSource.Token.IsCancellationRequested)
             {
                 if (lastGenerated < DateTime.Now.AddHours(-8))
                 {
@@ -693,7 +695,9 @@ namespace PterodactylPavlovServerController.Services
             }
         }
 
-        private bool running = true;
-        internal void StopStatsReader() => running = false;
+        public void Dispose()
+        {
+            statsCancellationTokenSource.Cancel();
+        }
     }
 }

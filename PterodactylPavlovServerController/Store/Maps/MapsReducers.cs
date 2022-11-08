@@ -8,12 +8,18 @@ namespace PterodactylPavlovServerController.Store.Maps
         [ReducerMethod]
         public static MapsState OnMapsAdd(MapsState mapsState, MapsAddAction mapsAddAction)
         {
-            List<MapDetailModel> maps = mapsState.MapDetails.ToList();
-            maps.Add(mapsAddAction.MapDetailModel);
+            Dictionary<long, MapDetailModel> maps = (Dictionary<long, MapDetailModel>)mapsState.MapDetails;
+
+            if (maps.ContainsKey(mapsAddAction.MapDetailModel.Id))
+            {
+                maps.Remove(mapsAddAction.MapDetailModel.Id);
+            }
+
+            maps.Add(mapsAddAction.MapDetailModel.Id, mapsAddAction.MapDetailModel);
 
             return mapsState with
             {
-                MapDetails = maps.ToArray()
+                MapDetails = maps
             };
         }
 

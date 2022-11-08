@@ -1,18 +1,27 @@
 ﻿@page "/rcon/{ServerId}"
 @using Fluxor
 @using Fluxor.Blazor.Web.Components
+@using PterodactylPavlovServerController.Models
+@using PterodactylPavlovServerController.Pages.Player
+@using PterodactylPavlovServerController.Services
+@using PterodactylPavlovServerController.Store
 @using PterodactylPavlovServerController.Store.Maps
 @using PterodactylPavlovServerController.Store.PavlovServers
+@using PterodactylPavlovServerController.Store.Players
 @using PterodactylPavlovServerController.Store.Servers
 @using PterodactylPavlovServerDomain.Models
 @inherits FluxorComponent
 
 @inject IDispatcher Dispatcher
-@inject IState<PterodactylServersState> PterodactylServersState
+@inject PavlovRconConnectionService Rcon
+@*@inject IState<PterodactylServersState> PterodactylServersState*@
 @inject IState<PavlovServersState> PavlovServersState
 @inject IState<MapsState> MapsState
+@*@inject IState<PlayersState> PlayersState*@
+@inject PavlovRconService RconService
+@inject IToastService Toast
 
-@if (PterodactylServersState.Value.Servers == null)
+@if (!Rcon.Initialised)
 {
     <div class="spinner-border text-info" role="status">
         <span class="visually-hidden">Loading...</span>
@@ -20,178 +29,304 @@
     return;
 }
 
-@{
-    PterodactylServerModel? server = PterodactylServersState.Value.Servers.FirstOrDefault(s => s.ServerId == ServerId);
-}
-
-@if (server == null)
+@if (Rcon.GetServer(ServerId) is not PavlovRconConnection connection)
 {
     <div>Server does not exist</div>
     return;
 }
 
 @{
-    ServerInfoModel? serverInfo = PavlovServersState.Value.Servers.FirstOrDefault(s => s.ServerId == ServerId);
-}
+    PterodactylServerModel server = connection.PterodactylServer;
+    ServerInfoModel? serverInfo = connection.ServerInfo;
 
-<h1>@server.Name (@(serverInfo == null ? (PavlovServersState.Value.ServerNamesFromGameIni.ContainsKey(ServerId) ? PavlovServersState.Value.ServerNamesFromGameIni[ServerId] : "...") : serverInfo.ServerName))</h1>
+    Dispatcher.Dispatch(new PageTitleSetAction($"{server.Name} ({(serverInfo == null ? (PavlovServersState.Value.ServerNamesFromGameIni.ContainsKey(ServerId) ? PavlovServersState.Value.ServerNamesFromGameIni[ServerId] : "...") : serverInfo.ServerName)})"));
 
-@if (serverInfo == null)
-{
-    <div>Server may be offline</div>
+    if (!connection.Online.HasValue || !connection.Online.Value)
+    {
+        <h2 class="text-bg-danger">
+            Server is offline.
+        </h2>
+        return;
+    }
 
-    <div class="spinner-border text-info" role="status">
-        <span class="visually-hidden">Loading...</span>
-    </div>
-    return;
-}
+    if (serverInfo == null)
+    {
+        <div class="spinner-border text-info" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        return;
+    }
 
-<p>Currently @serverInfo.CurrentPlayerCount out of @serverInfo.MaximumPlayerCount players online.</p>
-<p>Round #@serverInfo.Round (@serverInfo.RoundState)</p>
-
-@{
     MapDetailModel? mapDetail = null;
     if (serverInfo.MapLabel.StartsWith("UGC"))
     {
         long mapId = long.Parse(serverInfo.MapLabel.Substring(3));
-        mapDetail = MapsState.Value.MapDetails.FirstOrDefault(m => m.Id == mapId);
 
-        if (mapDetail == null)
+        if (!MapsState.Value.MapDetails.TryGetValue(mapId, out mapDetail))
         {
             Dispatcher.Dispatch(new MapsLoadAction(mapId));
         }
     }
-}
 
-<p>
-    Current map:
-    <br />
-    <div class="card" style="display: inline-block; width: 256px;">
-        <img class="card-img-top" src="@(mapDetail == null ? "" : mapDetail.ImageURL + "/?imw=128&imh=128&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true")" alt="@serverInfo.MapLabel" />
-        <div class="card-body">
-            <h5 class="card-title">@(mapDetail == null ? serverInfo.MapLabel : mapDetail.Name)</h5>
-            <p class="card-text">
-                <div class="container px-0">
-                    <div class="row gx-0"><div class="col-auto px-1"><b>GameMode:</b></div><div class="col text-end px-1">@serverInfo.GameMode</div></div>
-                    @if (mapDetail == null)
-                    {
-                        <div class="row gx-0"><div class="col-auto px-1">Loading...</div></div>
-                    }
-                </div>
-            </p>
-        </div>
-    </div>
-</p>
-
-<p>
-    Available maps:<br />
-    @if (!MapsState.Value.ServerMaps.ContainsKey(ServerId))
+    string mapUrl;
+    if (mapDetail != null)
     {
-        @:Loading...
+        mapUrl = mapDetail.URL;
+    }
+    else if (serverInfo.MapLabel.StartsWith("UGC"))
+    {
+        mapUrl = $"https://steamcommunity.com/sharedfiles/filedetails/?id={serverInfo.MapLabel.Substring(3)}";
     }
     else
     {
-        foreach (MapRowModel mapRow in MapsState.Value.ServerMaps[ServerId])
-        {
-            MapDetailModel? serverMapsDetail = MapsState.Value.MapDetails.FirstOrDefault(m => m.Id == mapRow.MapId);
+        mapUrl = $"http://wiki.pavlov-vr.com/index.php?title=Default_Maps#{serverInfo.MapLabel}";
+    }
+}
 
-            <div class="card" style="display: inline-block; width: 256px;">
-                <img class="card-img-top" src="@(serverMapsDetail == null ? "" : serverMapsDetail.ImageURL + "/?imw=128&imh=128&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true")" alt="@mapRow.MapId" />
-                <div class="card-body">
-                    <h5 class="card-title">@(serverMapsDetail == null ? mapRow.MapId : serverMapsDetail.Name)</h5>
-                    <p class="card-text">
-                        <div class="container px-0">
-                            <div class="row gx-0"><div class="col-auto px-1"><b>GameMode:</b></div><div class="col text-end px-1">@mapRow.GameMode</div></div>
-                            @if (serverMapsDetail == null)
-                            {
-                                <div class="row gx-0"><div class="col-auto px-1">Loading...</div></div>
-                            }
+<div class="container">
+    <div class="row">
+        <div class="col px-0">
+            <div class="card bg-dark">
+                <div class="row g-0">
+                    <div class="col-auto">
+                        <a href="@mapUrl" class="text-decoration-none" target="_blank"><img class="card-img rounded-start" width="256" height="256" src="@(mapDetail == null ? "https://pavlov.bloodisgood.net/gunimages/unknown.png" : mapDetail.ImageURL + "/?imw=256&imh=256&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true")" alt="@serverInfo.MapLabel" /></a>
+                    </div>
+
+                    <div class="col">
+                        <div class="card-body">
+                            <a href="@mapUrl" class="text-decoration-none" target="_blank"><h5 class="card-title">@(mapDetail == null ? serverInfo.MapLabel : mapDetail.Name)</h5></a>
+                            <p class="card-text">
+                                <div class="container px-0">
+                                    <div class="row gx-0">
+                                        <div class="col-auto px-1"><i class="fa-solid fa-gun"></i></div>
+                                        <div class="col px-1">@serverInfo.GameMode</div>
+                                    </div>
+                                    <div class="row gx-0">
+                                        <div class="col-auto px-1"><i class="fa-solid fa-person-rifle" style="color: limegreen;"></i></div>
+                                        <div class="col px-1">@(connection.PlayerListPlayers == null ? $"{serverInfo.CurrentPlayerCount}*" : connection.PlayerListPlayers.Count)&nbsp;/&nbsp;@serverInfo.MaximumPlayerCount</div>
+                                    </div>
+                                    <div class="row gx-0">
+                                        <div class="col-auto px-1"><i class="fa-solid fa-chess-board"></i></div>
+                                        <div class="col px-1">#@serverInfo.Round&nbsp;(@serverInfo.RoundState)</div>
+                                    </div>
+                                    <div class="row gx-0">
+                                        <div class="col-auto px-1"><i class="fa-solid fa-trophy" style="color: lightskyblue"></i></div>
+                                        <div class="col px-1">@serverInfo.Team0Score</div>
+                                    </div>
+                                    <div class="row gx-0">
+                                        <div class="col-auto px-1"><i class="fa-solid fa-trophy" style="color: tomato"></i></div>
+                                        <div class="col px-1">@serverInfo.Team1Score</div>
+                                    </div>
+                                    @if (mapDetail == null)
+                                    {
+                                        <div class="row gx-0"><div class="col-auto px-1">Loading...</div></div>
+                                    }
+                                </div>
+                            </p>
                         </div>
-                    </p>
+                    </div>
                 </div>
             </div>
-        }
-    }
-</p>
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <div class="col px-0">
+            <div class="container px-0">
+                <ul class="nav nav-tabs mb-3">
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link active" style="font-size: 2em;" data-bs-toggle="pill" href="#players">Players</a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link" style="font-size: 2em;" data-bs-toggle="pill" href="#maps">Maps</a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link" style="font-size: 2em;" data-bs-toggle="pill" href="#cheats">Cheats</a>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+                    <div class="tab-pane container active" id="players">
+                        <div class="row">
+                            <div class="col rounded h2 p-3 me-2" style="background-color: lightskyblue; color: #222;">
+                                Blue Team (@serverInfo.Team0Score)
+                            </div>
+                            <div class="col rounded h2 p-3 ms-2" style="background-color: tomato; color: #222;">
+                                Red Team (@serverInfo.Team1Score)
+                            </div>
+                        </div>
+
+                        <div class="row">
+
+                            @{
+                                List<ulong> blueTeam = new List<ulong>();
+                                List<ulong> redTeam = new List<ulong>();
+
+                                if (connection.PlayerDetails is IReadOnlyDictionary<ulong, PlayerDetailModel> playersDetails)
+                                {
+                                    blueTeam.AddRange(playersDetails.Where(kvp => kvp.Value.TeamId == 0).Select(kvp => kvp.Key));
+                                    redTeam.AddRange(playersDetails.Where(kvp => kvp.Value.TeamId == 1).Select(kvp => kvp.Key));
+                                }
+                            }
+
+                            <div class="col ps-0">
+                                <div class="container">
+
+                                    @foreach (ulong playerId in blueTeam)
+                                    {
+                                        <div class="row">
+                                            <div class="col px-0">
+
+                                                <PlayerCard PlayerId="@playerId" ServerId="@ServerId" />
+
+                                            </div>
+                                        </div>
+                                    }
+
+                                </div>
+                            </div>
+
+                            <div class="col pe-0">
+                                <div class="container">
+
+                                    @foreach (ulong playerId in redTeam)
+                                    {
+                                        <div class="row">
+                                            <div class="col px-0">
+
+                                                <PlayerCard PlayerId="@playerId" ServerId="@ServerId" />
+
+                                            </div>
+                                        </div>
+                                    }
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane container fade" id="maps">
+                        @if (!MapsState.Value.ServerMaps.ContainsKey(ServerId))
+                        {
+                            @:Loading...
+                        }
+                        else
+                        {
+                            foreach (MapRowModel mapRow in MapsState.Value.ServerMaps[ServerId])
+                            {
+                                MapsState.Value.MapDetails.TryGetValue(mapRow.MapId, out MapDetailModel? serverMapsDetail);
+
+                                @*string serverMapsUrl;
+                        if (serverMapsDetail != null)
+                        {
+                        serverMapsUrl = serverMapsDetail.URL;
+                        }
+                        else
+                        {
+                        serverMapsUrl = $"https://steamcommunity.com/sharedfiles/filedetails/?id={mapRow.MapId}";
+                        }*@
+
+                                <div class="card bg-dark" style="display: inline-block; width: 256px;">
+                                    <a href="#" @onclick="() => changeMap(mapRow.MapId, mapRow.GameMode)" @onclick:preventDefault class="text-decoration-none"><img class="card-img-top" src="@(serverMapsDetail == null ? "https://pavlov.bloodisgood.net/gunimages/unknown.png" : serverMapsDetail.ImageURL + "/?imw=256&imh=256&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true")" alt="@mapRow.MapId" /></a>
+                                    <div class="card-body">
+                                        <a href="#" @onclick="() => changeMap(mapRow.MapId, mapRow.GameMode)" @onclick:preventDefault class="text-decoration-none"><h5 class="card-title">@(serverMapsDetail == null ? mapRow.MapId : serverMapsDetail.Name)</h5></a>
+                                        <p class="card-text">
+                                            <div class="container px-0">
+                                                <div class="row gx-0"><div class="col-auto px-1"><b>GameMode:</b></div><div class="col text-end px-1">@mapRow.GameMode</div></div>
+                                                @if (serverMapsDetail == null)
+                                                {
+                                                    <div class="row gx-0"><div class="col-auto px-1">Loading...</div></div>
+                                                }
+                                            </div>
+                                        </p>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+
+                    <div class="tab-pane container fade" id="cheats">
+                        TBD
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 @code {
     [Parameter]
-    public string ServerId { get; set; }
+    [EditorRequired]
+    public string ServerId { get; set; } = null!;
 
-    private ManualResetEvent serverUpdateActionReset = new ManualResetEvent(false);
-    private CancellationTokenSource serverUpdateCancellation = new CancellationTokenSource();
+    private async Task loadMaps()
+    {
+        if (!MapsState.Value.ServerMaps.ContainsKey(ServerId))
+        {
+            lock (Dispatcher)
+            {
+                Dispatcher.Dispatch(new MapsLoadServerAction(ServerId));
+            }
+        }
+
+        await Task.CompletedTask;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        Dispatcher.ActionDispatched += DispatcherOnActionDispatched;
+        await loadMaps();
+        await base.OnParametersSetAsync();
+    }
+
+    private void DispatcherOnActionDispatched(object? sender, ActionDispatchedEventArgs e)
+    {
+        if (e.Action is PavlovServersSetErrorAction pavlovServersSetErrorAction && pavlovServersSetErrorAction.ServerId == ServerId && (Rcon.GetServer(ServerId)?.Online ?? false))
+        {
+            Toast.ShowError(pavlovServersSetErrorAction.Error);
+        }
+    }
 
     protected override void OnInitialized()
     {
-        Dispatcher.ActionDispatched += actionDispatched;
-
-        if (PterodactylServersState.Value.Servers == null)
-        {
-            Dispatcher.Dispatch(new PterodactylServersLoadAction());
-        }
-
-        if (PavlovServersState.Value.Servers.All(s => s.ServerId != ServerId))
-        {
-            Dispatcher.Dispatch(new PavlovServersLoadAction(ServerId));
-        }
-
-        if (!MapsState.Value.ServerMaps.ContainsKey(ServerId))
-        {
-            Dispatcher.Dispatch(new MapsLoadServerAction(ServerId));
-        }
+        Rcon.OnServersUpdated += refresh;
 
         base.OnInitialized();
     }
 
-    protected override void OnAfterRender(bool firstRender)
+    private async void refresh()
     {
-        if (firstRender)
-        {
-            Task.Run(refreshServerTask);
-        }
-
-        base.OnAfterRender(firstRender);
+        await InvokeAsync(StateHasChanged);
     }
 
     protected override void Dispose(bool disposing)
     {
-        if (disposing)
-        {
-            serverUpdateCancellation.Cancel();
-        }
+        Rcon.OnServersUpdated -= refresh;
+
         base.Dispose(disposing);
     }
 
-    private void actionDispatched(object? sender, ActionDispatchedEventArgs eventArgs)
+    protected override void OnParametersSet()
     {
-        if (eventArgs.Action is PavlovServersLoadAction pavlovServersLoadAction && pavlovServersLoadAction.ServerId == ServerId)
-        {
-            serverUpdateActionReset.Set();
-        }
-
-        if (eventArgs.Action is MapsAddServerAction mapsAddServerAction && mapsAddServerAction.ServerId == ServerId)
-        {
-            foreach (MapRowModel map in mapsAddServerAction.Maps)
-            {
-                if (MapsState.Value.MapDetails.Any(m => m.Id == map.MapId))
-                {
-                    continue;
-                }
-
-                Dispatcher.Dispatch(new MapsLoadAction(map.MapId));
-            }
-        }
+        Dispatcher.Dispatch(new PavlovServerLoadNameFromGameIniAction(ServerId));
+        base.OnParametersSet();
     }
 
-    private async void refreshServerTask()
+    private void changeMap(long mapId, string gameMode)
     {
-        while (!serverUpdateCancellation.Token.IsCancellationRequested)
-        {
-            Dispatcher.Dispatch(new PavlovServersLoadAction(ServerId));
+        MapsState.Value.MapDetails.TryGetValue(mapId, out MapDetailModel? mapDetail);
 
-            serverUpdateActionReset.WaitOne();
-            serverUpdateActionReset.Reset();
-            await Task.Delay(5000);
+        try
+        {
+            RconService.SwitchMap(ServerId, mapId, gameMode);
         }
+        catch (Exception e)
+        {
+            Toast.ShowError(e.Message);
+            return;
+        }
+
+        Toast.ShowSuccess($"Map switching to {(mapDetail == null ? $"UGC{mapId}" : mapDetail.Name)} ({gameMode})");
     }
+
 }

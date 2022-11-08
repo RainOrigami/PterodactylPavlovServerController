@@ -1,10 +1,28 @@
-﻿using PterodactylPavlovServerDomain.Models;
-
-namespace PterodactylPavlovServerController.Store.PavlovServers
+﻿namespace PterodactylPavlovServerController.Store.PavlovServers
 {
-    public class PavlovServersLoadAction
+    //public class PavlovServersLoadAction
+    //{
+    //    public PavlovServersLoadAction(string serverId)
+    //    {
+    //        this.ServerId = serverId;
+    //    }
+
+    //    public string ServerId { get; }
+    //}
+
+    //public class PavlovServersAddAction
+    //{
+    //    public PavlovServersAddAction(ServerInfoModel serverInfoModel)
+    //    {
+    //        this.ServerInfoModel = serverInfoModel;
+    //    }
+
+    //    public ServerInfoModel ServerInfoModel { get; }
+    //}
+
+    public class PavlovServerLoadNameFromGameIniAction
     {
-        public PavlovServersLoadAction(string serverId)
+        public PavlovServerLoadNameFromGameIniAction(string serverId)
         {
             this.ServerId = serverId;
         }
@@ -12,19 +30,9 @@ namespace PterodactylPavlovServerController.Store.PavlovServers
         public string ServerId { get; }
     }
 
-    public class PavlovServersAddAction
+    public class PavlovServerAddNameFromGameIniAction
     {
-        public PavlovServersAddAction(ServerInfoModel serverInfoModel)
-        {
-            this.ServerInfoModel = serverInfoModel;
-        }
-
-        public ServerInfoModel ServerInfoModel { get; }
-    }
-
-    public class PavlovServerNameFromGameIniAction
-    {
-        public PavlovServerNameFromGameIniAction(string serverId, string serverName)
+        public PavlovServerAddNameFromGameIniAction(string serverId, string serverName)
         {
             this.ServerId = serverId;
             this.ServerName = serverName;
@@ -32,5 +40,29 @@ namespace PterodactylPavlovServerController.Store.PavlovServers
 
         public string ServerId { get; }
         public string ServerName { get; }
+    }
+
+    //public class PavlovServersSetOnlineStateAction
+    //{
+    //    public PavlovServersSetOnlineStateAction(string serverId, bool online)
+    //    {
+    //        this.ServerId = serverId;
+    //        this.Online = online;
+    //    }
+
+    //    public string ServerId { get; }
+    //    public bool Online { get; }
+    //}
+
+    public class PavlovServersSetErrorAction
+    {
+        public PavlovServersSetErrorAction(string serverId, string? error)
+        {
+            this.ServerId = serverId;
+            this.Error = error;
+        }
+
+        public string ServerId { get; }
+        public string? Error { get; }
     }
 }

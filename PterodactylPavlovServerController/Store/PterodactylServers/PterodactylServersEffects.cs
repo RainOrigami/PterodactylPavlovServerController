@@ -1,23 +1,26 @@
-﻿using Fluxor;
-using PterodactylPavlovServerController.Services;
-
-namespace PterodactylPavlovServerController.Store.Servers
+﻿namespace PterodactylPavlovServerController.Store.Servers
 {
-    public class PterodactylServersEffects
-    {
-        private readonly PterodactylService pterodactylService;
+    //public class PterodactylServersEffects
+    //{
+    //    private readonly PavlovRconConnectionService pavlovRconConnectionService;
 
-        public PterodactylServersEffects(PterodactylService pterodactylService)
-        {
-            this.pterodactylService = pterodactylService;
-        }
+    //    public PterodactylServersEffects(PavlovRconConnectionService pavlovRconConnectionService)
+    //    {
+    //        this.pavlovRconConnectionService = pavlovRconConnectionService;
+    //    }
 
-        [EffectMethod(typeof(PterodactylServersLoadAction))]
-        public async Task LoadServers(IDispatcher dispatcher)
-        {
-            dispatcher.Dispatch(new PterodactylServersSetAction(pterodactylService.GetServers()));
-
-            await Task.CompletedTask;
-        }
-    }
+    //    [EffectMethod(typeof(PterodactylServersLoadAction))]
+    //    public async Task LoadServers(IDispatcher dispatcher)
+    //    {
+    //        try
+    //        {
+    //            dispatcher.Dispatch(new PterodactylServersSetAction(pavlovRconConnectionService.GetAllConnections().Select(c => c.PterodactylServer).ToArray()));
+    //        }
+    //        catch (Exception e)
+    //        {
+    //            Console.WriteLine(e.Message);
+    //        }
+    //        await Task.CompletedTask;
+    //    }
+    //}
 }

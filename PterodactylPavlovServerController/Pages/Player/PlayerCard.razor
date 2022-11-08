@@ -1,0 +1,202 @@
+﻿@using Fluxor
+@using Fluxor.Blazor.Web.Components
+@using PterodactylPavlovServerController.Models
+@using PterodactylPavlovServerController.Services
+@using PterodactylPavlovServerController.Store.Players
+@using PterodactylPavlovServerDomain.Models
+@using Steam.Models.SteamCommunity
+@inherits FluxorComponent
+
+@inject IDispatcher Dispatcher
+@inject IState<PlayersState> PlayersState
+@inject PavlovRconConnectionService Rcon
+
+@{
+    PavlovRconConnection? connection = null;
+    if (ServerId != null)
+    {
+        connection = Rcon.GetServer(ServerId);
+    }
+
+    PlayerListPlayerModel? playerListPlayer = null;
+    if (connection is { PlayerListPlayers: IReadOnlyDictionary<ulong, PlayerListPlayerModel> playerListPlayers })
+    {
+        playerListPlayers.TryGetValue(PlayerId, out playerListPlayer);
+    }
+
+    PlayerDetailModel? playerDetail = null;
+    if (connection is { PlayerDetails: IReadOnlyDictionary<ulong, PlayerDetailModel> playerDetails })
+    {
+        playerDetails.TryGetValue(PlayerId, out playerDetail);
+    }
+
+    PlayersState.Value.PlayerSummaries.TryGetValue(PlayerId, out var playerSummary);
+
+    PlayersState.Value.PlayerBans.TryGetValue(PlayerId, out var playerBans);
+
+    string profileUrl;
+    string avatarUrl;
+    if (playerSummary != null)
+    {
+        profileUrl = playerSummary.ProfileUrl;
+        avatarUrl = playerSummary.AvatarFullUrl;
+    }
+    else
+    {
+        profileUrl = $"https://steamcommunity.com/profiles/{PlayerId}/";
+        avatarUrl = "https://pavlov.bloodisgood.net/gunimages/unknown.png";
+    }
+
+    string playerName;
+    if (playerListPlayer != null)
+    {
+        playerName = playerListPlayer.Username;
+    }
+    else if (playerSummary != null)
+    {
+        playerName = playerSummary.Nickname;
+    }
+    else
+    {
+        playerName = PlayerId.ToString();
+    }
+}
+<div class="card bg-dark">
+    <div class="row g-0">
+        <div class="col-auto">
+            <a href="@profileUrl" class="text-decoration-none" target="_blank"><img class="card-img rounded-start" width="256" height="256" src="@avatarUrl" alt="@PlayerId" /></a>
+        </div>
+
+        <div class="col">
+            <div class="card-body">
+                <a href="@profileUrl" class="text-decoration-none" target="_blank"><h5 class="card-title">@playerName</h5></a>
+                <p class="card-text">
+                    <div class="container px-0">
+                        @if (playerDetail != null)
+                        {
+                            <div class="row gx-0">
+                                <div class="col-auto px-1"><i class="fa-solid fa-star"></i></div>
+                                <div class="col px-1">@playerDetail.Score</div>
+                            </div>
+                            <div class="row gx-0">
+                                <div class="col-auto px-1"><i class="fa-solid fa-dollar-sign"></i></div>
+                                <div class="col px-1">@playerDetail.Cash</div>
+                            </div>
+                            <div class="row gx-0">
+                                <div class="col-auto px-1"><i class="fa-solid fa-gun"></i></div>
+                                <div class="col px-1">@playerDetail.Kills</div>
+                            </div>
+                            <div class="row gx-0">
+                                <div class="col-auto px-1"><i class="fa-solid fa-skull-crossbones"></i></div>
+                                <div class="col px-1">@playerDetail.Deaths</div>
+                            </div>
+                            <div class="row gx-0">
+                                <div class="col-auto px-1"><i class="fa-solid fa-handshake-angle"></i></div>
+                                <div class="col px-1">@playerDetail.Assists</div>
+                            </div>
+                        }
+
+                        @if (playerBans != null)
+                        {
+                            bool isVacBanned = false;
+                            int vac = 0;
+                            int game = 0;
+                            int daysSinceLastBan = -1;
+                            foreach (PlayerBansModel playerBan in playerBans)
+                            {
+                                if (playerBan.VACBanned)
+                                {
+                                    isVacBanned = true;
+                                }
+
+                                vac += (int)playerBan.NumberOfVACBans;
+                                game += (int)playerBan.NumberOfGameBans;
+
+                                if ((daysSinceLastBan == -1 && playerBan.DaysSinceLastBan != 0) || playerBan.DaysSinceLastBan < daysSinceLastBan)
+                                {
+                                    daysSinceLastBan = (int)playerBan.DaysSinceLastBan;
+                                }
+                            }
+
+                            @if (vac == 0 && game == 0 && daysSinceLastBan == -1)
+                            {
+                                <div class="row gx-0">
+                                    <div class="col-auto px-1"><i class="fa-solid fa-shield-halved"></i></div>
+                                    <div class="col px-1">Clean record</div>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="row gx-0">
+                                    <div class="col-auto px-1"><i class="fa-solid fa-shield-halved"></i></div>
+                                    <div class="col px-1 @(isVacBanned ? "text-danger" : vac > 0 ? "text-warning" : "")">
+                                        @(
+                                            $"x{vac}"
+                                            )
+                                    </div>
+                                </div>
+                                <div class="row gx-0">
+                                    <div class="col-auto px-1"><i class="fa-solid fa-gamepad"></i></div>
+                                    <div class="col px-1 @(game > 0 ? "text-danger" : "")">
+                                        @(
+                                            $"x{game}"
+                                            )
+                                    </div>
+                                </div>
+                                @if (daysSinceLastBan != -1)
+                                {
+                                    <div class="row gx-0">
+                                        <div class="col-auto px-1"><i class="fa-solid fa-calendar-xmark"></i></div>
+                                        <div class="col px-1">@daysSinceLastBan days</div>
+                                    </div>
+                                }
+                            }
+                        }
+                    </div>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+@code {
+    [Parameter]
+    public string? ServerId { get; set; } = null;
+
+    [Parameter]
+    [EditorRequired]
+    public ulong PlayerId { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (!PlayersState.Value.PlayerSummaries.ContainsKey(PlayerId))
+        {
+            Dispatcher.Dispatch(new PlayersLoadSummaryAction(PlayerId));
+        }
+
+        if (!PlayersState.Value.PlayerBans.ContainsKey(PlayerId))
+        {
+            Dispatcher.Dispatch(new PlayersLoadBansAction(PlayerId));
+        }
+
+        base.OnParametersSet();
+    }
+
+    protected override void OnInitialized()
+    {
+        Rcon.OnServersUpdated += refresh;
+
+        base.OnInitialized();
+    }
+
+    private async void refresh()
+    {
+        await InvokeAsync(StateHasChanged);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        Rcon.OnServersUpdated -= refresh;
+
+        base.Dispose(disposing);
+    }
+}
