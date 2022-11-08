@@ -5,12 +5,9 @@
 @using Fluxor.Blazor.Web.Components
 @using PterodactylPavlovServerController.Services
 @using PterodactylPavlovServerController.Store
-@using PterodactylPavlovServerController.Store.Servers
-@using PterodactylPavlovServerDomain.Models
 
 @inject IDispatcher Dispatcher
 @inject PavlovRconConnectionService Rcon
-@*@inject IState<PterodactylServersState> ServersState*@
 
 @{
     Dispatcher.Dispatch(new PageTitleSetAction("Select a server"));

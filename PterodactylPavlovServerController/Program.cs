@@ -12,7 +12,6 @@ builder.Services.AddServerSideBlazor();
 builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
 
-//builder.Services.AddScoped<RconToFluxorForwarderService>();
 builder.Services.AddScoped<PavlovServerContext>();
 builder.Services.AddSingleton<PavlovRconService>();
 builder.Services.AddSingleton<GoogleSheetService>();
@@ -28,8 +27,6 @@ builder.Services.AddSingleton<PavlovRconConnectionService>();
 builder.Services.AddFluxor(options =>
 {
     options.ScanAssemblies(typeof(Program).Assembly);
-    //options.UseReduxDevTools();
-    //options.UseRouting();
 });
 
 builder.Services.AddBlazoredToast();
@@ -43,6 +40,10 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+}
+else
+{
+    app.Services.GetRequiredService<PavlovStatisticsService>().Run();
 }
 
 app.UseHttpsRedirection();
@@ -66,6 +67,5 @@ using (IServiceScope scope = app.Services.CreateScope())
     scope.ServiceProvider.GetRequiredService<PavlovServerContext>().Database.EnsureCreated();
 }
 app.Services.GetRequiredService<PavlovRconConnectionService>().Run();
-//app.Services.GetRequiredService<PavlovStatisticsService>().Run();
 
 app.Run();

@@ -3,13 +3,11 @@
 @using PterodactylPavlovServerController.Models
 @using PterodactylPavlovServerController.Services
 @using PterodactylPavlovServerController.Store.PavlovServers
-@using PterodactylPavlovServerController.Store.Servers
 @using PterodactylPavlovServerDomain.Models
 
 @inherits FluxorComponent
 @inject IDispatcher Dispatcher
 @inject PavlovRconConnectionService Rcon
-@*@inject IState<PterodactylServersState> PterodactylServersState*@
 @inject IState<PavlovServersState> PavlovServersState
 
 @if (!Rcon.Initialised)
@@ -37,9 +35,10 @@
 </div>
 
 @code {
+
     [Parameter]
     [EditorRequired]
-    public string ServerId { get; set; }
+    public string ServerId { get; set; } = String.Empty;
 
     protected override void OnInitialized()
     {

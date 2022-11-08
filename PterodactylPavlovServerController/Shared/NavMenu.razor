@@ -3,13 +3,10 @@
 @using PterodactylPavlovServerController.Models
 @using PterodactylPavlovServerController.Services
 @using PterodactylPavlovServerController.Store.PavlovServers
-@using PterodactylPavlovServerController.Store.Servers
 @using PterodactylPavlovServerDomain.Models
 @inherits FluxorComponent
 
 @inject IDispatcher Dispatcher
-@*@inject IState<PterodactylServersState> PterodactylServersState
-@inject IState<PavlovServersState> PavlovServersState*@
 @inject PavlovRconConnectionService Rcon
 
 <div class="top-row ps-3 navbar navbar-dark">

@@ -1,13 +1,10 @@
 ﻿@using Fluxor
 @using Fluxor.Blazor.Web.Components
-@using PterodactylPavlovServerController.Services
 @using PterodactylPavlovServerController.Store
+
 @inherits FluxorLayout
 
-@inject IDispatcher Dispatcher
 @inject IState<PageTitleState> PageTitleState
-@inject PavlovRconConnectionService Rcon
-@*@inject RconToFluxorForwarderService Forwarder*@
 
 <PageTitle>@PageTitleState.Value.Title - PPSC</PageTitle>
 

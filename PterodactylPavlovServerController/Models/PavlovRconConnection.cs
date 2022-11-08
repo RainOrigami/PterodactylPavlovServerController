@@ -71,8 +71,6 @@ namespace PterodactylPavlovServerController.Models
                 Online = false;
                 OnServerOnlineStateChanged?.Invoke(ServerId);
                 OnServerErrorRaised?.Invoke(ServerId, ex.Message);
-                //dispatcher.Dispatch(new PavlovServersSetOnlineStateAction(ServerId, false));
-                //dispatcher.Dispatch(new PavlovServersSetErrorAction(ServerId, ex.Message));
 
                 return;
             }
@@ -81,11 +79,9 @@ namespace PterodactylPavlovServerController.Models
             {
                 Online = true;
                 OnServerOnlineStateChanged?.Invoke(ServerId);
-                //dispatcher.Dispatch(new PavlovServersSetOnlineStateAction(ServerId, true));
             }
 
             OnServerInfoUpdated?.Invoke(ServerId);
-            //dispatcher.Dispatch(new PavlovServersAddAction(ServerInfo));
         }
 
         public event ServerUpdated? OnPlayerListUpdated;
@@ -101,13 +97,10 @@ namespace PterodactylPavlovServerController.Models
             {
                 PlayerListPlayerModel[] playerListPlayerModels = pavlovRconService.GetActivePlayers(ServerId);
                 playerListPlayers = playerListPlayerModels.ToDictionary(k => ulong.Parse(k.UniqueId), v => v);
-
-                //dispatcher.Dispatch(new PlayersAddListAction(ServerId, PlayerListPlayers));
             }
             catch (Exception ex)
             {
                 OnServerErrorRaised?.Invoke(ServerId, ex.Message);
-                //dispatcher.Dispatch(new PavlovServersSetErrorAction(ServerId, ex.Message));
                 return;
             }
 
@@ -157,12 +150,10 @@ namespace PterodactylPavlovServerController.Models
 
                     newPlayerDetails.Add(playerDetail);
                     OnPlayerDetailUpdated?.Invoke(ServerId, playerDetail);
-                    //dispatcher.Dispatch(new PlayersAddDetailAction(ServerId, playerDetail));
                 }
                 catch (Exception ex)
                 {
                     OnServerErrorRaised?.Invoke(ServerId, ex.Message);
-                    //dispatcher.Dispatch(new PavlovServersSetErrorAction(ServerId, ex.Message));
                 }
             }
 

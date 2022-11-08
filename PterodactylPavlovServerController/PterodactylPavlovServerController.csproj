@@ -16,7 +16,6 @@
   <ItemGroup>
     <Compile Remove="Pages\Rcon\Server.razor.cs" />
     <Compile Remove="Services\RconToFluxorForwarderService.cs" />
-    <Compile Remove="Store\PterodactylServers\ServersFeature.cs" />
   </ItemGroup>
 
   <ItemGroup>

@@ -16,34 +16,6 @@ namespace PterodactylPavlovServerController.Store.PavlovServers
             this.pavlovServersState = pavlovServersState;
         }
 
-        //[EffectMethod]
-        //public async Task LoadServer(PavlovServersLoadAction pavlovServersLoadAction, IDispatcher dispatcher)
-        //{
-        //    if (!pavlovServersState.Value.ServerNamesFromGameIni.ContainsKey(pavlovServersLoadAction.ServerId))
-        //    {
-        //        dispatcher.Dispatch(new PavlovServerLoadNameFromGameIniAction(pavlovServersLoadAction.ServerId));
-        //    }
-
-        //    try
-        //    {
-        //        PavlovRconConnection connection = pavlovRconConnectionService.GetServer(pavlovServersLoadAction.ServerId);
-        //        ServerInfoModel? serverInfo = connection.ServerInfo;
-        //        if (serverInfo != null)
-        //        {
-        //            dispatcher.Dispatch(new PavlovServersAddAction(serverInfo));
-        //        }
-
-        //        dispatcher.Dispatch(new PavlovServersSetOnlineStateAction(pavlovServersLoadAction.ServerId, connection.Online));
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        dispatcher.Dispatch(new PavlovServersSetOnlineStateAction(pavlovServersLoadAction.ServerId, false));
-        //        dispatcher.Dispatch(new PavlovServersSetErrorAction(pavlovServersLoadAction.ServerId, ex.Message));
-        //    }
-
-        //    await Task.CompletedTask;
-        //}
-
         [EffectMethod]
         public async Task LoadServerNameFromGameIni(PavlovServerLoadNameFromGameIniAction pavlovServerLoadNameFromGameIniAction, IDispatcher dispatcher)
         {

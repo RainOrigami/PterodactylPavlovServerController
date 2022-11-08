@@ -7,17 +7,13 @@
 @using PterodactylPavlovServerController.Store
 @using PterodactylPavlovServerController.Store.Maps
 @using PterodactylPavlovServerController.Store.PavlovServers
-@using PterodactylPavlovServerController.Store.Players
-@using PterodactylPavlovServerController.Store.Servers
 @using PterodactylPavlovServerDomain.Models
 @inherits FluxorComponent
 
 @inject IDispatcher Dispatcher
 @inject PavlovRconConnectionService Rcon
-@*@inject IState<PterodactylServersState> PterodactylServersState*@
 @inject IState<PavlovServersState> PavlovServersState
 @inject IState<MapsState> MapsState
-@*@inject IState<PlayersState> PlayersState*@
 @inject PavlovRconService RconService
 @inject IToastService Toast
 
@@ -216,16 +212,6 @@
                             {
                                 MapsState.Value.MapDetails.TryGetValue(mapRow.MapId, out MapDetailModel? serverMapsDetail);
 
-                                @*string serverMapsUrl;
-                        if (serverMapsDetail != null)
-                        {
-                        serverMapsUrl = serverMapsDetail.URL;
-                        }
-                        else
-                        {
-                        serverMapsUrl = $"https://steamcommunity.com/sharedfiles/filedetails/?id={mapRow.MapId}";
-                        }*@
-
                                 <div class="card bg-dark" style="display: inline-block; width: 256px;">
                                     <a href="#" @onclick="() => changeMap(mapRow.MapId, mapRow.GameMode)" @onclick:preventDefault class="text-decoration-none"><img class="card-img-top" src="@(serverMapsDetail == null ? "https://pavlov.bloodisgood.net/gunimages/unknown.png" : serverMapsDetail.ImageURL + "/?imw=256&imh=256&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true")" alt="@mapRow.MapId" /></a>
                                     <div class="card-body">
@@ -257,7 +243,7 @@
 @code {
     [Parameter]
     [EditorRequired]
-    public string ServerId { get; set; } = null!;
+    public string ServerId { get; set; } = String.Empty;
 
     private async Task loadMaps()
     {
@@ -274,6 +260,7 @@
 
     protected override async Task OnParametersSetAsync()
     {
+
         Dispatcher.ActionDispatched += DispatcherOnActionDispatched;
         await loadMaps();
         await base.OnParametersSetAsync();
