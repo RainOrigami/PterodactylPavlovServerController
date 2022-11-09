@@ -1,11 +1,11 @@
-﻿using System.Diagnostics;
-using System.Text;
-using System.Text.RegularExpressions;
-using PavlovStatsReader;
+﻿using PavlovStatsReader;
 using PavlovStatsReader.Models;
 using PterodactylPavlovServerDomain.Models;
 using Steam.Models.SteamCommunity;
 using Steam.Models.Utilities;
+using System.Diagnostics;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace PterodactylPavlovServerController.Services;
 
@@ -388,10 +388,10 @@ public class PavlovStatisticsService : IDisposable
             CMapStats[] mapsStats = calculatedStats.OfType<CMapStats>().ToArray();
             mapsStats.AsParallel().ForAll(mapStats =>
             {
-                MapDetailModel mapDetail;
+                MapWorkshopModel mapWorkshop;
                 try
                 {
-                    mapDetail = this.steamWorkshopService.GetMapDetail(long.Parse(mapStats.MapId.Substring(3)));
+                    mapWorkshop = this.steamWorkshopService.GetMapDetail(long.Parse(mapStats.MapId.Substring(3)));
                 }
                 catch (Exception e)
                 {
@@ -403,7 +403,7 @@ public class PavlovStatisticsService : IDisposable
 
                 lock (mapsStatsContent)
                 {
-                    mapsStatsContent.Add(mapStats, this.createStatsCard($"map-{mapStats.MapId}-{mapStats.GameMode}", mapDetail.URL, true, $"{mapDetail.ImageURL}/?imw={PavlovStatisticsService.CARD_WIDTH}&imh={PavlovStatisticsService.CARD_WIDTH}&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true", $"{mapDetail.Name} ({mapStats.GameMode})", new Dictionary<string, string>
+                    mapsStatsContent.Add(mapStats, this.createStatsCard($"map-{mapStats.MapId}-{mapStats.GameMode}", mapWorkshop.URL, true, $"{mapWorkshop.ImageURL}/?imw={PavlovStatisticsService.CARD_WIDTH}&imh={PavlovStatisticsService.CARD_WIDTH}&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true", $"{mapWorkshop.Name} ({mapStats.GameMode})", new Dictionary<string, string>
                     {
                         {
                             "Played", $"{mapStats.PlayCount} time{(mapStats.PlayCount != 1 ? "s" : "")}"
@@ -541,7 +541,7 @@ public class PavlovStatisticsService : IDisposable
                             vacCount += (int) playerBan.NumberOfVACBans;
                         }
 
-                        MapDetailModel? bestMap = null;
+                        MapWorkshopModel? bestMap = null;
                         if (playerStats.BestMap != null)
                         {
                             bestMap = this.steamWorkshopService.GetMapDetail(long.Parse(playerStats.BestMap[3..]));

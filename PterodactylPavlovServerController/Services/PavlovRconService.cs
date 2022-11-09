@@ -1,8 +1,8 @@
-﻿using System.Text.Json;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using PavlovVR_Rcon;
 using PterodactylPavlovServerController.Exceptions;
 using PterodactylPavlovServerDomain.Models;
+using System.Text.Json;
 
 namespace PterodactylPavlovServerController.Services;
 
@@ -44,7 +44,7 @@ public class PavlovRconService
         return serverInfoModel;
     }
 
-    public void SwitchMap(string serverId, long mapId, string gameMode)
+    public void SwitchMap(string serverId, string mapLabel, string gameMode)
     {
         if (!Enum.TryParse(gameMode, out PavlovGameMode pavlovGameMode))
         {
@@ -52,7 +52,7 @@ public class PavlovRconService
         }
 
         PavlovRcon pavlovRcon = this.openConnection(serverId);
-        pavlovRcon.SendCommand(RconCommandType.SwitchMap, $"UGC{mapId}", pavlovGameMode.ToString());
+        pavlovRcon.SendCommand(RconCommandType.SwitchMap, mapLabel, pavlovGameMode.ToString());
     }
 
     public void RotateMap(string serverId)

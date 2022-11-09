@@ -1,7 +1,8 @@
 ﻿@using Fluxor
-@using PterodactylPavlovServerController.Services
+@using PterodactylPavlovServerController.Stores
 @using PterodactylPavlovServerDomain.Models
 @using Steam.Models.SteamCommunity
+@using PterodactylPavlovServerController.Services
 @using PterodactylPavlovServerController.Models
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
@@ -28,9 +29,9 @@
         playerDetails.TryGetValue(PlayerId, out playerDetail);
     }
 
-    PlayersState.Value.PlayerSummaries.TryGetValue(PlayerId, out var playerSummary);
+    PlayersState.Value.PlayerSummaries.TryGetValue(PlayerId, out PlayerSummaryModel? playerSummary);
 
-    PlayersState.Value.PlayerBans.TryGetValue(PlayerId, out var playerBans);
+    PlayersState.Value.PlayerBans.TryGetValue(PlayerId, out IReadOnlyCollection<PlayerBansModel>? playerBans);
 
     string profileUrl;
     string avatarUrl;

@@ -15,9 +15,9 @@ public class GoogleSheetService
     public T[] GetDocumentRows<T>(Type repositoryType, string spreadsheetId, string tabName) where T : BaseRecord
     {
         SheetHelper<T> sheetHelper = new(spreadsheetId, this.configuration["google_serviceaccountemail"], tabName);
-        sheetHelper.Init(File.ReadAllText(this.configuration["google_jsoncredentialpath"]));
+        sheetHelper.Init(File.ReadAllText(this.configuration["google_jsoncredentialpath"]!));
 
-        BaseRepository<T> repository = (BaseRepository<T>) Activator.CreateInstance(repositoryType, sheetHelper)!;
+        BaseRepository<T> repository = (BaseRepository<T>)Activator.CreateInstance(repositoryType, sheetHelper)!;
 
         if (!repository.ValidateSchema().IsValid)
         {

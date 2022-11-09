@@ -1,69 +1,70 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
-  <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net6.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+	</PropertyGroup>
 
-  <ItemGroup>
-    <Compile Remove="stats\**" />
-    <Content Remove="stats\**" />
-    <EmbeddedResource Remove="stats\**" />
-    <None Remove="stats\**" />
-  </ItemGroup>
+	<ItemGroup>
+		<Compile Remove="stats\**" />
+		<Content Remove="stats\**" />
+		<EmbeddedResource Remove="stats\**" />
+		<None Remove="stats\**" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <Compile Remove="Pages\Rcon\Server.razor.cs" />
-    <Compile Remove="Services\RconToFluxorForwarderService.cs" />
-  </ItemGroup>
+	<ItemGroup>
+		<Compile Remove="Pages\Rcon\Server.razor.cs" />
+		<Compile Remove="Services\RconToFluxorForwarderService.cs" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <Content Remove="buoyant-imagery-255718-b7158a794e35.json" />
-    <Content Remove="steambans.json" />
-    <Content Remove="steamprofiles.json" />
-    <Content Remove="workshopmapscache.json" />
-  </ItemGroup>
+	<ItemGroup>
+		<Content Remove="buoyant-imagery-255718-b7158a794e35.json" />
+		<Content Remove="steambans.json" />
+		<Content Remove="steamprofiles.json" />
+		<Content Remove="workshopmapscache.json" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <None Include="buoyant-imagery-255718-b7158a794e35.json">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>
-    <None Include="steambans.json">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>
-    <None Include="steamprofiles.json">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>
-    <None Include="workshopmapscache.json">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
+	<ItemGroup>
+		<None Include="..\.editorconfig" Link=".editorconfig" />
+		<None Include="buoyant-imagery-255718-b7158a794e35.json">
+			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
+		</None>
+		<None Include="steambans.json">
+			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
+		</None>
+		<None Include="steamprofiles.json">
+			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
+		</None>
+		<None Include="workshopmapscache.json">
+			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Blazored.Toast" Version="3.2.2" />
-    <PackageReference Include="Fluxor.Blazor.Web" Version="5.5.0" />
-    <PackageReference Include="Fluxor.Blazor.Web.ReduxDevTools" Version="5.5.0" />
-    <PackageReference Include="GoogleSheetsWrapper" Version="1.0.37" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="7.0.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="7.0.0" />
-    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="6.0.10" />
-    <PackageReference Include="MySql.EntityFrameworkCore" Version="6.0.7" />
-    <PackageReference Include="RestSharp" Version="108.0.2" />
-    <PackageReference Include="SteamWebAPI2" Version="4.4.0" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />
-  </ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Blazored.Toast" Version="3.2.2" />
+		<PackageReference Include="Fluxor.Blazor.Web" Version="5.5.0" />
+		<PackageReference Include="Fluxor.Blazor.Web.ReduxDevTools" Version="5.5.0" />
+		<PackageReference Include="GoogleSheetsWrapper" Version="1.0.37" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="7.0.0" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="7.0.0" />
+		<PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="6.0.10" />
+		<PackageReference Include="MySql.EntityFrameworkCore" Version="6.0.7" />
+		<PackageReference Include="RestSharp" Version="108.0.2" />
+		<PackageReference Include="SteamWebAPI2" Version="4.4.0" />
+		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\..\PavlovVR-Rcon\PavlovVR-Rcon\PavlovVR-Rcon.csproj" />
-    <ProjectReference Include="..\PavlovStatsReader\PavlovStatsReader.csproj" />
-    <ProjectReference Include="..\PterodactylPavlovServerDomain\PterodactylPavlovServerDomain.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\..\PavlovVR-Rcon\PavlovVR-Rcon\PavlovVR-Rcon.csproj" />
+		<ProjectReference Include="..\PavlovStatsReader\PavlovStatsReader.csproj" />
+		<ProjectReference Include="..\PterodactylPavlovServerDomain\PterodactylPavlovServerDomain.csproj" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <None Update="RustRconReplies.txt">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
+	<ItemGroup>
+		<None Update="RustRconReplies.txt">
+			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
 
 </Project>

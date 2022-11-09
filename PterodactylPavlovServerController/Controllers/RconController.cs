@@ -1,5 +1,4 @@
-﻿using System.Text.RegularExpressions;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using PterodactylPavlovServerController.Exceptions;
 using PterodactylPavlovServerController.Services;
 using PterodactylPavlovServerDomain.Models;
@@ -57,12 +56,7 @@ public class RconController : Controller
         try
         {
             PlayerDetailModel? activePlayer = this.pavlovRconService.GetActivePlayerDetail(serverId, uniqueId);
-            if (activePlayer is null)
-            {
-                return this.ValidationProblem("Player is not active on this server");
-            }
-
-            return this.Ok(activePlayer);
+            return activePlayer is null ? this.ValidationProblem("Player is not active on this server") : this.Ok(activePlayer);
         }
         catch (RconException)
         {
@@ -77,15 +71,9 @@ public class RconController : Controller
     [HttpPost("switchMap")]
     public IActionResult SwitchMap(string serverId, string mapId, string gameMode)
     {
-        Match mapIdMatch = MapsController.mapIdRegex.Match(mapId);
-        if (!mapIdMatch.Success)
-        {
-            return this.ValidationProblem("Map id must be in format UGC0000000000 or 0000000000");
-        }
-
         try
         {
-            this.pavlovRconService.SwitchMap(serverId, long.Parse(mapIdMatch.Groups["id"].Value), gameMode);
+            this.pavlovRconService.SwitchMap(serverId, mapId, gameMode);
             return this.Ok();
         }
         catch (RconException)

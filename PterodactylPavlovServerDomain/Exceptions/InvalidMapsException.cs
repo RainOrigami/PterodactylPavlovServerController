@@ -1,14 +1,13 @@
 ﻿using PterodactylPavlovServerDomain.Models;
 
-namespace PterodactylPavlovServerDomain.Exceptions
-{
-    public class InvalidMapsException : Exception
-    {
-        public InvalidMapsException(MapRowModel[] invalidMaps)
-        {
-            this.InvalidMaps = invalidMaps;
-        }
+namespace PterodactylPavlovServerDomain.Exceptions;
 
-        public MapRowModel[] InvalidMaps { get; }
+public class InvalidMapsException : Exception
+{
+    public InvalidMapsException(GoogleSheetsMapRowModel[] invalidMaps)
+    {
+        this.InvalidMaps = invalidMaps;
     }
+
+    public GoogleSheetsMapRowModel[] InvalidMaps { get; }
 }

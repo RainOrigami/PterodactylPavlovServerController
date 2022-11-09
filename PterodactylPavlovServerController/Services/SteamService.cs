@@ -24,7 +24,7 @@ public class SteamService
 
         try
         {
-            this.playerSummariesCache = JsonConvert.DeserializeObject<Dictionary<ulong, (DateTime lastUpdated, PlayerSummaryModel playerSummary)>>(File.ReadAllText(configuration["steam_summarycache"])) ?? new Dictionary<ulong, (DateTime lastUpdated, PlayerSummaryModel playerSummary)>();
+            this.playerSummariesCache = JsonConvert.DeserializeObject<Dictionary<ulong, (DateTime lastUpdated, PlayerSummaryModel playerSummary)>>(File.ReadAllText(configuration["steam_summarycache"]!)) ?? new Dictionary<ulong, (DateTime lastUpdated, PlayerSummaryModel playerSummary)>();
         }
         catch (Exception)
         {
@@ -33,7 +33,7 @@ public class SteamService
 
         try
         {
-            this.playerBansCache = JsonConvert.DeserializeObject<Dictionary<ulong, (DateTime lastUpdated, IReadOnlyCollection<PlayerBansModel> playerBans)>>(File.ReadAllText(configuration["steam_bancache"])) ?? new Dictionary<ulong, (DateTime lastUpdated, IReadOnlyCollection<PlayerBansModel> playerBans)>();
+            this.playerBansCache = JsonConvert.DeserializeObject<Dictionary<ulong, (DateTime lastUpdated, IReadOnlyCollection<PlayerBansModel> playerBans)>>(File.ReadAllText(configuration["steam_bancache"]!)) ?? new Dictionary<ulong, (DateTime lastUpdated, IReadOnlyCollection<PlayerBansModel> playerBans)>();
         }
         catch (Exception)
         {
@@ -84,7 +84,7 @@ public class SteamService
                 }
 
                 this.playerSummariesCache.Add(steamId, (lastUpdated.Value, playerSummary));
-                File.WriteAllText(this.configuration["steam_summarycache"], JsonConvert.SerializeObject(this.playerSummariesCache));
+                File.WriteAllText(this.configuration["steam_summarycache"]!, JsonConvert.SerializeObject(this.playerSummariesCache));
             }
         }
 
@@ -138,7 +138,7 @@ public class SteamService
                 }
 
                 this.playerBansCache.Add(steamId, (lastUpdated.Value, playerBans));
-                File.WriteAllText(this.configuration["steam_bancache"], JsonConvert.SerializeObject(this.playerBansCache));
+                File.WriteAllText(this.configuration["steam_bancache"]!, JsonConvert.SerializeObject(this.playerBansCache));
             }
         }
 

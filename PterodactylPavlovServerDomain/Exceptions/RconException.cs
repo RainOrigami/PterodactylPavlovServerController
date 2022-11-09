@@ -1,6 +1,3 @@
-﻿namespace PterodactylPavlovServerController.Exceptions
-{
-    public class RconException : Exception
-    {
-    }
-}
+﻿namespace PterodactylPavlovServerController.Exceptions;
+
+public class RconException : Exception { }

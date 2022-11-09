@@ -1,10 +1,10 @@
-﻿using System.Text.RegularExpressions;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using PterodactylPavlovServerController.Exceptions;
 using PterodactylPavlovServerController.Services;
 using PterodactylPavlovServerDomain.Exceptions;
 using PterodactylPavlovServerDomain.Models;
+using System.Text.RegularExpressions;
 
 namespace PterodactylPavlovServerController.Controllers;
 
@@ -27,11 +27,11 @@ public class MapsController : ControllerBase
     [HttpPost("update")]
     public IActionResult Update(string serverId, string spreadsheetId, string tabName)
     {
-        MapRowModel[] mapRows;
+        GoogleSheetsMapRowModel[] mapRows;
 
         try
         {
-            mapRows = this.googleSheetService.GetDocumentRows<MapRowModel>(typeof(MapRepository), spreadsheetId, tabName);
+            mapRows = this.googleSheetService.GetDocumentRows<GoogleSheetsMapRowModel>(typeof(MapRepository), spreadsheetId, tabName);
         }
         catch (GoogleSheetsHeaderMismatch)
         {

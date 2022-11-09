@@ -1,62 +1,61 @@
 ﻿using PterodactylPavlovServerController.Exceptions;
 using System.Text.RegularExpressions;
 
-namespace PterodactylPavlovServerDomain.Models
+namespace PterodactylPavlovServerDomain.Models;
+
+public class ServerInfoModel
 {
-    public class ServerInfoModel
+    private static readonly Regex playerCountRegex = new(@"^(?<current>\d+)/(?<max>\d+)$");
+
+    private int? currentPlayerCount;
+    private int? maximumPlayerCount;
+    private Match? playerCountMatch;
+    public string ServerId { get; set; } = string.Empty;
+    public string MapLabel { get; set; } = string.Empty;
+    public string GameMode { get; set; } = string.Empty;
+    public string ServerName { get; set; } = string.Empty;
+    public bool Teams { get; set; }
+    public int Team0Score { get; set; }
+    public int Team1Score { get; set; }
+    public int Round { get; set; }
+    public string RoundState { get; set; } = string.Empty;
+    public string PlayerCount { get; set; } = string.Empty;
+
+    private Match PlayerCountMatch
     {
-        public string ServerId { get; set; } = String.Empty;
-        public string MapLabel { get; set; } = String.Empty;
-        public string GameMode { get; set; } = String.Empty;
-        public string ServerName { get; set; } = String.Empty;
-        public bool Teams { get; set; }
-        public int Team0Score { get; set; }
-        public int Team1Score { get; set; }
-        public int Round { get; set; }
-        public string RoundState { get; set; } = String.Empty;
-        public string PlayerCount { get; set; } = String.Empty;
-
-        private static readonly Regex playerCountRegex = new(@"^(?<current>\d+)/(?<max>\d+)$");
-        private Match? playerCountMatch = null;
-        private Match PlayerCountMatch
+        get
         {
-            get
+            if (this.playerCountMatch is null)
             {
-                if (playerCountMatch is null)
+                this.playerCountMatch = ServerInfoModel.playerCountRegex.Match(this.PlayerCount);
+
+                if (!this.playerCountMatch.Success)
                 {
-                    playerCountMatch = playerCountRegex.Match(PlayerCount);
-
-                    if (!playerCountMatch.Success)
-                    {
-                        throw new RconException();
-                    }
+                    throw new RconException();
                 }
-
-                return playerCountMatch;
             }
+
+            return this.playerCountMatch;
         }
+    }
 
-        private int? currentPlayerCount = null;
-        private int? maximumPlayerCount = null;
-
-        public int CurrentPlayerCount
+    public int CurrentPlayerCount
+    {
+        get
         {
-            get
-            {
-                currentPlayerCount ??= int.Parse(PlayerCountMatch.Groups["current"].Value);
+            this.currentPlayerCount ??= int.Parse(this.PlayerCountMatch.Groups["current"].Value);
 
-                return currentPlayerCount.Value;
-            }
+            return this.currentPlayerCount.Value;
         }
+    }
 
-        public int MaximumPlayerCount
+    public int MaximumPlayerCount
+    {
+        get
         {
-            get
-            {
-                maximumPlayerCount ??= int.Parse(PlayerCountMatch.Groups["max"].Value);
+            this.maximumPlayerCount ??= int.Parse(this.PlayerCountMatch.Groups["max"].Value);
 
-                return maximumPlayerCount.Value;
-            }
+            return this.maximumPlayerCount.Value;
         }
     }
 }

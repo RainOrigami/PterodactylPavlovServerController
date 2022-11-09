@@ -1,5 +1,5 @@
-﻿using System.Net;
-using Microsoft.Extensions.Primitives;
+﻿using Microsoft.Extensions.Primitives;
+using System.Net;
 
 namespace PterodactylPavlovServerController.Middleware;
 

@@ -7,23 +7,22 @@ namespace PterodactylPavlovServerController.Stores;
 [FeatureState]
 public record MapsState
 {
-    public IReadOnlyDictionary<long, MapDetailModel> MapDetails { get; init; } = new Dictionary<long, MapDetailModel>();
-    public IReadOnlyDictionary<string, MapRowModel[]> ServerMaps { get; init; } = new Dictionary<string, MapRowModel[]>();
+    public IReadOnlyDictionary<long, MapWorkshopModel> MapDetails { get; init; } = new Dictionary<long, MapWorkshopModel>();
+    public IReadOnlyDictionary<string, MapServerModel[]> ServerMaps { get; init; } = new Dictionary<string, MapServerModel[]>();
 }
 
 public class MapsReducers
 {
     [ReducerMethod]
-    public static MapsState OnMapsAdd(MapsState mapsState, MapsAddAction mapsAddAction)
+    public static MapsState OnMapsAdd(MapsState mapsState, MapsAddWorkshopAction mapsAddWorkshopAction)
     {
-        Dictionary<long, MapDetailModel> maps = (Dictionary<long, MapDetailModel>) mapsState.MapDetails;
-
-        if (maps.ContainsKey(mapsAddAction.MapDetailModel.Id))
+        Dictionary<long, MapWorkshopModel> maps = (Dictionary<long, MapWorkshopModel>) mapsState.MapDetails;
+        if (maps.ContainsKey(mapsAddWorkshopAction.MapWorkshopModel.Id))
         {
-            maps.Remove(mapsAddAction.MapDetailModel.Id);
+            maps.Remove(mapsAddWorkshopAction.MapWorkshopModel.Id);
         }
 
-        maps.Add(mapsAddAction.MapDetailModel.Id, mapsAddAction.MapDetailModel);
+        maps.Add(mapsAddWorkshopAction.MapWorkshopModel.Id, mapsAddWorkshopAction.MapWorkshopModel);
 
         return mapsState with
         {
@@ -34,7 +33,7 @@ public class MapsReducers
     [ReducerMethod]
     public static MapsState OnMapsServerAdd(MapsState mapsState, MapsAddServerAction mapsAddServerAction)
     {
-        Dictionary<string, MapRowModel[]> maps = (Dictionary<string, MapRowModel[]>) mapsState.ServerMaps;
+        Dictionary<string, MapServerModel[]> maps = (Dictionary<string, MapServerModel[]>) mapsState.ServerMaps;
 
         if (maps.ContainsKey(mapsAddServerAction.ServerId))
         {
@@ -64,16 +63,16 @@ public class MapsEffects
     }
 
     [EffectMethod]
-    public async Task LoadMap(MapsLoadAction mapsLoadAction, IDispatcher dispatcher)
+    public async Task LoadMap(MapsLoadWorkshopAction mapsLoadWorkshopAction, IDispatcher dispatcher)
     {
-        if (this.mapsState.Value.MapDetails.ContainsKey(mapsLoadAction.MapId))
+        if (this.mapsState.Value.MapDetails.ContainsKey(mapsLoadWorkshopAction.MapId))
         {
             return;
         }
 
         try
         {
-            dispatcher.Dispatch(new MapsAddAction(this.steamWorkshopService.GetMapDetail(mapsLoadAction.MapId)));
+            dispatcher.Dispatch(new MapsAddWorkshopAction(this.steamWorkshopService.GetMapDetail(mapsLoadWorkshopAction.MapId)));
         }
         catch (Exception ex)
         {
@@ -86,26 +85,26 @@ public class MapsEffects
     [EffectMethod]
     public async Task LoadServerMaps(MapsLoadServerAction mapsLoadServerAction, IDispatcher dispatcher)
     {
-        MapRowModel[] mapRows = this.pavlovServerService.GetCurrentMapRotation(mapsLoadServerAction.ServerId);
+        MapServerModel[] mapRows = this.pavlovServerService.GetCurrentMapRotation(mapsLoadServerAction.ServerId);
         dispatcher.Dispatch(new MapsAddServerAction(mapsLoadServerAction.ServerId, mapRows));
 
-        foreach (MapRowModel map in mapRows)
+        foreach (MapServerModel map in mapRows)
         {
-            if (this.mapsState.Value.MapDetails.ContainsKey(map.MapId))
+            if (!map.IsWorkshopMap || this.mapsState.Value.MapDetails.ContainsKey(map.WorkshopId))
             {
                 continue;
             }
 
-            dispatcher.Dispatch(new MapsLoadAction(map.MapId));
+            dispatcher.Dispatch(new MapsLoadWorkshopAction(map.WorkshopId));
         }
 
         await Task.CompletedTask;
     }
 }
 
-public class MapsLoadAction
+public class MapsLoadWorkshopAction
 {
-    public MapsLoadAction(long mapId)
+    public MapsLoadWorkshopAction(long mapId)
     {
         this.MapId = mapId;
     }
@@ -113,14 +112,14 @@ public class MapsLoadAction
     public long MapId { get; }
 }
 
-public class MapsAddAction
+public class MapsAddWorkshopAction
 {
-    public MapsAddAction(MapDetailModel mapDetailModel)
+    public MapsAddWorkshopAction(MapWorkshopModel mapWorkshopModel)
     {
-        this.MapDetailModel = mapDetailModel;
+        this.MapWorkshopModel = mapWorkshopModel;
     }
 
-    public MapDetailModel MapDetailModel { get; }
+    public MapWorkshopModel MapWorkshopModel { get; }
 }
 
 public class MapsLoadServerAction
@@ -135,12 +134,12 @@ public class MapsLoadServerAction
 
 public class MapsAddServerAction
 {
-    public MapsAddServerAction(string serverId, MapRowModel[] maps)
+    public MapsAddServerAction(string serverId, MapServerModel[] maps)
     {
         this.ServerId = serverId;
         this.Maps = maps;
     }
 
     public string ServerId { get; }
-    public MapRowModel[] Maps { get; }
+    public MapServerModel[] Maps { get; }
 }

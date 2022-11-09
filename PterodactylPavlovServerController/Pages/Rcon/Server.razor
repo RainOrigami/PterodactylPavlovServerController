@@ -51,29 +51,19 @@
         return;
     }
 
-    MapDetailModel? mapDetail = null;
-    if (serverInfo.MapLabel.StartsWith("UGC"))
+    MapServerModel map = new()
     {
-        long mapId = long.Parse(serverInfo.MapLabel.Substring(3));
+        MapLabel = serverInfo.MapLabel,
+        GameMode = serverInfo.GameMode,
+    };
 
-        if (!MapsState.Value.MapDetails.TryGetValue(mapId, out mapDetail))
+    MapWorkshopModel? mapDetail = null;
+    if (map.IsWorkshopMap)
+    {
+        if (!MapsState.Value.MapDetails.TryGetValue(map.WorkshopId, out mapDetail))
         {
-            Dispatcher.Dispatch(new MapsLoadAction(mapId));
+            Dispatcher.Dispatch(new MapsLoadWorkshopAction(map.WorkshopId));
         }
-    }
-
-    string mapUrl;
-    if (mapDetail != null)
-    {
-        mapUrl = mapDetail.URL;
-    }
-    else if (serverInfo.MapLabel.StartsWith("UGC"))
-    {
-        mapUrl = $"https://steamcommunity.com/sharedfiles/filedetails/?id={serverInfo.MapLabel.Substring(3)}";
-    }
-    else
-    {
-        mapUrl = $"http://wiki.pavlov-vr.com/index.php?title=Default_Maps#{serverInfo.MapLabel}";
     }
 }
 
@@ -83,14 +73,14 @@
             <div class="card bg-dark">
                 <div class="row g-0">
                     <div class="col-auto">
-                        <a href="@mapUrl" class="text-decoration-none" target="_blank">
+                        <a href="@map.Url" class="text-decoration-none" target="_blank">
                             <img class="card-img rounded-start" width="256" height="256" src="@(mapDetail == null ? "https://pavlov.bloodisgood.net/gunimages/unknown.png" : mapDetail.ImageURL + "/?imw=256&imh=256&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true")" alt="@serverInfo.MapLabel" />
                         </a>
                     </div>
 
                     <div class="col">
                         <div class="card-body">
-                            <a href="@mapUrl" class="text-decoration-none" target="_blank">
+                            <a href="@map.Url" class="text-decoration-none" target="_blank">
                                 <h5 class="card-title">@(mapDetail == null ? serverInfo.MapLabel : mapDetail.Name)</h5>
                             </a>
                             <p class="card-text">
@@ -225,17 +215,21 @@
                         }
                         else
                         {
-                            foreach (MapRowModel mapRow in MapsState.Value.ServerMaps[ServerId])
+                            foreach (MapServerModel mapRow in MapsState.Value.ServerMaps[ServerId])
                             {
-                                MapsState.Value.MapDetails.TryGetValue(mapRow.MapId, out MapDetailModel? serverMapsDetail);
+                                MapWorkshopModel? mapRowDetail = null;
+                                if (mapRow.IsWorkshopMap)
+                                {
+                                    MapsState.Value.MapDetails.TryGetValue(mapRow.WorkshopId, out mapRowDetail);
+                                }
 
                                 <div class="card bg-dark" style="display: inline-block; width: 256px;">
-                                    <a href="#" @onclick="() => changeMap(mapRow.MapId, mapRow.GameMode!)" @onclick:preventDefault class="text-decoration-none">
-                                        <img class="card-img-top" src="@(serverMapsDetail == null ? "https://pavlov.bloodisgood.net/gunimages/unknown.png" : serverMapsDetail.ImageURL + "/?imw=256&imh=256&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true")" alt="@mapRow.MapId" />
+                                    <a href="#" @onclick="() => changeMap(mapRow)" @onclick:preventDefault class="text-decoration-none">
+                                        <img class="card-img-top" src="@(mapRowDetail == null ? "https://pavlov.bloodisgood.net/gunimages/unknown.png" : mapRowDetail.ImageURL + "/?imw=256&imh=256&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true")" alt="@mapRow.MapLabel" />
                                     </a>
                                     <div class="card-body">
-                                        <a href="#" @onclick="() => changeMap(mapRow.MapId, mapRow.GameMode!)" @onclick:preventDefault class="text-decoration-none">
-                                            <h5 class="card-title">@(serverMapsDetail == null ? mapRow.MapId : serverMapsDetail.Name)</h5>
+                                        <a href="#" @onclick="() => changeMap(mapRow)" @onclick:preventDefault class="text-decoration-none">
+                                            <h5 class="card-title">@(mapRowDetail == null ? mapRow.MapLabel : mapRowDetail.Name)</h5>
                                         </a>
                                         <p class="card-text">
                                             <div class="container px-0">
@@ -245,7 +239,7 @@
                                                     </div>
                                                     <div class="col text-end px-1">@mapRow.GameMode</div>
                                                 </div>
-                                                @if (serverMapsDetail == null)
+                                                @if (mapRowDetail == null)
                                                 {
                                                     <div class="row gx-0">
                                                         <div class="col-auto px-1">Loading...</div>
@@ -327,13 +321,17 @@
         base.Dispose(disposing);
     }
 
-    private void changeMap(long mapId, string gameMode)
+    private void changeMap(MapServerModel map)
     {
-        MapsState.Value.MapDetails.TryGetValue(mapId, out MapDetailModel? mapDetail);
+        MapWorkshopModel? mapDetail = null;
+        if (map.IsWorkshopMap)
+        {
+            MapsState.Value.MapDetails.TryGetValue(map.WorkshopId, out mapDetail);
+        }
 
         try
         {
-            RconService.SwitchMap(ServerId, mapId, gameMode);
+            RconService.SwitchMap(ServerId, map.MapLabel, map.GameMode);
         }
         catch (Exception e)
         {
@@ -341,7 +339,7 @@
             return;
         }
 
-        Toast.ShowSuccess($"Map switching to {(mapDetail == null ? $"UGC{mapId}" : mapDetail.Name)} ({gameMode})");
+        Toast.ShowSuccess($"Map switching to {(mapDetail == null ? map.MapLabel : mapDetail.Name)} ({map.GameMode})");
     }
 
 }

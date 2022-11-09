@@ -10,7 +10,9 @@ main {
     flex: 1;
 }
 
-.sidebar { background-image: linear-gradient(180deg, rgb(5, 39, 103) 0%, #3a0647 70%); }
+.sidebar {
+    background-image: linear-gradient(180deg, rgb(5, 39, 103) 0%, #3a0647 70%);
+}
 
 .top-row {
     align-items: center;
@@ -31,15 +33,23 @@ main {
 }
 
 @media (max-width: 640.98px) {
-    .top-row:not(.auth) { display: none; }
+    .top-row:not(.auth) {
+        display: none;
+    }
 
-    .top-row.auth { justify-content: space-between; }
+    .top-row.auth {
+        justify-content: space-between;
+    }
 
-    .top-row a, .top-row .btn-link { margin-left: 0; }
+    .top-row a, .top-row .btn-link {
+        margin-left: 0;
+    }
 }
 
 @media (min-width: 641px) {
-    .page { flex-direction: row; }
+    .page {
+        flex-direction: row;
+    }
 
     .sidebar {
         height: 100vh;

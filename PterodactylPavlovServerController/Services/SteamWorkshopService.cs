@@ -9,7 +9,7 @@ namespace PterodactylPavlovServerController.Services;
 public class SteamWorkshopService
 {
     private readonly IConfiguration configuration;
-    private readonly Dictionary<long, MapDetailModel> mapDetailCache;
+    private readonly Dictionary<long, MapWorkshopModel> mapDetailCache;
     private DateTime lastFetch = DateTime.MinValue;
 
     public SteamWorkshopService(IConfiguration configuration)
@@ -18,29 +18,29 @@ public class SteamWorkshopService
 
         try
         {
-            this.mapDetailCache = JsonConvert.DeserializeObject<Dictionary<long, MapDetailModel>>(File.ReadAllText(configuration["workshop_mapscache"])) ?? new Dictionary<long, MapDetailModel>();
+            this.mapDetailCache = JsonConvert.DeserializeObject<Dictionary<long, MapWorkshopModel>>(File.ReadAllText(configuration["workshop_mapscache"]!)) ?? new Dictionary<long, MapWorkshopModel>();
         }
         catch (Exception)
         {
-            this.mapDetailCache = new Dictionary<long, MapDetailModel>();
+            this.mapDetailCache = new Dictionary<long, MapWorkshopModel>();
         }
     }
 
-    public MapDetailModel GetMapDetail(long mapId)
+    public MapWorkshopModel GetMapDetail(long mapId)
     {
         lock (this.mapDetailCache)
         {
             if (!this.mapDetailCache.ContainsKey(mapId))
             {
                 this.mapDetailCache.Add(mapId, this.loadMapDetail(mapId));
-                File.WriteAllText(this.configuration["workshop_mapscache"], JsonConvert.SerializeObject(this.mapDetailCache));
+                File.WriteAllText(this.configuration["workshop_mapscache"]!, JsonConvert.SerializeObject(this.mapDetailCache));
             }
 
             return this.mapDetailCache[mapId];
         }
     }
 
-    private MapDetailModel loadMapDetail(long mapId)
+    private MapWorkshopModel loadMapDetail(long mapId)
     {
         while (this.lastFetch > DateTime.Now.AddSeconds(-1))
         {
@@ -65,7 +65,7 @@ public class SteamWorkshopService
 
         this.lastFetch = DateTime.Now;
 
-        return new MapDetailModel
+        return new MapWorkshopModel
         {
             Id = mapId,
             URL = mapUrl,

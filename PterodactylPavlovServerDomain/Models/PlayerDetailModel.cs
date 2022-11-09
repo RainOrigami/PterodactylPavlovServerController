@@ -1,78 +1,76 @@
 ﻿using PterodactylPavlovServerController.Exceptions;
 using System.Text.RegularExpressions;
 
-namespace PterodactylPavlovServerDomain.Models
+namespace PterodactylPavlovServerDomain.Models;
+
+public class PlayerDetailModel : PlayerListPlayerModel
 {
-    public class PlayerDetailModel : PlayerListPlayerModel
+    private static readonly Regex kdaRegex = new(@"^(?<kills>\d+)/(?<deaths>\d+)/(?<assists>\d+)$");
+    private int? assists;
+    private int? deaths;
+    private Match? kdaMatch;
+
+    private int? kills;
+    public string PlayerName { get; set; } = string.Empty;
+    public string KDA { get; set; } = string.Empty;
+    public int Cash { get; set; }
+    public bool Dead { get; set; }
+    public int TeamId { get; set; }
+    public int Score { get; set; }
+
+    private Match KdaMatch
     {
-        public string PlayerName { get; set; } = String.Empty;
-        public string KDA { get; set; } = String.Empty;
-        public int Cash { get; set; }
-        public bool Dead { get; set; }
-        public int TeamId { get; set; }
-        public int Score { get; set; }
-
-        private int? kills = null;
-        private int? deaths = null;
-        private int? assists = null;
-
-        private static readonly Regex kdaRegex = new Regex(@"^(?<kills>\d+)/(?<deaths>\d+)/(?<assists>\d+)$");
-        private Match? kdaMatch = null;
-
-        private Match KdaMatch
+        get
         {
-            get
+            if (this.kdaMatch is null)
             {
-                if (kdaMatch is null)
+                this.kdaMatch = PlayerDetailModel.kdaRegex.Match(this.KDA);
+                if (!this.kdaMatch.Success)
                 {
-                    kdaMatch = kdaRegex.Match(KDA);
-                    if (!kdaMatch.Success)
-                    {
-                        throw new RconException();
-                    }
+                    throw new RconException();
                 }
-
-                return kdaMatch;
             }
+
+            return this.kdaMatch;
         }
+    }
 
-        public int Kills
+    public int Kills
+    {
+        get
         {
-            get
+            if (this.kills is null)
             {
-                if (kills is null)
-                {
-                    kills = int.Parse(KdaMatch.Groups["kills"].Value);
-                }
-
-                return kills.Value;
+                this.kills = int.Parse(this.KdaMatch.Groups["kills"].Value);
             }
+
+            return this.kills.Value;
         }
+    }
 
-        public int Deaths
+    public int Deaths
+    {
+        get
         {
-            get
+            if (this.deaths is null)
             {
-                if (deaths is null)
-                {
-                    deaths = int.Parse(KdaMatch.Groups["deaths"].Value);
-                }
-
-                return deaths.Value;
+                this.deaths = int.Parse(this.KdaMatch.Groups["deaths"].Value);
             }
+
+            return this.deaths.Value;
         }
+    }
 
-        public int Assists
+    public int Assists
+    {
+        get
         {
-            get
+            if (this.assists is null)
             {
-                if (assists is null)
-                {
-                    assists = int.Parse(KdaMatch.Groups["assists"].Value);
-                }
-
-                return assists.Value;
+                this.assists = int.Parse(this.KdaMatch.Groups["assists"].Value);
             }
+
+            return this.assists.Value;
         }
     }
 }

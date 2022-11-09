@@ -1,6 +1,3 @@
-﻿namespace PterodactylPavlovServerController.Exceptions
-{
-    public class SteamException : Exception
-    {
-    }
-}
+﻿namespace PterodactylPavlovServerController.Exceptions;
+
+public class SteamException : Exception { }

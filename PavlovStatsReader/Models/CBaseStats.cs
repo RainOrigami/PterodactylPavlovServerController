@@ -1,6 +1,3 @@
-﻿namespace PavlovStatsReader.Models
-{
-    public class CBaseStats
-    {
-    }
-}
+﻿namespace PavlovStatsReader.Models;
+
+public class CBaseStats { }

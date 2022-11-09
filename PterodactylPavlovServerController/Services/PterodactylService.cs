@@ -1,11 +1,11 @@
-﻿using System.Net;
-using System.Text.Json;
-using System.Text.Json.Nodes;
-using Microsoft.Extensions.Primitives;
+﻿using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json;
 using PterodactylPavlovServerController.Exceptions;
 using PterodactylPavlovServerDomain.Models;
 using RestSharp;
+using System.Net;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace PterodactylPavlovServerController.Services;
 
@@ -80,9 +80,9 @@ public class PterodactylService
     public void WriteFile(string serverId, string path, string content)
     {
         RestRequest textBodyRequest = new($"client/servers/{serverId}/files/write?file={path}", Method.Post);
-        textBodyRequest.AddHeader("Content-Type", "text/plain");
+        _ = textBodyRequest.AddHeader("Content-Type", "text/plain");
 
-        this.executeRestRequest(textBodyRequest, content);
+        _ = this.executeRestRequest(textBodyRequest, content);
     }
 
     private RestResponse executeRestRequest(string path, bool throwError = true)
@@ -95,18 +95,18 @@ public class PterodactylService
         string apiKey;
         if (this.httpContextAccessor.HttpContext?.Request?.Headers?.TryGetValue("x-pterodactyl-api-key", out StringValues apiKeyValues) ?? (false && apiKeyValues.Count == 1))
         {
-            apiKey = apiKeyValues.First();
+            apiKey = apiKeyValues.First()!;
         }
         else
         {
-            apiKey = this.configuration["pterodactyl_apikey"];
+            apiKey = this.configuration["pterodactyl_apikey"]!;
         }
 
-        restRequest.AddHeader("Authorization", $"Bearer {apiKey}");
+        _ = restRequest.AddHeader("Authorization", $"Bearer {apiKey}");
 
         if (content is not null)
         {
-            restRequest.AddBody(content);
+            _ = restRequest.AddBody(content);
         }
 
         RestResponse restResponse = this.restClient.Execute(restRequest);
