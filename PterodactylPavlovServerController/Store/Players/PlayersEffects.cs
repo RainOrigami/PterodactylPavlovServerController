@@ -15,7 +15,14 @@ namespace PterodactylPavlovServerController.Store.Players
         [EffectMethod]
         public async Task PlayersLoadSummary(PlayersLoadSummaryAction playersLoadSummaryAction, IDispatcher dispatcher)
         {
-            dispatcher.Dispatch(new PlayersAddSummaryAction(steamService.GetPlayerSummary(playersLoadSummaryAction.PlayerId)));
+            try
+            {
+                dispatcher.Dispatch(new PlayersAddSummaryAction(steamService.GetPlayerSummary(playersLoadSummaryAction.PlayerId)));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
 
             await Task.CompletedTask;
         }
@@ -23,7 +30,14 @@ namespace PterodactylPavlovServerController.Store.Players
         [EffectMethod]
         public async Task PlayersLoadBans(PlayersLoadBansAction playersLoadBansAction, IDispatcher dispatcher)
         {
-            dispatcher.Dispatch(new PlayersAddBansAction(playersLoadBansAction.PlayerId, steamService.GetBans(playersLoadBansAction.PlayerId)));
+            try
+            {
+                dispatcher.Dispatch(new PlayersAddBansAction(playersLoadBansAction.PlayerId, steamService.GetBans(playersLoadBansAction.PlayerId)));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
 
             await Task.CompletedTask;
         }

@@ -10,6 +10,7 @@ namespace PterodactylPavlovServerController.Services
     {
         private readonly IConfiguration configuration;
         private Dictionary<long, MapDetailModel> mapDetailCache;
+        private DateTime lastFetch = DateTime.MinValue;
 
         public SteamWorkshopService(IConfiguration configuration)
         {
@@ -41,6 +42,11 @@ namespace PterodactylPavlovServerController.Services
 
         private MapDetailModel loadMapDetail(long mapId)
         {
+            while (lastFetch > DateTime.Now.AddSeconds(-1))
+            {
+                Thread.Sleep(1000);
+            }
+
             string mapUrl = $"https://steamcommunity.com/sharedfiles/filedetails/?id={mapId}";
 
             HtmlParser mapPageParser = new HtmlParser();
@@ -56,6 +62,8 @@ namespace PterodactylPavlovServerController.Services
             {
                 mapImageUrl = mapImageUrl.Substring(0, mapImageUrl.IndexOf('?'));
             }
+
+            lastFetch = DateTime.Now;
 
             return new MapDetailModel()
             {

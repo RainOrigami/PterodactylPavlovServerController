@@ -24,7 +24,15 @@ namespace PterodactylPavlovServerController.Store.Maps
             {
                 return;
             }
-            dispatcher.Dispatch(new MapsAddAction(steamWorkshopService.GetMapDetail(mapsLoadAction.MapId)));
+
+            try
+            {
+                dispatcher.Dispatch(new MapsAddAction(steamWorkshopService.GetMapDetail(mapsLoadAction.MapId)));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
 
             await Task.CompletedTask;
         }
