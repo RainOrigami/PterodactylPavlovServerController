@@ -4,74 +4,73 @@ using Newtonsoft.Json;
 using PterodactylPavlovServerController.Exceptions;
 using PterodactylPavlovServerDomain.Models;
 
-namespace PterodactylPavlovServerController.Services
+namespace PterodactylPavlovServerController.Services;
+
+public class SteamWorkshopService
 {
-    public class SteamWorkshopService
+    private readonly IConfiguration configuration;
+    private readonly Dictionary<long, MapDetailModel> mapDetailCache;
+    private DateTime lastFetch = DateTime.MinValue;
+
+    public SteamWorkshopService(IConfiguration configuration)
     {
-        private readonly IConfiguration configuration;
-        private Dictionary<long, MapDetailModel> mapDetailCache;
-        private DateTime lastFetch = DateTime.MinValue;
+        this.configuration = configuration;
 
-        public SteamWorkshopService(IConfiguration configuration)
+        try
         {
-            this.configuration = configuration;
+            this.mapDetailCache = JsonConvert.DeserializeObject<Dictionary<long, MapDetailModel>>(File.ReadAllText(configuration["workshop_mapscache"])) ?? new Dictionary<long, MapDetailModel>();
+        }
+        catch (Exception)
+        {
+            this.mapDetailCache = new Dictionary<long, MapDetailModel>();
+        }
+    }
 
-            try
+    public MapDetailModel GetMapDetail(long mapId)
+    {
+        lock (this.mapDetailCache)
+        {
+            if (!this.mapDetailCache.ContainsKey(mapId))
             {
-                mapDetailCache = JsonConvert.DeserializeObject<Dictionary<long, MapDetailModel>>(File.ReadAllText(configuration["workshop_mapscache"])) ?? new Dictionary<long, MapDetailModel>();
+                this.mapDetailCache.Add(mapId, this.loadMapDetail(mapId));
+                File.WriteAllText(this.configuration["workshop_mapscache"], JsonConvert.SerializeObject(this.mapDetailCache));
             }
-            catch (Exception)
-            {
-                mapDetailCache = new Dictionary<long, MapDetailModel>();
-            }
+
+            return this.mapDetailCache[mapId];
+        }
+    }
+
+    private MapDetailModel loadMapDetail(long mapId)
+    {
+        while (this.lastFetch > DateTime.Now.AddSeconds(-1))
+        {
+            Thread.Sleep(1000);
         }
 
-        public MapDetailModel GetMapDetail(long mapId)
-        {
-            lock (mapDetailCache)
-            {
-                if (!mapDetailCache.ContainsKey(mapId))
-                {
-                    mapDetailCache.Add(mapId, loadMapDetail(mapId));
-                    File.WriteAllText(configuration["workshop_mapscache"], JsonConvert.SerializeObject(mapDetailCache));
-                }
+        string mapUrl = $"https://steamcommunity.com/sharedfiles/filedetails/?id={mapId}";
 
-                return mapDetailCache[mapId];
-            }
+        HtmlParser mapPageParser = new();
+        IHtmlDocument mapPageDocument = mapPageParser.ParseDocument(new HttpClient().GetStreamAsync(mapUrl).GetAwaiter().GetResult());
+
+        string? mapImageUrl = mapPageDocument.QuerySelector("img#previewImageMain")?.GetAttribute("src");
+        if (mapImageUrl is null)
+        {
+            mapImageUrl = mapPageDocument.QuerySelector("img#previewImage")?.GetAttribute("src");
         }
 
-        private MapDetailModel loadMapDetail(long mapId)
+        if (mapImageUrl is not null)
         {
-            while (lastFetch > DateTime.Now.AddSeconds(-1))
-            {
-                Thread.Sleep(1000);
-            }
-
-            string mapUrl = $"https://steamcommunity.com/sharedfiles/filedetails/?id={mapId}";
-
-            HtmlParser mapPageParser = new HtmlParser();
-            IHtmlDocument mapPageDocument = mapPageParser.ParseDocument(new HttpClient().GetStreamAsync(mapUrl).GetAwaiter().GetResult());
-
-            string? mapImageUrl = mapPageDocument.QuerySelector("img#previewImageMain")?.GetAttribute("src");
-            if (mapImageUrl is null)
-            {
-                mapImageUrl = mapPageDocument.QuerySelector("img#previewImage")?.GetAttribute("src");
-            }
-
-            if (mapImageUrl is not null)
-            {
-                mapImageUrl = mapImageUrl.Substring(0, mapImageUrl.IndexOf('?'));
-            }
-
-            lastFetch = DateTime.Now;
-
-            return new MapDetailModel()
-            {
-                Id = mapId,
-                URL = mapUrl,
-                Name = mapPageDocument.QuerySelector("div.workshopItemTitle")?.TextContent ?? throw new SteamWorkshopException(),
-                ImageURL = mapImageUrl
-            };
+            mapImageUrl = mapImageUrl.Substring(0, mapImageUrl.IndexOf('?'));
         }
+
+        this.lastFetch = DateTime.Now;
+
+        return new MapDetailModel
+        {
+            Id = mapId,
+            URL = mapUrl,
+            Name = mapPageDocument.QuerySelector("div.workshopItemTitle")?.TextContent ?? throw new SteamWorkshopException(),
+            ImageURL = mapImageUrl,
+        };
     }
 }

@@ -1,68 +1,70 @@
-﻿using PterodactylPavlovServerController.Models;
+﻿using System.Collections.Concurrent;
+using PterodactylPavlovServerController.Models;
 using PterodactylPavlovServerDomain.Models;
-using System.Collections.Concurrent;
 
-namespace PterodactylPavlovServerController.Services
+namespace PterodactylPavlovServerController.Services;
+
+public class PavlovRconConnectionService : IDisposable
 {
-    public class PavlovRconConnectionService : IDisposable
+    public delegate void ServersUpdated();
+
+    private readonly IConfiguration configuration;
+
+    private readonly ConcurrentDictionary<string, PavlovRconConnection> connections = new();
+    private readonly PavlovRconService pavlovRconService;
+    private readonly PterodactylService pterodactylService;
+
+    private readonly CancellationTokenSource updaterCancellationTokenSource = new();
+
+    public PavlovRconConnectionService(PterodactylService pterodactylService, PavlovRconService pavlovRconService, IConfiguration configuration)
     {
-        private readonly PterodactylService pterodactylService;
-        private readonly PavlovRconService pavlovRconService;
-        private readonly IConfiguration configuration;
+        this.pterodactylService = pterodactylService;
+        this.pavlovRconService = pavlovRconService;
+        this.configuration = configuration;
+    }
 
-        private readonly ConcurrentDictionary<string, PavlovRconConnection> connections = new();
+    public bool Initialised { get; private set; }
 
-        private readonly CancellationTokenSource updaterCancellationTokenSource = new();
+    public void Dispose()
+    {
+        this.updaterCancellationTokenSource.Cancel();
+    }
 
-        public bool Initialised { get; private set; }
+    public PavlovRconConnection[] GetAllConnections()
+    {
+        return this.connections.Values.ToArray();
+    }
 
-        public PavlovRconConnection[] GetAllConnections() => connections.Values.ToArray();
+    public PavlovRconConnection? GetServer(string serverId)
+    {
+        this.connections.TryGetValue(serverId, out PavlovRconConnection? connection);
+        return connection;
+    }
 
-        public PavlovRconConnection? GetServer(string serverId)
+    public event ServersUpdated? OnServersUpdated;
+
+    public void Run()
+    {
+        Task.Run(this.serverUpdater);
+    }
+
+    private async Task serverUpdater()
+    {
+        while (!this.updaterCancellationTokenSource.Token.IsCancellationRequested)
         {
-            connections.TryGetValue(serverId, out PavlovRconConnection? connection);
-            return connection;
+            PterodactylServerModel[] serverModels = this.pterodactylService.GetServers();
+            serverModels.Where(s => !this.connections.ContainsKey(s.ServerId)).AsParallel().ForAll(this.addServer);
+            this.Initialised = true;
+            this.OnServersUpdated?.Invoke();
+
+            await Task.Delay(1000);
         }
+    }
 
-        public delegate void ServersUpdated();
-
-        public event ServersUpdated? OnServersUpdated;
-
-        public PavlovRconConnectionService(PterodactylService pterodactylService, PavlovRconService pavlovRconService, IConfiguration configuration)
-        {
-            this.pterodactylService = pterodactylService;
-            this.pavlovRconService = pavlovRconService;
-            this.configuration = configuration;
-        }
-
-        public void Run()
-        {
-            Task.Run(serverUpdater);
-        }
-
-        private async Task serverUpdater()
-        {
-            while (!updaterCancellationTokenSource.Token.IsCancellationRequested)
-            {
-                PterodactylServerModel[] serverModels = pterodactylService.GetServers();
-                serverModels.Where(s => !connections.ContainsKey(s.ServerId)).AsParallel().ForAll(addServer);
-                Initialised = true;
-                OnServersUpdated?.Invoke();
-
-                await Task.Delay(1000);
-            }
-        }
-
-        private void addServer(PterodactylServerModel server)
-        {
-            PavlovRconConnection serverConnection = new PavlovRconConnection(server, pavlovRconService, configuration);
-            serverConnection.Run();
-            connections.AddOrUpdate(server.ServerId, serverConnection, (k, v) => serverConnection);
-        }
-
-        public void Dispose()
-        {
-            updaterCancellationTokenSource.Cancel();
-        }
+    private void addServer(PterodactylServerModel server)
+    {
+        PavlovRconConnection serverConnection = new(server, this.pavlovRconService, this.configuration);
+        serverConnection.Run();
+        this.connections.AddOrUpdate(server.ServerId, serverConnection, (k, v) => serverConnection);
     }
 }

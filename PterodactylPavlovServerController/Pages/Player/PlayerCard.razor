@@ -1,11 +1,9 @@
 ﻿@using Fluxor
-@using Fluxor.Blazor.Web.Components
-@using PterodactylPavlovServerController.Models
 @using PterodactylPavlovServerController.Services
-@using PterodactylPavlovServerController.Store.Players
 @using PterodactylPavlovServerDomain.Models
 @using Steam.Models.SteamCommunity
-@inherits FluxorComponent
+@using PterodactylPavlovServerController.Models
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 @inject IDispatcher Dispatcher
 @inject IState<PlayersState> PlayersState
@@ -19,13 +17,13 @@
     }
 
     PlayerListPlayerModel? playerListPlayer = null;
-    if (connection is { PlayerListPlayers: IReadOnlyDictionary<ulong, PlayerListPlayerModel> playerListPlayers })
+    if (connection is { PlayerListPlayers: IReadOnlyDictionary<ulong, PlayerListPlayerModel> playerListPlayers, })
     {
         playerListPlayers.TryGetValue(PlayerId, out playerListPlayer);
     }
 
     PlayerDetailModel? playerDetail = null;
-    if (connection is { PlayerDetails: IReadOnlyDictionary<ulong, PlayerDetailModel> playerDetails })
+    if (connection is { PlayerDetails: IReadOnlyDictionary<ulong, PlayerDetailModel> playerDetails, })
     {
         playerDetails.TryGetValue(PlayerId, out playerDetail);
     }
@@ -64,34 +62,48 @@
 <div class="card bg-dark">
     <div class="row g-0">
         <div class="col-auto">
-            <a href="@profileUrl" class="text-decoration-none" target="_blank"><img class="card-img rounded-start" width="256" height="256" src="@avatarUrl" alt="@PlayerId" /></a>
+            <a href="@profileUrl" class="text-decoration-none" target="_blank">
+                <img class="card-img rounded-start" width="256" height="256" src="@avatarUrl" alt="@PlayerId" />
+            </a>
         </div>
 
         <div class="col">
             <div class="card-body">
-                <a href="@profileUrl" class="text-decoration-none" target="_blank"><h5 class="card-title">@playerName</h5></a>
+                <a href="@profileUrl" class="text-decoration-none" target="_blank">
+                    <h5 class="card-title">@playerName</h5>
+                </a>
                 <p class="card-text">
                     <div class="container px-0">
                         @if (playerDetail != null)
                         {
                             <div class="row gx-0">
-                                <div class="col-auto px-1"><i class="fa-solid fa-star"></i></div>
+                                <div class="col-auto px-1">
+                                    <i class="fa-solid fa-star"></i>
+                                </div>
                                 <div class="col px-1">@playerDetail.Score</div>
                             </div>
                             <div class="row gx-0">
-                                <div class="col-auto px-1"><i class="fa-solid fa-dollar-sign"></i></div>
+                                <div class="col-auto px-1">
+                                    <i class="fa-solid fa-dollar-sign"></i>
+                                </div>
                                 <div class="col px-1">@playerDetail.Cash</div>
                             </div>
                             <div class="row gx-0">
-                                <div class="col-auto px-1"><i class="fa-solid fa-gun"></i></div>
+                                <div class="col-auto px-1">
+                                    <i class="fa-solid fa-gun"></i>
+                                </div>
                                 <div class="col px-1">@playerDetail.Kills</div>
                             </div>
                             <div class="row gx-0">
-                                <div class="col-auto px-1"><i class="fa-solid fa-skull-crossbones"></i></div>
+                                <div class="col-auto px-1">
+                                    <i class="fa-solid fa-skull-crossbones"></i>
+                                </div>
                                 <div class="col px-1">@playerDetail.Deaths</div>
                             </div>
                             <div class="row gx-0">
-                                <div class="col-auto px-1"><i class="fa-solid fa-handshake-angle"></i></div>
+                                <div class="col-auto px-1">
+                                    <i class="fa-solid fa-handshake-angle"></i>
+                                </div>
                                 <div class="col px-1">@playerDetail.Assists</div>
                             </div>
                         }
@@ -109,44 +121,48 @@
                                     isVacBanned = true;
                                 }
 
-                                vac += (int)playerBan.NumberOfVACBans;
-                                game += (int)playerBan.NumberOfGameBans;
+                                vac += (int) playerBan.NumberOfVACBans;
+                                game += (int) playerBan.NumberOfGameBans;
 
                                 if ((daysSinceLastBan == -1 && playerBan.DaysSinceLastBan != 0) || playerBan.DaysSinceLastBan < daysSinceLastBan)
                                 {
-                                    daysSinceLastBan = (int)playerBan.DaysSinceLastBan;
+                                    daysSinceLastBan = (int) playerBan.DaysSinceLastBan;
                                 }
                             }
 
                             @if (vac == 0 && game == 0 && daysSinceLastBan == -1)
                             {
                                 <div class="row gx-0">
-                                    <div class="col-auto px-1"><i class="fa-solid fa-shield-halved"></i></div>
+                                    <div class="col-auto px-1">
+                                        <i class="fa-solid fa-shield-halved"></i>
+                                    </div>
                                     <div class="col px-1">Clean record</div>
                                 </div>
                             }
                             else
                             {
                                 <div class="row gx-0">
-                                    <div class="col-auto px-1"><i class="fa-solid fa-shield-halved"></i></div>
+                                    <div class="col-auto px-1">
+                                        <i class="fa-solid fa-shield-halved"></i>
+                                    </div>
                                     <div class="col px-1 @(isVacBanned ? "text-danger" : vac > 0 ? "text-warning" : "")">
-                                        @(
-                                            $"x{vac}"
-                                            )
+                                        @($"x{vac}")
                                     </div>
                                 </div>
                                 <div class="row gx-0">
-                                    <div class="col-auto px-1"><i class="fa-solid fa-gamepad"></i></div>
+                                    <div class="col-auto px-1">
+                                        <i class="fa-solid fa-gamepad"></i>
+                                    </div>
                                     <div class="col px-1 @(game > 0 ? "text-danger" : "")">
-                                        @(
-                                            $"x{game}"
-                                            )
+                                        @($"x{game}")
                                     </div>
                                 </div>
                                 @if (daysSinceLastBan != -1)
                                 {
                                     <div class="row gx-0">
-                                        <div class="col-auto px-1"><i class="fa-solid fa-calendar-xmark"></i></div>
+                                        <div class="col-auto px-1">
+                                            <i class="fa-solid fa-calendar-xmark"></i>
+                                        </div>
                                         <div class="col px-1">@daysSinceLastBan days</div>
                                     </div>
                                 }
@@ -158,7 +174,9 @@
         </div>
     </div>
 </div>
+
 @code {
+
     [Parameter]
     public string? ServerId { get; set; } = null;
 
@@ -199,4 +217,5 @@
 
         base.Dispose(disposing);
     }
+
 }

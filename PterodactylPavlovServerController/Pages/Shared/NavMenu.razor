@@ -1,10 +1,7 @@
 ﻿@using Fluxor
-@using Fluxor.Blazor.Web.Components
-@using PterodactylPavlovServerController.Models
 @using PterodactylPavlovServerController.Services
-@using PterodactylPavlovServerController.Store.PavlovServers
-@using PterodactylPavlovServerDomain.Models
-@inherits FluxorComponent
+@using PterodactylPavlovServerController.Models
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 @inject IDispatcher Dispatcher
 @inject PavlovRconConnectionService Rcon
@@ -95,4 +92,5 @@
 
         base.Dispose(disposing);
     }
+
 }

@@ -1,10 +1,8 @@
 ﻿@page "/rcon"
-@inherits FluxorComponent
-
 @using Fluxor
-@using Fluxor.Blazor.Web.Components
 @using PterodactylPavlovServerController.Services
-@using PterodactylPavlovServerController.Store
+@using PterodactylPavlovServerController.Stores
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 @inject IDispatcher Dispatcher
 @inject PavlovRconConnectionService Rcon

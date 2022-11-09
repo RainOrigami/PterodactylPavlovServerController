@@ -1,14 +1,11 @@
 ﻿@page "/rcon/{ServerId}"
 @using Fluxor
-@using Fluxor.Blazor.Web.Components
+@using PterodactylPavlovServerController.Services
+@using PterodactylPavlovServerController.Stores
+@using PterodactylPavlovServerDomain.Models
 @using PterodactylPavlovServerController.Models
 @using PterodactylPavlovServerController.Pages.Player
-@using PterodactylPavlovServerController.Services
-@using PterodactylPavlovServerController.Store
-@using PterodactylPavlovServerController.Store.Maps
-@using PterodactylPavlovServerController.Store.PavlovServers
-@using PterodactylPavlovServerDomain.Models
-@inherits FluxorComponent
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 @inject IDispatcher Dispatcher
 @inject PavlovRconConnectionService Rcon
@@ -36,7 +33,7 @@
     PterodactylServerModel server = connection.PterodactylServer;
     ServerInfoModel? serverInfo = connection.ServerInfo;
 
-    Dispatcher.Dispatch(new PageTitleSetAction($"{server.Name} ({(serverInfo == null ? (PavlovServersState.Value.ServerNamesFromGameIni.ContainsKey(ServerId) ? PavlovServersState.Value.ServerNamesFromGameIni[ServerId] : "...") : serverInfo.ServerName)})"));
+    Dispatcher.Dispatch(new PageTitleSetAction($"{server.Name} ({(serverInfo == null ? PavlovServersState.Value.ServerNamesFromGameIni.ContainsKey(ServerId) ? PavlovServersState.Value.ServerNamesFromGameIni[ServerId] : "..." : serverInfo.ServerName)})"));
 
     if (!connection.Online.HasValue || !connection.Online.Value)
     {
@@ -86,37 +83,53 @@
             <div class="card bg-dark">
                 <div class="row g-0">
                     <div class="col-auto">
-                        <a href="@mapUrl" class="text-decoration-none" target="_blank"><img class="card-img rounded-start" width="256" height="256" src="@(mapDetail == null ? "https://pavlov.bloodisgood.net/gunimages/unknown.png" : mapDetail.ImageURL + "/?imw=256&imh=256&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true")" alt="@serverInfo.MapLabel" /></a>
+                        <a href="@mapUrl" class="text-decoration-none" target="_blank">
+                            <img class="card-img rounded-start" width="256" height="256" src="@(mapDetail == null ? "https://pavlov.bloodisgood.net/gunimages/unknown.png" : mapDetail.ImageURL + "/?imw=256&imh=256&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true")" alt="@serverInfo.MapLabel" />
+                        </a>
                     </div>
 
                     <div class="col">
                         <div class="card-body">
-                            <a href="@mapUrl" class="text-decoration-none" target="_blank"><h5 class="card-title">@(mapDetail == null ? serverInfo.MapLabel : mapDetail.Name)</h5></a>
+                            <a href="@mapUrl" class="text-decoration-none" target="_blank">
+                                <h5 class="card-title">@(mapDetail == null ? serverInfo.MapLabel : mapDetail.Name)</h5>
+                            </a>
                             <p class="card-text">
                                 <div class="container px-0">
                                     <div class="row gx-0">
-                                        <div class="col-auto px-1"><i class="fa-solid fa-gun"></i></div>
+                                        <div class="col-auto px-1">
+                                            <i class="fa-solid fa-gun"></i>
+                                        </div>
                                         <div class="col px-1">@serverInfo.GameMode</div>
                                     </div>
                                     <div class="row gx-0">
-                                        <div class="col-auto px-1"><i class="fa-solid fa-person-rifle" style="color: limegreen;"></i></div>
+                                        <div class="col-auto px-1">
+                                            <i class="fa-solid fa-person-rifle" style="color: limegreen;"></i>
+                                        </div>
                                         <div class="col px-1">@(connection.PlayerListPlayers == null ? $"{serverInfo.CurrentPlayerCount}*" : connection.PlayerListPlayers.Count)&nbsp;/&nbsp;@serverInfo.MaximumPlayerCount</div>
                                     </div>
                                     <div class="row gx-0">
-                                        <div class="col-auto px-1"><i class="fa-solid fa-chess-board"></i></div>
+                                        <div class="col-auto px-1">
+                                            <i class="fa-solid fa-chess-board"></i>
+                                        </div>
                                         <div class="col px-1">#@serverInfo.Round&nbsp;(@serverInfo.RoundState)</div>
                                     </div>
                                     <div class="row gx-0">
-                                        <div class="col-auto px-1"><i class="fa-solid fa-trophy" style="color: lightskyblue"></i></div>
+                                        <div class="col-auto px-1">
+                                            <i class="fa-solid fa-trophy" style="color: lightskyblue"></i>
+                                        </div>
                                         <div class="col px-1">@serverInfo.Team0Score</div>
                                     </div>
                                     <div class="row gx-0">
-                                        <div class="col-auto px-1"><i class="fa-solid fa-trophy" style="color: tomato"></i></div>
+                                        <div class="col-auto px-1">
+                                            <i class="fa-solid fa-trophy" style="color: tomato"></i>
+                                        </div>
                                         <div class="col px-1">@serverInfo.Team1Score</div>
                                     </div>
                                     @if (mapDetail == null)
                                     {
-                                        <div class="row gx-0"><div class="col-auto px-1">Loading...</div></div>
+                                        <div class="row gx-0">
+                                            <div class="col-auto px-1">Loading...</div>
+                                        </div>
                                     }
                                 </div>
                             </p>
@@ -159,8 +172,8 @@
                         <div class="row">
 
                             @{
-                                List<ulong> blueTeam = new List<ulong>();
-                                List<ulong> redTeam = new List<ulong>();
+                                List<ulong> blueTeam = new();
+                                List<ulong> redTeam = new();
 
                                 if (connection.PlayerDetails is IReadOnlyDictionary<ulong, PlayerDetailModel> playersDetails)
                                 {
@@ -217,15 +230,26 @@
                                 MapsState.Value.MapDetails.TryGetValue(mapRow.MapId, out MapDetailModel? serverMapsDetail);
 
                                 <div class="card bg-dark" style="display: inline-block; width: 256px;">
-                                    <a href="#" @onclick="() => changeMap(mapRow.MapId, mapRow.GameMode)" @onclick:preventDefault class="text-decoration-none"><img class="card-img-top" src="@(serverMapsDetail == null ? "https://pavlov.bloodisgood.net/gunimages/unknown.png" : serverMapsDetail.ImageURL + "/?imw=256&imh=256&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true")" alt="@mapRow.MapId" /></a>
+                                    <a href="#" @onclick="() => changeMap(mapRow.MapId, mapRow.GameMode!)" @onclick:preventDefault class="text-decoration-none">
+                                        <img class="card-img-top" src="@(serverMapsDetail == null ? "https://pavlov.bloodisgood.net/gunimages/unknown.png" : serverMapsDetail.ImageURL + "/?imw=256&imh=256&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true")" alt="@mapRow.MapId" />
+                                    </a>
                                     <div class="card-body">
-                                        <a href="#" @onclick="() => changeMap(mapRow.MapId, mapRow.GameMode)" @onclick:preventDefault class="text-decoration-none"><h5 class="card-title">@(serverMapsDetail == null ? mapRow.MapId : serverMapsDetail.Name)</h5></a>
+                                        <a href="#" @onclick="() => changeMap(mapRow.MapId, mapRow.GameMode!)" @onclick:preventDefault class="text-decoration-none">
+                                            <h5 class="card-title">@(serverMapsDetail == null ? mapRow.MapId : serverMapsDetail.Name)</h5>
+                                        </a>
                                         <p class="card-text">
                                             <div class="container px-0">
-                                                <div class="row gx-0"><div class="col-auto px-1"><b>GameMode:</b></div><div class="col text-end px-1">@mapRow.GameMode</div></div>
+                                                <div class="row gx-0">
+                                                    <div class="col-auto px-1">
+                                                        <b>GameMode:</b>
+                                                    </div>
+                                                    <div class="col text-end px-1">@mapRow.GameMode</div>
+                                                </div>
                                                 @if (serverMapsDetail == null)
                                                 {
-                                                    <div class="row gx-0"><div class="col-auto px-1">Loading...</div></div>
+                                                    <div class="row gx-0">
+                                                        <div class="col-auto px-1">Loading...</div>
+                                                    </div>
                                                 }
                                             </div>
                                         </p>
@@ -245,9 +269,10 @@
 </div>
 
 @code {
+
     [Parameter]
     [EditorRequired]
-    public string ServerId { get; set; } = String.Empty;
+    public string ServerId { get; set; } = string.Empty;
 
     private async Task loadMaps()
     {

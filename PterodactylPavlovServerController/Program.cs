@@ -66,6 +66,7 @@ using (IServiceScope scope = app.Services.CreateScope())
 {
     scope.ServiceProvider.GetRequiredService<PavlovServerContext>().Database.EnsureCreated();
 }
+
 app.Services.GetRequiredService<PavlovRconConnectionService>().Run();
 
 app.Run();
