@@ -2,9 +2,9 @@
 
 namespace PterodactylPavlovServerDomain.Models;
 
-public class PlayerListPlayerModel
+public class PersistentPavlovPlayer
 {
-    public string UniqueId { get; set; } = string.Empty;
+    public ulong UniqueId { get; set; }
 
     [JsonIgnore]
     public string ServerId { get; set; } = string.Empty;

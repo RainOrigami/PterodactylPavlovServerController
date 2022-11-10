@@ -1,5 +1,6 @@
 ﻿@page "/rcon/{ServerId}"
 @using Fluxor
+@using PavlovVR_Rcon.Models.Pavlov
 @using PterodactylPavlovServerController.Services
 @using PterodactylPavlovServerController.Stores
 @using PterodactylPavlovServerDomain.Models
@@ -31,7 +32,7 @@
 
 @{
     PterodactylServerModel server = connection.PterodactylServer;
-    ServerInfoModel? serverInfo = connection.ServerInfo;
+    PavlovServerInfo? serverInfo = connection.ServerInfo;
 
     Dispatcher.Dispatch(new PageTitleSetAction($"{server.Name} ({(serverInfo == null ? PavlovServersState.Value.ServerNamesFromGameIni.ContainsKey(ServerId) ? PavlovServersState.Value.ServerNamesFromGameIni[ServerId] : "..." : serverInfo.ServerName)})"));
 
@@ -51,18 +52,18 @@
         return;
     }
 
-    MapServerModel map = new()
-    {
-        MapLabel = serverInfo.MapLabel,
-        GameMode = serverInfo.GameMode,
-    };
+    ServerMapModel serverMap = new()
+            {
+                MapLabel = serverInfo.MapLabel,
+                GameMode = serverInfo.GameMode,
+            };
 
     MapWorkshopModel? mapDetail = null;
-    if (map.IsWorkshopMap)
+    if (serverMap.IsWorkshopMap)
     {
-        if (!MapsState.Value.MapDetails.TryGetValue(map.WorkshopId, out mapDetail))
+        if (!MapsState.Value.MapDetails.TryGetValue(serverMap.WorkshopId, out mapDetail))
         {
-            Dispatcher.Dispatch(new MapsLoadWorkshopAction(map.WorkshopId));
+            Dispatcher.Dispatch(new MapsLoadWorkshopAction(serverMap.WorkshopId));
         }
     }
 }
@@ -73,14 +74,14 @@
             <div class="card bg-dark">
                 <div class="row g-0">
                     <div class="col-auto">
-                        <a href="@map.Url" class="text-decoration-none" target="_blank">
+                        <a href="@serverMap.Url" class="text-decoration-none" target="_blank">
                             <img class="card-img rounded-start" width="256" height="256" src="@(mapDetail == null ? "https://pavlov.bloodisgood.net/gunimages/unknown.png" : mapDetail.ImageURL + "/?imw=256&imh=256&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true")" alt="@serverInfo.MapLabel" />
                         </a>
                     </div>
 
                     <div class="col">
                         <div class="card-body">
-                            <a href="@map.Url" class="text-decoration-none" target="_blank">
+                            <a href="@serverMap.Url" class="text-decoration-none" target="_blank">
                                 <h5 class="card-title">@(mapDetail == null ? serverInfo.MapLabel : mapDetail.Name)</h5>
                             </a>
                             <p class="card-text">
@@ -95,30 +96,34 @@
                                         <div class="col-auto px-1">
                                             <i class="fa-solid fa-person-rifle" style="color: limegreen;"></i>
                                         </div>
-                                        <div class="col px-1">@(connection.PlayerListPlayers == null ? $"{serverInfo.CurrentPlayerCount}*" : connection.PlayerListPlayers.Count)&nbsp;/&nbsp;@serverInfo.MaximumPlayerCount</div>
+                                        <div class="col px-1">@(connection.PlayerListPlayers == null ? $"{serverInfo.PlayerCount}*" : connection.PlayerListPlayers.Count)&nbsp;/&nbsp;@serverInfo.PlayerCount</div>
                                     </div>
                                     <div class="row gx-0">
                                         <div class="col-auto px-1">
                                             <i class="fa-solid fa-chess-board"></i>
                                         </div>
-                                        <div class="col px-1">#@serverInfo.Round&nbsp;(@serverInfo.RoundState)</div>
+                                        @if (string.IsNullOrEmpty(serverInfo.Round))
+                                        {
+                                            <div class="col px-1">@serverInfo.RoundState</div>
+                                        }
+                                        else
+                                        {
+                                            <div class="col px-1">#@serverInfo.Round&nbsp;(@serverInfo.RoundState)</div>
+                                        }
                                     </div>
-                                    <div class="row gx-0">
-                                        <div class="col-auto px-1">
-                                            <i class="fa-solid fa-trophy" style="color: lightskyblue"></i>
-                                        </div>
-                                        <div class="col px-1">@serverInfo.Team0Score</div>
-                                    </div>
-                                    <div class="row gx-0">
-                                        <div class="col-auto px-1">
-                                            <i class="fa-solid fa-trophy" style="color: tomato"></i>
-                                        </div>
-                                        <div class="col px-1">@serverInfo.Team1Score</div>
-                                    </div>
-                                    @if (mapDetail == null)
+                                    @if (serverInfo.Teams)
                                     {
                                         <div class="row gx-0">
-                                            <div class="col-auto px-1">Loading...</div>
+                                            <div class="col-auto px-1">
+                                                <i class="fa-solid fa-trophy" style="color: lightskyblue"></i>
+                                            </div>
+                                            <div class="col px-1">@serverInfo.Team0Score</div>
+                                        </div>
+                                        <div class="row gx-0">
+                                            <div class="col-auto px-1">
+                                                <i class="fa-solid fa-trophy" style="color: tomato"></i>
+                                            </div>
+                                            <div class="col px-1">@serverInfo.Team1Score</div>
                                         </div>
                                     }
                                 </div>
@@ -165,7 +170,7 @@
                                 List<ulong> blueTeam = new();
                                 List<ulong> redTeam = new();
 
-                                if (connection.PlayerDetails is IReadOnlyDictionary<ulong, PlayerDetailModel> playersDetails)
+                                if (connection.PlayerDetails is IReadOnlyDictionary<ulong, PavlovPlayerDetail> playersDetails)
                                 {
                                     blueTeam.AddRange(playersDetails.Where(kvp => kvp.Value.TeamId == 0).Select(kvp => kvp.Key));
                                     redTeam.AddRange(playersDetails.Where(kvp => kvp.Value.TeamId == 1).Select(kvp => kvp.Key));
@@ -215,7 +220,7 @@
                         }
                         else
                         {
-                            foreach (MapServerModel mapRow in MapsState.Value.ServerMaps[ServerId])
+                            foreach (ServerMapModel mapRow in MapsState.Value.ServerMaps[ServerId])
                             {
                                 MapWorkshopModel? mapRowDetail = null;
                                 if (mapRow.IsWorkshopMap)
@@ -321,17 +326,18 @@
         base.Dispose(disposing);
     }
 
-    private void changeMap(MapServerModel map)
+    private async Task changeMap(ServerMapModel serverMap)
     {
         MapWorkshopModel? mapDetail = null;
-        if (map.IsWorkshopMap)
+        if (serverMap.IsWorkshopMap)
         {
-            MapsState.Value.MapDetails.TryGetValue(map.WorkshopId, out mapDetail);
+            MapsState.Value.MapDetails.TryGetValue(serverMap.WorkshopId, out mapDetail);
         }
 
         try
         {
-            RconService.SwitchMap(ServerId, map.MapLabel, map.GameMode);
+            PavlovGameMode gameMode = Enum.Parse<PavlovGameMode>(serverMap.GameMode);
+            await RconService.SwitchMap(ServerId, serverMap.MapLabel, gameMode);
         }
         catch (Exception e)
         {
@@ -339,7 +345,7 @@
             return;
         }
 
-        Toast.ShowSuccess($"Map switching to {(mapDetail == null ? map.MapLabel : mapDetail.Name)} ({map.GameMode})");
+        Toast.ShowSuccess($"Map switching to {(mapDetail == null ? serverMap.MapLabel : mapDetail.Name)} ({serverMap.GameMode})");
     }
 
 }

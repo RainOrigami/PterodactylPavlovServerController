@@ -1,4 +1,5 @@
 ﻿@using Fluxor
+@using PavlovVR_Rcon.Models.Pavlov
 @using PterodactylPavlovServerController.Services
 @using PterodactylPavlovServerController.Stores
 @using PterodactylPavlovServerDomain.Models
@@ -22,7 +23,7 @@
 
 @{
     PterodactylServerModel server = connection.PterodactylServer;
-    ServerInfoModel? serverInfo = connection.ServerInfo;
+    PavlovServerInfo? serverInfo = connection.ServerInfo;
 }
 
 <div>

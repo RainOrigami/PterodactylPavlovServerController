@@ -35,9 +35,9 @@ public class PavlovServerService
         return mapRows;
     }
 
-    public MapServerModel[] GetCurrentMapRotation(string serverId)
+    public ServerMapModel[] GetCurrentMapRotation(string serverId)
     {
-        return this.pterodactylService.ReadFile(serverId, this.configuration["pavlov_gameinipath"]!).Split('\n').Select(l => l.Trim('\r')).Where(l => l.StartsWith("MapRotation=")).Select(l => PavlovServerService.mapRotationLineRegex.Match(l)).Where(m => m.Success).Select(m => new MapServerModel
+        return this.pterodactylService.ReadFile(serverId, this.configuration["pavlov_gameinipath"]!).Split('\n').Select(l => l.Trim('\r')).Where(l => l.StartsWith("MapRotation=")).Select(l => PavlovServerService.mapRotationLineRegex.Match(l)).Where(m => m.Success).Select(m => new ServerMapModel
         {
             MapLabel = m.Groups["id"].Value,
             GameMode = m.Groups["gamemode"].Value,

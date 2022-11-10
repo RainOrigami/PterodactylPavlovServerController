@@ -1,5 +1,4 @@
-﻿using PterodactylPavlovServerController.Exceptions;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 
 namespace PterodactylPavlovServerDomain.Models;
 
@@ -31,7 +30,7 @@ public class ServerInfoModel
 
                 if (!this.playerCountMatch.Success)
                 {
-                    throw new RconException();
+                    throw new Exception();
                 }
             }
 

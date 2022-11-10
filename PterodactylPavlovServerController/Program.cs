@@ -3,6 +3,7 @@ using Fluxor;
 using PavlovStatsReader;
 using PterodactylPavlovServerController.Contexts;
 using PterodactylPavlovServerController.Middleware;
+using PterodactylPavlovServerController.Models;
 using PterodactylPavlovServerController.Services;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
@@ -13,6 +14,7 @@ builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddScoped<PavlovServerContext>();
+builder.Services.AddScoped<PterodactylContext>();
 builder.Services.AddSingleton<PavlovRconService>();
 builder.Services.AddSingleton<GoogleSheetService>();
 builder.Services.AddSingleton<PterodactylService>();
@@ -33,6 +35,8 @@ builder.Services.AddBlazoredToast();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+//builder.Services.AddAuthentication().AddApplicationCookie();
 
 WebApplication app = builder.Build();
 
@@ -59,8 +63,18 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
+//app.UseAuthentication();
+
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
+
+using (PterodactylContext context = new PterodactylContext(app.Services.GetRequiredService<IConfiguration>()))
+{
+    foreach (PterodactylUserModel user in context.Users)
+    {
+        Console.WriteLine(user.Username);
+    }
+}
 
 using (IServiceScope scope = app.Services.CreateScope())
 {

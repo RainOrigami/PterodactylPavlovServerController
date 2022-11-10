@@ -8,7 +8,7 @@ namespace PterodactylPavlovServerController.Stores;
 public record MapsState
 {
     public IReadOnlyDictionary<long, MapWorkshopModel> MapDetails { get; init; } = new Dictionary<long, MapWorkshopModel>();
-    public IReadOnlyDictionary<string, MapServerModel[]> ServerMaps { get; init; } = new Dictionary<string, MapServerModel[]>();
+    public IReadOnlyDictionary<string, ServerMapModel[]> ServerMaps { get; init; } = new Dictionary<string, ServerMapModel[]>();
 }
 
 public class MapsReducers
@@ -33,7 +33,7 @@ public class MapsReducers
     [ReducerMethod]
     public static MapsState OnMapsServerAdd(MapsState mapsState, MapsAddServerAction mapsAddServerAction)
     {
-        Dictionary<string, MapServerModel[]> maps = (Dictionary<string, MapServerModel[]>) mapsState.ServerMaps;
+        Dictionary<string, ServerMapModel[]> maps = (Dictionary<string, ServerMapModel[]>) mapsState.ServerMaps;
 
         if (maps.ContainsKey(mapsAddServerAction.ServerId))
         {
@@ -85,10 +85,10 @@ public class MapsEffects
     [EffectMethod]
     public async Task LoadServerMaps(MapsLoadServerAction mapsLoadServerAction, IDispatcher dispatcher)
     {
-        MapServerModel[] mapRows = this.pavlovServerService.GetCurrentMapRotation(mapsLoadServerAction.ServerId);
+        ServerMapModel[] mapRows = this.pavlovServerService.GetCurrentMapRotation(mapsLoadServerAction.ServerId);
         dispatcher.Dispatch(new MapsAddServerAction(mapsLoadServerAction.ServerId, mapRows));
 
-        foreach (MapServerModel map in mapRows)
+        foreach (ServerMapModel map in mapRows)
         {
             if (!map.IsWorkshopMap || this.mapsState.Value.MapDetails.ContainsKey(map.WorkshopId))
             {
@@ -134,12 +134,12 @@ public class MapsLoadServerAction
 
 public class MapsAddServerAction
 {
-    public MapsAddServerAction(string serverId, MapServerModel[] maps)
+    public MapsAddServerAction(string serverId, ServerMapModel[] maps)
     {
         this.ServerId = serverId;
         this.Maps = maps;
     }
 
     public string ServerId { get; }
-    public MapServerModel[] Maps { get; }
+    public ServerMapModel[] Maps { get; }
 }

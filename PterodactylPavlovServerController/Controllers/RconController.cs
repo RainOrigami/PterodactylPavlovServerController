@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using PterodactylPavlovServerController.Exceptions;
+using PavlovVR_Rcon.Exceptions;
+using PavlovVR_Rcon.Models.Pavlov;
 using PterodactylPavlovServerController.Services;
-using PterodactylPavlovServerDomain.Models;
 
 namespace PterodactylPavlovServerController.Controllers;
 
@@ -51,12 +51,12 @@ public class RconController : Controller
     }
 
     [HttpGet("player")]
-    public IActionResult GetPlayer(string serverId, string uniqueId)
+    public async Task<IActionResult> GetPlayer(string serverId, ulong uniqueId)
     {
         try
         {
-            PlayerDetailModel? activePlayer = this.pavlovRconService.GetActivePlayerDetail(serverId, uniqueId);
-            return activePlayer is null ? this.ValidationProblem("Player is not active on this server") : this.Ok(activePlayer);
+            PavlovPlayerDetail activePlayer = await this.pavlovRconService.GetActivePlayerDetail(serverId, uniqueId);
+            return this.Ok(activePlayer);
         }
         catch (RconException)
         {
@@ -69,11 +69,11 @@ public class RconController : Controller
     }
 
     [HttpPost("switchMap")]
-    public IActionResult SwitchMap(string serverId, string mapId, string gameMode)
+    public async Task<IActionResult> SwitchMap(string serverId, string mapId, string gameMode)
     {
         try
         {
-            this.pavlovRconService.SwitchMap(serverId, mapId, gameMode);
+            await this.pavlovRconService.SwitchMap(serverId, mapId, gameMode);
             return this.Ok();
         }
         catch (RconException)

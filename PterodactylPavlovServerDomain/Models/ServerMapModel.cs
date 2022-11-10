@@ -1,6 +1,6 @@
 ﻿namespace PterodactylPavlovServerDomain.Models;
 
-public class MapServerModel
+public class ServerMapModel
 {
     public string MapLabel { get; set; } = string.Empty;
     public string GameMode { get; set; } = string.Empty;

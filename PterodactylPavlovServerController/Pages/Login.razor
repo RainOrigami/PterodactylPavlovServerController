@@ -1,0 +1,61 @@
+﻿@using PterodactylPavlovServerController.Models
+@using PterodactylPavlovServerController.Contexts
+@using Microsoft.EntityFrameworkCore
+@using BCrypt.Net
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Authentication.Cookies
+@using Microsoft.AspNetCore.Components.Server
+@using Microsoft.AspNetCore.Identity
+@using System.Security.Claims
+@attribute [AllowAnonymous]
+@inject PterodactylContext PterodactylContext
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<EditForm Model="userModel" OnValidSubmit="doLogin" style="width: 22rem;">
+    <DataAnnotationsValidator />
+
+    <div class="form-floating mb-3">
+        <InputText @bind-Value="userModel.Username" class="form-control" placeholder="Username" />
+        <label>Username</Label>
+        <ValidationMessage For="@(() => userModel.Username)" class="text-danger" />
+    </div>
+    <div class="form-floating mb-3">
+        <InputText @bind-Value="userModel.Password" type="password" class="form-control" placeholder="Password" />
+        <label>Password</label>
+        <ValidationMessage For="@(() => userModel.Password)" class="text-danger"/>
+    </div>
+
+    <div class="form-floating">
+        <button type="submit" class="btn btn-primary w-100">Sign in</button>
+    </div>
+    
+    <div class="text-danger">@error</div>
+</EditForm>
+
+@code {
+    private PterodactylUserModel userModel = new();
+    private string? error;
+
+    private async Task doLogin()
+    {
+        PterodactylUserModel? targetUser = await PterodactylContext.Users.FirstOrDefaultAsync(u => u.Username == userModel.Username);
+        if (targetUser == null || !BCrypt.Verify(userModel.Password, targetUser.Password))
+        {
+            error = "Username or password invalid.";
+            userModel.Password = string.Empty;
+            return;
+        }
+
+        error = null;
+        // TODO: this fucking sucks
+        List<Claim> claims = new()
+        {
+            new(ClaimTypes.Name, targetUser.Username)
+        };
+        ClaimsIdentity claimsIdentity = new(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+        ClaimsPrincipal claimsPrincipal = new(claimsIdentity);
+        AuthenticationState authenticationState = new(claimsPrincipal);
+
+        (AuthenticationStateProvider as ServerAuthenticationStateProvider).SetAuthenticationState(Task.FromResult(authenticationState));
+    }
+}

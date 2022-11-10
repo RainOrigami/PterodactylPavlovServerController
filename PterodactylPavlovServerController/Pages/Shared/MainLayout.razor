@@ -4,22 +4,43 @@
 
 @inject IState<PageTitleState> PageTitleState
 
-<PageTitle>@PageTitleState.Value.Title - PPSC</PageTitle>
+@*<CascadingAuthenticationState>
+    <AuthorizeView>
+        <Authorized>*@
+            <PageTitle>@PageTitleState.Value.Title - PPSC</PageTitle>
 
-<div class="page">
-    <div class="sidebar col-12">
-        <NavMenu />
-    </div>
+            <div class="page">
+                <div class="sidebar col-12">
+                    <NavMenu />
+                </div>
 
-    <main class="bg-dark">
-        <div class="top-row navbar-dark px-4">
-            <h3 class="navbar-brand">@PageTitleState.Value.Title</h3>
-        </div>
+                <main class="bg-dark">
+                    <div class="top-row navbar-dark px-4">
+                        <h3 class="navbar-brand">@PageTitleState.Value.Title</h3>
+                    </div>
 
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
-</div>
+                    <article class="content px-4">
+                        @Body
+                    </article>
+                </main>
+            </div>
 
-<BlazoredToasts/>
+            <BlazoredToasts />
+@*        </Authorized>
+        <NotAuthorized>
+            <PageTitle>Login - PPSC</PageTitle>
+            <div class="page h-100">
+                <main class="bg-dark">
+                    <div class="top-row navbar-dark px-4 pt-5 justify-content-center">
+                        <h1>Login</h1>
+                    </div>
+                    <div class="w-100 p-4 d-flex justify-content-center pb-4">
+                        <article class="content px-4">
+                            <Login />
+                        </article>
+                    </div>
+                </main>
+            </div>
+        </NotAuthorized>
+    </AuthorizeView>
+</CascadingAuthenticationState>*@

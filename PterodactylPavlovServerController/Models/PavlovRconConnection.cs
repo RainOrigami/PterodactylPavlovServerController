@@ -1,4 +1,5 @@
-﻿using PterodactylPavlovServerController.Contexts;
+﻿using PavlovVR_Rcon.Models.Pavlov;
+using PterodactylPavlovServerController.Contexts;
 using PterodactylPavlovServerController.Services;
 using PterodactylPavlovServerDomain.Models;
 
@@ -7,7 +8,7 @@ namespace PterodactylPavlovServerController.Models;
 
 public class PavlovRconConnection : IDisposable
 {
-    public delegate void PlayerDetailUpdate(string serverId, PlayerDetailModel playerDetail);
+    public delegate void PlayerDetailUpdate(string serverId, PavlovPlayerDetail playerDetail);
 
     public delegate void ServerError(string serverId, string error);
 
@@ -17,8 +18,8 @@ public class PavlovRconConnection : IDisposable
     private readonly PavlovRconService pavlovRconService;
 
     private readonly CancellationTokenSource updateCancellationTokenSource = new();
-    private Dictionary<ulong, PlayerDetailModel>? playerDetails;
-    private Dictionary<ulong, PlayerListPlayerModel>? playerListPlayers;
+    private Dictionary<ulong, PavlovPlayerDetail>? playerDetails;
+    private Dictionary<ulong, PavlovPlayer>? playerListPlayers;
 
     public PavlovRconConnection(PterodactylServerModel pterodactylServer, PavlovRconService pavlovRconService, IConfiguration configuration)
     {
@@ -28,12 +29,22 @@ public class PavlovRconConnection : IDisposable
     }
 
     public string ServerId => this.PterodactylServer.ServerId;
-    public bool? Online { get; set; }
+
+    public bool? Online
+    {
+        get => online;
+        set
+        {
+            this.online = value;
+        }
+    }
+
+    private bool? online;
 
     public PterodactylServerModel PterodactylServer { get; }
-    public ServerInfoModel? ServerInfo { get; private set; }
-    public IReadOnlyDictionary<ulong, PlayerListPlayerModel>? PlayerListPlayers => this.playerListPlayers;
-    public IReadOnlyDictionary<ulong, PlayerDetailModel>? PlayerDetails => this.playerDetails;
+    public PavlovServerInfo? ServerInfo { get; private set; }
+    public IReadOnlyDictionary<ulong, PavlovPlayer>? PlayerListPlayers => this.playerListPlayers;
+    public IReadOnlyDictionary<ulong, PavlovPlayerDetail>? PlayerDetails => this.playerDetails;
 
     public void Dispose()
     {
@@ -51,9 +62,9 @@ public class PavlovRconConnection : IDisposable
         {
             try
             {
-                this.updateServerInfo();
-                this.updatePlayerList();
-                this.updatePlayerDetails();
+                await this.updateServerInfo();
+                await this.updatePlayerList();
+                await this.updatePlayerDetails();
             }
             catch (Exception ex)
             {
@@ -68,11 +79,11 @@ public class PavlovRconConnection : IDisposable
     public event ServerUpdated? OnServerOnlineStateChanged;
     public event ServerError? OnServerErrorRaised;
 
-    private void updateServerInfo()
+    private async Task updateServerInfo()
     {
         try
         {
-            this.ServerInfo = this.pavlovRconService.GetServerInfo(this.ServerId);
+            this.ServerInfo = await this.pavlovRconService.GetServerInfo(this.ServerId);
         }
         catch (Exception ex)
         {
@@ -94,7 +105,7 @@ public class PavlovRconConnection : IDisposable
 
     public event ServerUpdated? OnPlayerListUpdated;
 
-    private void updatePlayerList()
+    private async Task updatePlayerList()
     {
         if (!this.Online.HasValue || !this.Online.Value)
         {
@@ -103,8 +114,8 @@ public class PavlovRconConnection : IDisposable
 
         try
         {
-            PlayerListPlayerModel[] playerListPlayerModels = this.pavlovRconService.GetActivePlayers(this.ServerId);
-            this.playerListPlayers = playerListPlayerModels.ToDictionary(k => ulong.Parse(k.UniqueId), v => v);
+            PavlovPlayer[] playerListPlayerModels = await this.pavlovRconService.GetActivePlayers(this.ServerId);
+            this.playerListPlayers = playerListPlayerModels.ToDictionary(k => k.UniqueId, v => v);
         }
         catch (Exception ex)
         {
@@ -114,41 +125,44 @@ public class PavlovRconConnection : IDisposable
 
         this.OnPlayerListUpdated?.Invoke(this.ServerId);
 
-        using (PavlovServerContext context = new(this.configuration))
-        {
-            foreach (PlayerListPlayerModel player in this.playerListPlayers.Values)
-            {
-                PlayerListPlayerModel? dbPlayer = context.Players.FirstOrDefault(p => p.UniqueId == player.UniqueId && p.ServerId == this.ServerId);
-                if (dbPlayer == null)
-                {
-                    player.ServerId = this.ServerId;
-                    context.Players.Add(player);
-                }
-                else if (dbPlayer.Username != player.Username)
-                {
-                    dbPlayer.Username = player.Username;
-                }
-            }
+        await using PavlovServerContext context = new(this.configuration);
 
-            context.SaveChanges();
+        foreach (PavlovPlayer player in this.playerListPlayers.Values)
+        {
+            PersistentPavlovPlayer? dbPlayer = context.Players.FirstOrDefault(p => p.UniqueId == player.UniqueId && p.ServerId == this.ServerId);
+            if (dbPlayer == null)
+            {
+                context.Players.Add(new PersistentPavlovPlayer()
+                {
+                    ServerId = this.ServerId,
+                    UniqueId = player.UniqueId,
+                    Username = player.Username
+                });
+            }
+            else if (dbPlayer.Username != player.Username)
+            {
+                dbPlayer.Username = player.Username;
+            }
         }
+
+        await context.SaveChangesAsync();
     }
 
     public event PlayerDetailUpdate? OnPlayerDetailUpdated;
 
-    private void updatePlayerDetails()
+    private async Task updatePlayerDetails()
     {
         if (!this.Online.HasValue || !this.Online.Value || this.PlayerListPlayers == null)
         {
             return;
         }
 
-        List<PlayerDetailModel> newPlayerDetails = new();
+        List<PavlovPlayerDetail> newPlayerDetails = new();
         foreach (ulong playerId in this.PlayerListPlayers.Keys)
         {
             try
             {
-                PlayerDetailModel? playerDetail = this.pavlovRconService.GetActivePlayerDetail(this.ServerId, playerId.ToString());
+                PavlovPlayerDetail playerDetail = await this.pavlovRconService.GetActivePlayerDetail(this.ServerId, playerId);
 
                 if (playerDetail == null)
                 {
@@ -164,6 +178,6 @@ public class PavlovRconConnection : IDisposable
             }
         }
 
-        this.playerDetails = newPlayerDetails.ToDictionary(k => ulong.Parse(k.UniqueId), v => v);
+        this.playerDetails = newPlayerDetails.ToDictionary(k => k.UniqueId, v => v);
     }
 }

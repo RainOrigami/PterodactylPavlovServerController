@@ -1,8 +1,6 @@
-﻿using Newtonsoft.Json;
-using PavlovVR_Rcon;
-using PterodactylPavlovServerController.Exceptions;
-using PterodactylPavlovServerDomain.Models;
-using System.Text.Json;
+﻿using PavlovVR_Rcon;
+using PavlovVR_Rcon.Commands;
+using PavlovVR_Rcon.Models.Pavlov;
 
 namespace PterodactylPavlovServerController.Services;
 
@@ -16,156 +14,93 @@ public class PavlovRconService
         this.pterodactylService = pterodactylService;
     }
 
-    public PlayerListPlayerModel[] GetActivePlayers(string serverId)
+    public async Task<PavlovPlayer[]> GetActivePlayers(string serverId)
     {
-        PavlovRcon pavlovRcon = this.openConnection(serverId);
-        string playerList = pavlovRcon.SendCommand(RconCommandType.RefreshList);
-        return JsonConvert.DeserializeObject<PlayerListPlayerModel[]>(JsonDocument.Parse(playerList).RootElement.GetProperty("PlayerList").ToString()) ?? throw new RconException();
+        return (await new RefreshListCommand().ExecuteCommand(await this.openConnection(serverId))).PlayerList;
     }
 
-    public PlayerDetailModel? GetActivePlayerDetail(string serverId, string uniqueId)
+    public async Task<PavlovPlayerDetail> GetActivePlayerDetail(string serverId, ulong uniqueId)
     {
-        PavlovRcon pavlovRcon = this.openConnection(serverId);
-        JsonElement result = JsonDocument.Parse(pavlovRcon.SendCommand(RconCommandType.InspectPlayer, uniqueId)).RootElement;
-        if (!result.GetProperty("Successful").GetBoolean())
-        {
-            return null;
-        }
-
-        return JsonConvert.DeserializeObject<PlayerDetailModel>(result.GetProperty("PlayerInfo").ToString()) ?? null;
+        return (await new InspectPlayerCommand(uniqueId).ExecuteCommand(await this.openConnection(serverId))).PlayerInfo;
     }
 
-    public ServerInfoModel GetServerInfo(string serverId)
+    public async Task<PavlovServerInfo> GetServerInfo(string serverId)
     {
-        PavlovRcon pavlovRcon = this.openConnection(serverId);
-        string response = pavlovRcon.SendCommand(RconCommandType.ServerInfo);
-        ServerInfoModel serverInfoModel = JsonConvert.DeserializeObject<ServerInfoModel>(JsonDocument.Parse(response).RootElement.GetProperty("ServerInfo").ToString() ?? throw new RconException()) ?? throw new RconException();
-        serverInfoModel.ServerId = serverId;
-        return serverInfoModel;
+        return (await new ServerInfoCommand().ExecuteCommand(await this.openConnection(serverId))).ServerInfo;
     }
 
-    public void SwitchMap(string serverId, string mapLabel, string gameMode)
+    public async Task SwitchMap(string serverId, string mapLabel, PavlovGameMode gameMode)
     {
-        if (!Enum.TryParse(gameMode, out PavlovGameMode pavlovGameMode))
-        {
-            throw new ArgumentException("Invalid game mode specified", nameof(gameMode));
-        }
-
-        PavlovRcon pavlovRcon = this.openConnection(serverId);
-        pavlovRcon.SendCommand(RconCommandType.SwitchMap, mapLabel, pavlovGameMode.ToString());
+        await new SwitchMapCommand(mapLabel, gameMode).ExecuteCommand(await this.openConnection(serverId));
     }
 
-    public void RotateMap(string serverId)
+    public async Task RotateMap(string serverId)
     {
-        PavlovRcon pavlovRcon = this.openConnection(serverId);
-        pavlovRcon.SendCommand(RconCommandType.RotateMap);
+        await new RotateMapCommand().ExecuteCommand(await this.openConnection(serverId));
     }
 
-    public void KickPlayer(string serverId, string uniqueId)
+    public async Task KickPlayer(string serverId, ulong uniqueId)
     {
-        PavlovRcon pavlovRcon = this.openConnection(serverId);
-        pavlovRcon.SendCommand(RconCommandType.Kick, uniqueId);
+        await new KickCommand(uniqueId).ExecuteCommand(await this.openConnection(serverId));
     }
 
-    public void BanPlayer(string serverId, string uniqueId)
+    public async Task BanPlayer(string serverId, ulong uniqueId)
     {
-        PavlovRcon pavlovRcon = this.openConnection(serverId);
-        JsonElement result = JsonDocument.Parse(pavlovRcon.SendCommand(RconCommandType.Ban, uniqueId)).RootElement;
-        if (!result.GetProperty("Successful").GetBoolean())
-        {
-            throw new RconException();
-        }
+        await new BanCommand(uniqueId).ExecuteCommand(await this.openConnection(serverId));
     }
 
-    public void UnbanPlayer(string serverId, string uniqueId)
+    public async Task UnbanPlayer(string serverId, ulong uniqueId)
     {
-        PavlovRcon pavlovRcon = this.openConnection(serverId);
-        JsonElement result = JsonDocument.Parse(pavlovRcon.SendCommand(RconCommandType.Unban, uniqueId)).RootElement;
-        if (!result.GetProperty("Successful").GetBoolean())
-        {
-            throw new RconException();
-        }
+        await new UnbanCommand(uniqueId).ExecuteCommand(await this.openConnection(serverId));
     }
 
-    public string[] Banlist(string serverId)
+    public async Task<string[]> Banlist(string serverId)
     {
-        PavlovRcon pavlovRcon = this.openConnection(serverId);
-        return JsonDocument.Parse(pavlovRcon.SendCommand(RconCommandType.Banlist)).RootElement.GetProperty("BanList").EnumerateArray().Select(s => s.GetString()!).ToArray();
+        return (await new BanlistCommand().ExecuteCommand(await this.openConnection(serverId))).BanList;
     }
 
-    private PavlovRcon openConnection(string serverId)
+    private async Task<PavlovRcon> openConnection(string serverId)
     {
         if (!PavlovRconService.pavlovRconConnections.ContainsKey(serverId))
         {
-            PavlovRconService.pavlovRconConnections.Add(serverId, new PavlovRcon(this.pterodactylService.GetHost(serverId), int.Parse(this.pterodactylService.GetStartupVariable(serverId, "RCON_PORT")), this.pterodactylService.GetStartupVariable(serverId, "RCON_PASSWORD")));
-            //pavlovRconConnections[serverId].RconEvent += this.PavlovRcon_RconEvent;
+            PavlovRconService.pavlovRconConnections.Add(serverId, new PavlovRcon(this.pterodactylService.GetHost(serverId), int.Parse(this.pterodactylService.GetStartupVariable(serverId, "RCON_PORT")), this.pterodactylService.GetStartupVariable(serverId, "RCON_PASSWORD"), true));
         }
 
         if (!PavlovRconService.pavlovRconConnections[serverId].Connected)
         {
-            PavlovRconService.pavlovRconConnections[serverId].Connect();
+            await PavlovRconService.pavlovRconConnections[serverId].Connect(new CancellationTokenSource(2000).Token);
         }
 
         return PavlovRconService.pavlovRconConnections[serverId];
     }
 
-    internal void GiveItem(string serverId, string uniqueId, string item)
+    public async Task GiveItem(string serverId, ulong uniqueId, string item)
     {
-        PavlovRcon pavlovRcon = this.openConnection(serverId);
-        JsonElement result = JsonDocument.Parse(pavlovRcon.SendCommand(RconCommandType.GiveItem, uniqueId, item)).RootElement;
-        if (!result.GetProperty("Successful").GetBoolean())
-        {
-            throw new RconException();
-        }
+        await new GiveItemCommand(uniqueId, item).ExecuteCommand(await this.openConnection(serverId));
     }
 
-    internal void GiveCash(string serverId, string uniqueId, int amount)
+    public async Task GiveCash(string serverId, ulong uniqueId, int amount)
     {
-        PavlovRcon pavlovRcon = this.openConnection(serverId);
-        JsonElement result = JsonDocument.Parse(pavlovRcon.SendCommand(RconCommandType.GiveCash, uniqueId, amount.ToString())).RootElement;
-        if (!result.GetProperty("Successful").GetBoolean())
-        {
-            throw new RconException();
-        }
+        await new GiveCashCommand(uniqueId, amount).ExecuteCommand(await this.openConnection(serverId));
     }
 
-    internal void GiveVehicle(string serverId, string uniqueId, string vehicle)
+    public async Task GiveVehicle(string serverId, ulong uniqueId, string vehicle)
     {
-        PavlovRcon pavlovRcon = this.openConnection(serverId);
-        JsonElement result = JsonDocument.Parse(pavlovRcon.SendCommand(RconCommandType.GiveVehicle, uniqueId, vehicle)).RootElement;
-        if (!result.GetProperty("Successful").GetBoolean())
-        {
-            throw new RconException();
-        }
+        await new GiveVehicleCommand(uniqueId, vehicle).ExecuteCommand(await this.openConnection(serverId));
     }
 
-    internal void SetSkin(string serverId, string uniqueId, string skin)
+    public async Task SetSkin(string serverId, ulong uniqueId, string skin)
     {
-        PavlovRcon pavlovRcon = this.openConnection(serverId);
-        JsonElement result = JsonDocument.Parse(pavlovRcon.SendCommand(RconCommandType.SetPlayerSkin, uniqueId, skin)).RootElement;
-        if (!result.GetProperty("Successful").GetBoolean())
-        {
-            throw new RconException();
-        }
+        await new SetPlayerSkinCommand(uniqueId, skin).ExecuteCommand(await this.openConnection(serverId));
     }
 
-    internal void Slap(string serverId, string uniqueId, int amount)
+    public async Task Slap(string serverId, ulong uniqueId, int amount)
     {
-        PavlovRcon pavlovRcon = this.openConnection(serverId);
-        JsonElement result = JsonDocument.Parse(pavlovRcon.SendCommand(RconCommandType.Slap, uniqueId, amount.ToString())).RootElement;
-        if (!result.GetProperty("Successful").GetBoolean())
-        {
-            throw new RconException();
-        }
+        await new SlapCommand(uniqueId, amount).ExecuteCommand(await this.openConnection(serverId));
     }
 
-    internal void SwitchTeam(string serverId, string uniqueId, int team)
+    public async Task SwitchTeam(string serverId, ulong uniqueId, int team)
     {
-        PavlovRcon pavlovRcon = this.openConnection(serverId);
-        JsonElement result = JsonDocument.Parse(pavlovRcon.SendCommand(RconCommandType.SwitchTeam, uniqueId, team.ToString())).RootElement;
-        if (!result.GetProperty("Successful").GetBoolean())
-        {
-            throw new RconException();
-        }
+        await new SwitchTeamCommand(uniqueId, team).ExecuteCommand(await this.openConnection(serverId));
     }
 }
