@@ -1,5 +1,5 @@
 ﻿using PavlovVR_Rcon;
-using PavlovVR_Rcon.Commands;
+using PavlovVR_Rcon.Models.Commands;
 using PavlovVR_Rcon.Models.Pavlov;
 
 namespace PterodactylPavlovServerController.Services;
@@ -8,55 +8,75 @@ public class PavlovRconService
 {
     private static readonly Dictionary<string, PavlovRcon> pavlovRconConnections = new();
     private readonly PterodactylService pterodactylService;
+    private DateTime lastCommand = DateTime.MinValue;
 
     public PavlovRconService(PterodactylService pterodactylService)
     {
         this.pterodactylService = pterodactylService;
     }
 
-    public async Task<PavlovPlayer[]> GetActivePlayers(string serverId)
+    private async Task delay()
     {
+        if (this.lastCommand > DateTime.Now.AddMilliseconds(100))
+        {
+            await Task.Delay(100);
+        }
+
+        this.lastCommand = DateTime.Now;
+    }
+
+    public async Task<Player[]> GetActivePlayers(string serverId)
+    {
+        await this.delay();
         return (await new RefreshListCommand().ExecuteCommand(await this.openConnection(serverId))).PlayerList;
     }
 
-    public async Task<PavlovPlayerDetail> GetActivePlayerDetail(string serverId, ulong uniqueId)
+    public async Task<PlayerDetail> GetActivePlayerDetail(string serverId, ulong uniqueId)
     {
+        await this.delay();
         return (await new InspectPlayerCommand(uniqueId).ExecuteCommand(await this.openConnection(serverId))).PlayerInfo;
     }
 
-    public async Task<PavlovServerInfo> GetServerInfo(string serverId)
+    public async Task<ServerInfo> GetServerInfo(string serverId)
     {
+        await this.delay();
         return (await new ServerInfoCommand().ExecuteCommand(await this.openConnection(serverId))).ServerInfo;
     }
 
-    public async Task SwitchMap(string serverId, string mapLabel, PavlovGameMode gameMode)
+    public async Task SwitchMap(string serverId, string mapLabel, GameMode gameMode)
     {
+        await this.delay();
         await new SwitchMapCommand(mapLabel, gameMode).ExecuteCommand(await this.openConnection(serverId));
     }
 
     public async Task RotateMap(string serverId)
     {
+        await this.delay();
         await new RotateMapCommand().ExecuteCommand(await this.openConnection(serverId));
     }
 
-    public async Task KickPlayer(string serverId, ulong uniqueId)
+    public async Task<bool> KickPlayer(string serverId, ulong uniqueId)
     {
-        await new KickCommand(uniqueId).ExecuteCommand(await this.openConnection(serverId));
+        await this.delay();
+        return (await new KickCommand(uniqueId).ExecuteCommand(await this.openConnection(serverId))).Kick;
     }
 
-    public async Task BanPlayer(string serverId, ulong uniqueId)
+    public async Task<bool> BanPlayer(string serverId, ulong uniqueId)
     {
-        await new BanCommand(uniqueId).ExecuteCommand(await this.openConnection(serverId));
+        await this.delay();
+        return (await new BanCommand(uniqueId).ExecuteCommand(await this.openConnection(serverId))).Ban;
     }
 
-    public async Task UnbanPlayer(string serverId, ulong uniqueId)
+    public async Task<bool> UnbanPlayer(string serverId, ulong uniqueId)
     {
-        await new UnbanCommand(uniqueId).ExecuteCommand(await this.openConnection(serverId));
+        await this.delay();
+        return (await new UnbanCommand(uniqueId).ExecuteCommand(await this.openConnection(serverId))).Unban;
     }
 
-    public async Task<string[]> Banlist(string serverId)
+    public async Task<ulong[]> Banlist(string serverId)
     {
-        return (await new BanlistCommand().ExecuteCommand(await this.openConnection(serverId))).BanList;
+        await this.delay();
+        return (await new BanListCommand().ExecuteCommand(await this.openConnection(serverId))).BanList;
     }
 
     private async Task<PavlovRcon> openConnection(string serverId)
@@ -76,31 +96,37 @@ public class PavlovRconService
 
     public async Task GiveItem(string serverId, ulong uniqueId, string item)
     {
+        await this.delay();
         await new GiveItemCommand(uniqueId, item).ExecuteCommand(await this.openConnection(serverId));
     }
 
     public async Task GiveCash(string serverId, ulong uniqueId, int amount)
     {
+        await this.delay();
         await new GiveCashCommand(uniqueId, amount).ExecuteCommand(await this.openConnection(serverId));
     }
 
     public async Task GiveVehicle(string serverId, ulong uniqueId, string vehicle)
     {
+        await this.delay();
         await new GiveVehicleCommand(uniqueId, vehicle).ExecuteCommand(await this.openConnection(serverId));
     }
 
     public async Task SetSkin(string serverId, ulong uniqueId, string skin)
     {
+        await this.delay();
         await new SetPlayerSkinCommand(uniqueId, skin).ExecuteCommand(await this.openConnection(serverId));
     }
 
     public async Task Slap(string serverId, ulong uniqueId, int amount)
     {
+        await this.delay();
         await new SlapCommand(uniqueId, amount).ExecuteCommand(await this.openConnection(serverId));
     }
 
-    public async Task SwitchTeam(string serverId, ulong uniqueId, int team)
+    public async Task<bool> SwitchTeam(string serverId, ulong uniqueId, int team)
     {
-        await new SwitchTeamCommand(uniqueId, team).ExecuteCommand(await this.openConnection(serverId));
+        await this.delay();
+        return (await new SwitchTeamCommand(uniqueId, team).ExecuteCommand(await this.openConnection(serverId))).Successful;
     }
 }

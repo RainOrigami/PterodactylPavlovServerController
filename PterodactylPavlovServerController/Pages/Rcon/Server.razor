@@ -1,11 +1,13 @@
 ﻿@page "/rcon/{ServerId}"
 @using Fluxor
 @using PavlovVR_Rcon.Models.Pavlov
+@using PterodactylPavlovServerController.Contexts
 @using PterodactylPavlovServerController.Services
 @using PterodactylPavlovServerController.Stores
 @using PterodactylPavlovServerDomain.Models
 @using PterodactylPavlovServerController.Models
 @using PterodactylPavlovServerController.Pages.Player
+@using PterodactylPavlovServerDomain.Extensions
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 @inject IDispatcher Dispatcher
@@ -14,6 +16,7 @@
 @inject IState<MapsState> MapsState
 @inject PavlovRconService RconService
 @inject IToastService Toast
+@inject PavlovServerContext PavlovServerContext
 
 @if (!Rcon.Initialised)
 {
@@ -32,7 +35,7 @@
 
 @{
     PterodactylServerModel server = connection.PterodactylServer;
-    PavlovServerInfo? serverInfo = connection.ServerInfo;
+    ServerInfo? serverInfo = connection.ServerInfo;
 
     Dispatcher.Dispatch(new PageTitleSetAction($"{server.Name} ({(serverInfo == null ? PavlovServersState.Value.ServerNamesFromGameIni.ContainsKey(ServerId) ? PavlovServersState.Value.ServerNamesFromGameIni[ServerId] : "..." : serverInfo.ServerName)})"));
 
@@ -96,13 +99,13 @@
                                         <div class="col-auto px-1">
                                             <i class="fa-solid fa-person-rifle" style="color: limegreen;"></i>
                                         </div>
-                                        <div class="col px-1">@(connection.PlayerListPlayers == null ? $"{serverInfo.PlayerCount}*" : connection.PlayerListPlayers.Count)&nbsp;/&nbsp;@serverInfo.PlayerCount</div>
+                                        <div class="col px-1">@(connection.PlayerListPlayers == null ? $"{serverInfo.CurrentPlayerCount()}*" : connection.PlayerListPlayers.Count)&nbsp;/&nbsp;@serverInfo.MaximumPlayerCount()</div>
                                     </div>
                                     <div class="row gx-0">
                                         <div class="col-auto px-1">
                                             <i class="fa-solid fa-chess-board"></i>
                                         </div>
-                                        @if (string.IsNullOrEmpty(serverInfo.Round))
+                                        @if (serverInfo.Round == null)
                                         {
                                             <div class="col px-1">@serverInfo.RoundState</div>
                                         }
@@ -117,13 +120,13 @@
                                             <div class="col-auto px-1">
                                                 <i class="fa-solid fa-trophy" style="color: lightskyblue"></i>
                                             </div>
-                                            <div class="col px-1">@serverInfo.Team0Score</div>
+                                            <div class="col px-1">@(serverInfo.Team0Score?.ToString() ?? "Unavailable")</div>
                                         </div>
                                         <div class="row gx-0">
                                             <div class="col-auto px-1">
                                                 <i class="fa-solid fa-trophy" style="color: tomato"></i>
                                             </div>
-                                            <div class="col px-1">@serverInfo.Team1Score</div>
+                                            <div class="col px-1">@(serverInfo.Team1Score?.ToString() ?? "Unavailable")</div>
                                         </div>
                                     }
                                 </div>
@@ -155,62 +158,86 @@
 
                 <div class="tab-content">
                     <div class="tab-pane container active" id="players">
-                        <div class="row">
-                            <div class="col rounded h2 p-3 me-2" style="background-color: lightskyblue; color: #222;">
-                                Blue Team (@serverInfo.Team0Score)
+                        @if (serverInfo.Teams)
+                        {
+                            <div class="row">
+                                <div class="col rounded h2 p-3 me-2" style="background-color: lightskyblue; color: #222;">
+                                    Blue Team
+                                    @if (@serverInfo.Team0Score != null)
+                                    {
+                                        @:(@serverInfo.Team0Score)
+                                    }
+                                </div>
+                                <div class="col rounded h2 p-3 ms-2" style="background-color: tomato; color: #222;">
+                                    Red Team
+                                    @if (@serverInfo.Team1Score != null)
+                                    {
+                                        @:(@serverInfo.Team1Score)
+                                    }
+                                </div>
                             </div>
-                            <div class="col rounded h2 p-3 ms-2" style="background-color: tomato; color: #222;">
-                                Red Team (@serverInfo.Team1Score)
-                            </div>
-                        </div>
 
-                        <div class="row">
+                            <div class="row">
 
-                            @{
-                                List<ulong> blueTeam = new();
-                                List<ulong> redTeam = new();
+                                @{
+                                    List<ulong> blueTeam = new();
+                                    List<ulong> redTeam = new();
 
-                                if (connection.PlayerDetails is IReadOnlyDictionary<ulong, PavlovPlayerDetail> playersDetails)
-                                {
-                                    blueTeam.AddRange(playersDetails.Where(kvp => kvp.Value.TeamId == 0).Select(kvp => kvp.Key));
-                                    redTeam.AddRange(playersDetails.Where(kvp => kvp.Value.TeamId == 1).Select(kvp => kvp.Key));
+                                    if (connection.PlayerDetails is IReadOnlyDictionary<ulong, PlayerDetail> playersDetails)
+                                    {
+                                        blueTeam.AddRange(playersDetails.Where(kvp => kvp.Value.TeamId == 0).Select(kvp => kvp.Key));
+                                        redTeam.AddRange(playersDetails.Where(kvp => kvp.Value.TeamId == 1).Select(kvp => kvp.Key));
+                                    }
                                 }
+
+                                <div class="col ps-0">
+                                    <div class="container">
+
+                                        @foreach (ulong playerId in blueTeam)
+                                        {
+                                            <div class="row">
+                                                <div class="col px-0">
+
+                                                    <PlayerCard PlayerId="@playerId" ServerId="@ServerId" />
+
+                                                </div>
+                                            </div>
+                                        }
+
+                                    </div>
+                                </div>
+
+                                <div class="col pe-0">
+                                    <div class="container">
+
+                                        @foreach (ulong playerId in redTeam)
+                                        {
+                                            <div class="row">
+                                                <div class="col px-0">
+
+                                                    <PlayerCard PlayerId="@playerId" ServerId="@ServerId" />
+
+                                                </div>
+                                            </div>
+                                        }
+
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        else if (connection.PlayerDetails is IReadOnlyDictionary<ulong, PlayerDetail> playersDetails)
+                        {
+                            @foreach (ulong playerId in playersDetails.Keys)
+                            {
+                                <div class="row">
+                                    <div class="col px-0">
+
+                                        <PlayerCard PlayerId="@playerId" ServerId="@ServerId" />
+
+                                    </div>
+                                </div>
                             }
-
-                            <div class="col ps-0">
-                                <div class="container">
-
-                                    @foreach (ulong playerId in blueTeam)
-                                    {
-                                        <div class="row">
-                                            <div class="col px-0">
-
-                                                <PlayerCard PlayerId="@playerId" ServerId="@ServerId" />
-
-                                            </div>
-                                        </div>
-                                    }
-
-                                </div>
-                            </div>
-
-                            <div class="col pe-0">
-                                <div class="container">
-
-                                    @foreach (ulong playerId in redTeam)
-                                    {
-                                        <div class="row">
-                                            <div class="col px-0">
-
-                                                <PlayerCard PlayerId="@playerId" ServerId="@ServerId" />
-
-                                            </div>
-                                        </div>
-                                    }
-
-                                </div>
-                            </div>
-                        </div>
+                        }
                     </div>
 
                     <div class="tab-pane container fade" id="maps">
@@ -257,7 +284,12 @@
                             }
                         }
                     </div>
-
+                    <div class="tab-pane container fade" id="offline">
+                        @foreach (PersistentPavlovPlayer player in PavlovServerContext.Players.Where(p => p.ServerId == ServerId).AsEnumerable().Where(p => !(connection?.PlayerListPlayers?.ContainsKey(p.UniqueId) ?? false)).OrderBy(p => (connection?.BanList?.Contains(p.UniqueId) ?? false) ? 1 : 0))
+                        {
+                            <PlayerCard PlayerId="@player.UniqueId" ServerId="@ServerId" />
+                        }
+                    </div>
                     <div class="tab-pane container fade" id="cheats">
                         TBD
                     </div>
@@ -300,7 +332,10 @@
 
                 Toast.ShowError(error, "Error");
             };
-            Dispatcher.Dispatch(new PavlovServerLoadNameFromGameIniAction(ServerId));
+            if (!PavlovServersState.Value.ServerNamesFromGameIni.ContainsKey(ServerId))
+            {
+                Dispatcher.Dispatch(new PavlovServerLoadNameFromGameIniAction(ServerId));
+            }
             await loadMaps();
         }
 
@@ -336,7 +371,7 @@
 
         try
         {
-            PavlovGameMode gameMode = Enum.Parse<PavlovGameMode>(serverMap.GameMode);
+            GameMode gameMode = Enum.Parse<GameMode>(serverMap.GameMode);
             await RconService.SwitchMap(ServerId, serverMap.MapLabel, gameMode);
         }
         catch (Exception e)

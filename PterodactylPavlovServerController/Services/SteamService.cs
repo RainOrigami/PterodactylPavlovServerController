@@ -41,7 +41,7 @@ public class SteamService
         }
     }
 
-    public PlayerSummaryModel GetPlayerSummary(ulong steamId)
+    public async Task<PlayerSummaryModel> GetPlayerSummary(ulong steamId)
     {
         DateTime? lastUpdated = null;
         PlayerSummaryModel? playerSummary = null;
@@ -66,7 +66,7 @@ public class SteamService
             }
 
             SteamUser user = this.factory.CreateSteamWebInterface<SteamUser>();
-            ISteamWebResponse<PlayerSummaryModel> response = user.GetPlayerSummaryAsync(steamId).GetAwaiter().GetResult();
+            ISteamWebResponse<PlayerSummaryModel> response = await user.GetPlayerSummaryAsync(steamId);
 
             if (response.Data is null)
             {
@@ -94,7 +94,7 @@ public class SteamService
         }
     }
 
-    private IReadOnlyCollection<PlayerBansModel> getPlayerBans(ulong steamId)
+    private async Task<IReadOnlyCollection<PlayerBansModel>> getPlayerBans(ulong steamId)
     {
         DateTime? lastUpdated = null;
         IReadOnlyCollection<PlayerBansModel>? playerBans = null;
@@ -120,7 +120,7 @@ public class SteamService
             }
 
             SteamUser user = this.factory.CreateSteamWebInterface<SteamUser>();
-            ISteamWebResponse<IReadOnlyCollection<PlayerBansModel>> response = user.GetPlayerBansAsync(steamId).GetAwaiter().GetResult();
+            ISteamWebResponse<IReadOnlyCollection<PlayerBansModel>> response = await user.GetPlayerBansAsync(steamId);
 
             if (response.Data is null)
             {
@@ -148,13 +148,13 @@ public class SteamService
         }
     }
 
-    public string GetUsername(ulong steamId)
+    public async Task<string> GetUsername(ulong steamId)
     {
-        return this.GetPlayerSummary(steamId).Nickname;
+        return (await this.GetPlayerSummary(steamId)).Nickname;
     }
 
-    public IReadOnlyCollection<PlayerBansModel> GetBans(ulong steamId)
+    public async Task<IReadOnlyCollection<PlayerBansModel>> GetBans(ulong steamId)
     {
-        return this.getPlayerBans(steamId);
+        return await this.getPlayerBans(steamId);
     }
 }

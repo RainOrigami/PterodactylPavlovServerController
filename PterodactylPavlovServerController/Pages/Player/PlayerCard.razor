@@ -5,11 +5,14 @@
 @using Steam.Models.SteamCommunity
 @using PterodactylPavlovServerController.Services
 @using PterodactylPavlovServerController.Models
+@using PterodactylPavlovServerDomain.Extensions
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 @inject IDispatcher Dispatcher
 @inject IState<PlayersState> PlayersState
 @inject PavlovRconConnectionService Rcon
+@inject PavlovRconService RconService
+@inject IToastService Toast
 
 @{
     PavlovRconConnection? connection = null;
@@ -24,8 +27,8 @@
         playerListPlayers.TryGetValue(PlayerId, out playerListPlayer);
     }
 
-    PavlovPlayerDetail? playerDetail = null;
-    if (connection is { PlayerDetails: IReadOnlyDictionary<ulong, PavlovPlayerDetail> playerDetails, })
+    PlayerDetail? playerDetail = null;
+    if (connection is { PlayerDetails: IReadOnlyDictionary<ulong, PlayerDetail> playerDetails, })
     {
         playerDetails.TryGetValue(PlayerId, out playerDetail);
     }
@@ -76,100 +79,135 @@
                 </a>
                 <p class="card-text">
                     <div class="container px-0">
-                        @if (playerDetail != null)
-                        {
-                            <div class="row gx-0">
-                                <div class="col-auto px-1">
-                                    <i class="fa-solid fa-star"></i>
-                                </div>
-                                <div class="col px-1">@playerDetail.Score</div>
-                            </div>
-                            <div class="row gx-0">
-                                <div class="col-auto px-1">
-                                    <i class="fa-solid fa-dollar-sign"></i>
-                                </div>
-                                <div class="col px-1">@playerDetail.Cash</div>
-                            </div>
-                            <div class="row gx-0">
-                                <div class="col-auto px-1">
-                                    <i class="fa-solid fa-gun"></i>
-                                </div>
-                                <div class="col px-1">@playerDetail.KDA</div>
-                            </div>
-                            <div class="row gx-0">
-                                <div class="col-auto px-1">
-                                    <i class="fa-solid fa-skull-crossbones"></i>
-                                </div>
-                                <div class="col px-1">@playerDetail.KDA</div>
-                            </div>
-                            <div class="row gx-0">
-                                <div class="col-auto px-1">
-                                    <i class="fa-solid fa-handshake-angle"></i>
-                                </div>
-                                <div class="col px-1">@playerDetail.KDA</div>
-                            </div>
-                        }
-
-                        @if (playerBans != null)
-                        {
-                            bool isVacBanned = false;
-                            int vac = 0;
-                            int game = 0;
-                            int daysSinceLastBan = -1;
-                            foreach (PlayerBansModel playerBan in playerBans)
-                            {
-                                if (playerBan.VACBanned)
-                                {
-                                    isVacBanned = true;
-                                }
-
-                                vac += (int) playerBan.NumberOfVACBans;
-                                game += (int) playerBan.NumberOfGameBans;
-
-                                if ((daysSinceLastBan == -1 && playerBan.DaysSinceLastBan != 0) || playerBan.DaysSinceLastBan < daysSinceLastBan)
-                                {
-                                    daysSinceLastBan = (int) playerBan.DaysSinceLastBan;
-                                }
-                            }
-
-                            @if (vac == 0 && game == 0 && daysSinceLastBan == -1)
-                            {
-                                <div class="row gx-0">
-                                    <div class="col-auto px-1">
-                                        <i class="fa-solid fa-shield-halved"></i>
-                                    </div>
-                                    <div class="col px-1">Clean record</div>
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="row gx-0">
-                                    <div class="col-auto px-1">
-                                        <i class="fa-solid fa-shield-halved"></i>
-                                    </div>
-                                    <div class="col px-1 @(isVacBanned ? "text-danger" : vac > 0 ? "text-warning" : "")">
-                                        @($"x{vac}")
-                                    </div>
-                                </div>
-                                <div class="row gx-0">
-                                    <div class="col-auto px-1">
-                                        <i class="fa-solid fa-gamepad"></i>
-                                    </div>
-                                    <div class="col px-1 @(game > 0 ? "text-danger" : "")">
-                                        @($"x{game}")
-                                    </div>
-                                </div>
-                                @if (daysSinceLastBan != -1)
+                        <div class="row">
+                            <div class="col">
+                                @if (playerDetail != null)
                                 {
                                     <div class="row gx-0">
                                         <div class="col-auto px-1">
-                                            <i class="fa-solid fa-calendar-xmark"></i>
+                                            <i class="fa-solid fa-star"></i>
                                         </div>
-                                        <div class="col px-1">@daysSinceLastBan days</div>
+                                        <div class="col px-1">@playerDetail.Score</div>
+                                    </div>
+                                    <div class="row gx-0">
+                                        <div class="col-auto px-1">
+                                            <i class="fa-solid fa-dollar-sign"></i>
+                                        </div>
+                                        <div class="col px-1">@playerDetail.Cash</div>
+                                    </div>
+                                    <div class="row gx-0">
+                                        <div class="col-auto px-1">
+                                            <i class="fa-solid fa-gun"></i>
+                                        </div>
+                                        <div class="col px-1">@playerDetail.Kills()</div>
+                                    </div>
+                                    <div class="row gx-0">
+                                        <div class="col-auto px-1">
+                                            <i class="fa-solid fa-skull-crossbones"></i>
+                                        </div>
+                                        <div class="col px-1">@playerDetail.Deaths()</div>
+                                    </div>
+                                    <div class="row gx-0">
+                                        <div class="col-auto px-1">
+                                            <i class="fa-solid fa-handshake-angle"></i>
+                                        </div>
+                                        <div class="col px-1">@playerDetail.Assists()</div>
                                     </div>
                                 }
-                            }
-                        }
+
+                                @if (playerBans != null)
+                                {
+                                    bool isVacBanned = false;
+                                    int vac = 0;
+                                    int game = 0;
+                                    int daysSinceLastBan = -1;
+                                    foreach (PlayerBansModel playerBan in playerBans)
+                                    {
+                                        if (playerBan.VACBanned)
+                                        {
+                                            isVacBanned = true;
+                                        }
+
+                                        vac += (int)playerBan.NumberOfVACBans;
+                                        game += (int)playerBan.NumberOfGameBans;
+
+                                        if ((daysSinceLastBan == -1 && playerBan.DaysSinceLastBan != 0) || playerBan.DaysSinceLastBan < daysSinceLastBan)
+                                        {
+                                            daysSinceLastBan = (int)playerBan.DaysSinceLastBan;
+                                        }
+                                    }
+
+                                    @if (vac == 0 && game == 0 && daysSinceLastBan == -1)
+                                    {
+                                        <div class="row gx-0">
+                                            <div class="col-auto px-1">
+                                                <i class="fa-solid fa-shield-halved"></i>
+                                            </div>
+                                            <div class="col px-1">Clean record</div>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <div class="row gx-0">
+                                            <div class="col-auto px-1">
+                                                <i class="fa-solid fa-shield-halved"></i>
+                                            </div>
+                                            <div class="col px-1 @(isVacBanned ? "text-danger" : vac > 0 ? "text-warning" : "")">
+                                                @($"x{vac}")
+                                            </div>
+                                        </div>
+                                        <div class="row gx-0">
+                                            <div class="col-auto px-1">
+                                                <i class="fa-solid fa-gamepad"></i>
+                                            </div>
+                                            <div class="col px-1 @(game > 0 ? "text-danger" : "")">
+                                                @($"x{game}")
+                                            </div>
+                                        </div>
+                                        @if (daysSinceLastBan != -1)
+                                        {
+                                            <div class="row gx-0">
+                                                <div class="col-auto px-1">
+                                                    <i class="fa-solid fa-calendar-xmark"></i>
+                                                </div>
+                                                <div class="col px-1">@daysSinceLastBan days</div>
+                                            </div>
+                                        }
+                                    }
+                                }
+                            </div>
+                            <div class="col col-auto">
+                                @if (connection != null)
+                                {
+                                    if (playerDetail != null)
+                                    {
+                                        <div class="row pb-1">
+                                            <div class="col">
+                                                <a class="btn btn-outline-success" style="width: 120px;" href="#" @onclick="switchTeam" @onclick:preventDefault>Switch team</a>
+                                            </div>
+                                        </div>
+                                        <div class="row pb-1">
+                                            <div class="col">
+                                                <a class="btn btn-outline-warning" style="width: 120px;" href="#" @onclick="kick" @onclick:preventDefault>Kick</a>
+                                            </div>
+                                        </div>
+                                    }
+
+                                    <div class="row">
+                                        <div class="col">
+                                            @if (connection.BanList?.Contains(PlayerId) ?? false)
+                                            {
+                                                <a class="btn btn-outline-danger" style="width: 120px;" href="#" @onclick="unban" @onclick:preventDefault>Unban</a>
+                                            }
+                                            else
+                                            {
+                                                <a class="btn btn-outline-danger" style="width: 120px;" href="#" @onclick="ban" @onclick:preventDefault>Ban</a>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
                     </div>
                 </p>
             </div>
@@ -220,4 +258,123 @@
         base.Dispose(disposing);
     }
 
+    private async Task switchTeam()
+    {
+        if (ServerId == null)
+        {
+            Toast.ShowError("Can not switch player that is not associated with a server");
+            return;
+        }
+
+        PavlovRconConnection? connection = Rcon.GetServer(ServerId);
+
+        if (connection == null)
+        {
+            Toast.ShowError("Server is not available");
+            return;
+        }
+
+        PlayerDetail? playerDetail = null;
+        if (connection is { PlayerDetails: IReadOnlyDictionary<ulong, PlayerDetail> playerDetails, })
+        {
+            playerDetails.TryGetValue(PlayerId, out playerDetail);
+        }
+
+        if (playerDetail == null)
+        {
+            Toast.ShowError("Can not switch player that has an unknown team");
+            return;
+        }
+
+        try
+        {
+            if (await RconService.SwitchTeam(ServerId, playerDetail.UniqueId, playerDetail.TeamId == 0 ? 1 : 0))
+            {
+                Toast.ShowSuccess("Player has been switched!");
+            }
+            else
+            {
+                Toast.ShowError("Server refused to switch player");
+            }
+        }
+        catch (Exception ex)
+        {
+            Toast.ShowError(ex.Message, "Error during team switch");
+        }
+    }
+
+    private async Task kick()
+    {
+        if (ServerId == null)
+        {
+            Toast.ShowError("Can not kick player that is not associated with a server");
+            return;
+        }
+
+        try
+        {
+            if (await RconService.KickPlayer(ServerId, PlayerId))
+            {
+                Toast.ShowWarning("Player has been kicked!");
+            }
+            else
+            {
+                Toast.ShowError("Server refused to kick player");
+            }
+        }
+        catch (Exception ex)
+        {
+            Toast.ShowError(ex.Message, "Error during kick");
+        }
+    }
+
+    private async Task ban()
+    {
+        if (ServerId == null)
+        {
+            Toast.ShowError("Can not ban player that is not associated with a server");
+            return;
+        }
+
+        try
+        {
+            if (await RconService.BanPlayer(ServerId, PlayerId))
+            {
+                Toast.ShowWarning("Player has been banned!");
+            }
+            else
+            {
+                Toast.ShowError("Server refused to ban player");
+            }
+        }
+        catch (Exception ex)
+        {
+            Toast.ShowError(ex.Message, "Error during ban");
+        }
+    }
+
+    private async Task unban()
+    {
+        if (ServerId == null)
+        {
+            Toast.ShowError("Can not unban player that is not associated with a server");
+            return;
+        }
+
+        try
+        {
+            if (await RconService.UnbanPlayer(ServerId, PlayerId))
+            {
+                Toast.ShowSuccess("Player has been unbanned!");
+            }
+            else
+            {
+                Toast.ShowError("Server refused to unban player");
+            }
+        }
+        catch (Exception ex)
+        {
+            Toast.ShowError(ex.Message, "Error during unban");
+        }
+    }
 }

@@ -277,7 +277,7 @@ public class PavlovStatisticsService : IDisposable
         return pterodactylServerModels;
     }
 
-    private void generateStatsFiles(PterodactylServerModel[] pterodactylServerModels)
+    private async Task generateStatsFiles(PterodactylServerModel[] pterodactylServerModels)
     {
         if (!Directory.Exists("stats"))
         {
@@ -386,7 +386,7 @@ public class PavlovStatisticsService : IDisposable
 
             Dictionary<CMapStats, string> mapsStatsContent = new();
             CMapStats[] mapsStats = calculatedStats.OfType<CMapStats>().ToArray();
-            mapsStats.AsParallel().ForAll(mapStats =>
+            foreach (CMapStats mapStats in mapsStats)
             {
                 MapWorkshopModel mapWorkshop;
                 try
@@ -399,7 +399,7 @@ public class PavlovStatisticsService : IDisposable
                     return;
                 }
 
-                string? bestPlayerUsername = mapStats.BestPlayer == null ? null : this.steamService.GetUsername(mapStats.BestPlayer.Value);
+                string? bestPlayerUsername = mapStats.BestPlayer == null ? null : await this.steamService.GetUsername(mapStats.BestPlayer.Value);
 
                 lock (mapsStatsContent)
                 {
@@ -419,7 +419,7 @@ public class PavlovStatisticsService : IDisposable
                         },
                     }));
                 }
-            });
+            }
 
             serverStatsBuilder.AppendLine(this.splitInRows(mapsStatsContent.OrderByDescending(kvp => kvp.Key.PlayCount).Select(kvp => kvp.Value).ToArray()));
 
@@ -436,7 +436,7 @@ public class PavlovStatisticsService : IDisposable
             foreach (CGunStats gunStats in gunsStats.OrderByDescending(g => g.Kills))
             {
                 string gunName = PavlovStatisticsService.gunMap.ContainsKey(gunStats.Name) ? PavlovStatisticsService.gunMap[gunStats.Name] : $"{gunStats.Name}(?)";
-                string? bestPlayerUsername = gunStats.BestPlayer == null ? null : this.steamService.GetUsername(gunStats.BestPlayer.Value);
+                string? bestPlayerUsername = gunStats.BestPlayer == null ? null : await this.steamService.GetUsername(gunStats.BestPlayer.Value);
 
                 gunCards.Add(this.createStatsCard($"gun-{gunStats.Name}", "http://wiki.pavlov-vr.com/index.php?title=Weapons", true, $"https://pavlov.bloodisgood.net/gunimages/{(PavlovStatisticsService.gunMap.ContainsKey(gunStats.Name) ? gunStats.Name : "unknown")}.png", gunName, new Dictionary<string, string>
                 {
@@ -465,7 +465,7 @@ public class PavlovStatisticsService : IDisposable
             List<string> teamCards = new();
             foreach (CTeamStats teamStats in teamsStats)
             {
-                string? bestPlayerUsername = teamStats.BestPlayer == null ? null : this.steamService.GetUsername(teamStats.BestPlayer.Value);
+                string? bestPlayerUsername = teamStats.BestPlayer == null ? null : await this.steamService.GetUsername(teamStats.BestPlayer.Value);
 
                 teamCards.Add(this.createStatsCard(null, null, false, teamStats.TeamId == 0 ? "https://bloodisgood.net/wp-content/uploads/2022/10/blueteam.png" : "https://bloodisgood.net/wp-content/uploads/2022/10/redteam.png", teamStats.Name, new Dictionary<string, string>
                 {
@@ -509,14 +509,14 @@ public class PavlovStatisticsService : IDisposable
 
                 Dictionary<CPlayerStats, string> playerStatsContent = new();
 
-                playersStats.AsParallel().ForAll(playerStats =>
+                foreach (CPlayerStats playerStats in playersStats)
                 {
                     using (StatsContext statsContext = new(this.configuration))
                     {
                         PlayerSummaryModel playerSummary;
                         try
                         {
-                            playerSummary = this.steamService.GetPlayerSummary(playerStats.UniqueId);
+                            playerSummary = await this.steamService.GetPlayerSummary(playerStats.UniqueId);
                         }
                         catch (Exception e)
                         {
@@ -527,7 +527,7 @@ public class PavlovStatisticsService : IDisposable
                         IReadOnlyCollection<PlayerBansModel> playerBans;
                         try
                         {
-                            playerBans = this.steamService.GetBans(playerStats.UniqueId);
+                            playerBans = await this.steamService.GetBans(playerStats.UniqueId);
                         }
                         catch (Exception e)
                         {
@@ -538,7 +538,7 @@ public class PavlovStatisticsService : IDisposable
                         int vacCount = 0;
                         foreach (PlayerBansModel playerBan in playerBans)
                         {
-                            vacCount += (int) playerBan.NumberOfVACBans;
+                            vacCount += (int)playerBan.NumberOfVACBans;
                         }
 
                         MapWorkshopModel? bestMap = null;
@@ -593,62 +593,62 @@ public class PavlovStatisticsService : IDisposable
                             }));
                         }
                     }
-                });
+                }
 
                 serverStatsBuilder.AppendLine(@"<h4>Honorable mentions</h3>
         <div class=""card-group d-flex flex-wrap"">");
 
                 List<string> honorableMentionsCards = new();
 
-                string? highestKDR = this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.Kills > 10 ? (double) p.Kills / (p.Deaths == 0 ? 1 : p.Deaths) : 0, p => p.Kills, 1, false, "Highest K/D ratio", "K/D ratio");
+                string? highestKDR = await this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.Kills > 10 ? (double)p.Kills / (p.Deaths == 0 ? 1 : p.Deaths) : 0, p => p.Kills, 1, false, "Highest K/D ratio", "K/D ratio");
                 if (highestKDR != null)
                 {
                     honorableMentionsCards.Add(highestKDR);
                 }
 
-                string? mostKills = this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.Kills, p => p.TotalScore, 0, false, "Most kills", "Kills");
+                string? mostKills = await this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.Kills, p => p.TotalScore, 0, false, "Most kills", "Kills");
                 if (mostKills != null)
                 {
                     honorableMentionsCards.Add(mostKills);
                 }
 
-                string? mostAssists = this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.Assists, p => p.TotalScore, 0, false, "Most assists", "Assists");
+                string? mostAssists = await this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.Assists, p => p.TotalScore, 0, false, "Most assists", "Assists");
                 if (mostAssists != null)
                 {
                     honorableMentionsCards.Add(mostAssists);
                 }
 
-                string? highestTotalScore = this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.TotalScore, p => p.Kills, 0, false, "Highest total score", "Score");
+                string? highestTotalScore = await this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.TotalScore, p => p.Kills, 0, false, "Highest total score", "Score");
                 if (highestTotalScore != null)
                 {
                     honorableMentionsCards.Add(highestTotalScore);
                 }
 
-                string? highestAverageScore = this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.AverageScore, p => p.TotalScore, 0, false, "Highest average score", "Score");
+                string? highestAverageScore = await this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.AverageScore, p => p.TotalScore, 0, false, "Highest average score", "Score");
                 if (highestAverageScore != null)
                 {
                     honorableMentionsCards.Add(highestAverageScore);
                 }
 
-                string? mostPlants = this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.BombsPlanted, p => p.TotalScore, 0, false, "Most bomb plants", "Plants");
+                string? mostPlants = await this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.BombsPlanted, p => p.TotalScore, 0, false, "Most bomb plants", "Plants");
                 if (mostPlants != null)
                 {
                     honorableMentionsCards.Add(mostPlants);
                 }
 
-                string? mostDefuses = this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.BombsDefused, p => p.TotalScore, 0, false, "Most bomb defuses", "Defuses");
+                string? mostDefuses = await this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.BombsDefused, p => p.TotalScore, 0, false, "Most bomb defuses", "Defuses");
                 if (mostDefuses != null)
                 {
                     honorableMentionsCards.Add(mostDefuses);
                 }
 
-                string? mostHeadshots = this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.Headshots, p => p.Kills, 0, false, "Most headshot kills", "HS kills");
+                string? mostHeadshots = await this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.Headshots, p => p.Kills, 0, false, "Most headshot kills", "HS kills");
                 if (mostHeadshots != null)
                 {
                     honorableMentionsCards.Add(mostHeadshots);
                 }
 
-                string? highestHSKR = this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.Kills > 10 ? (double) p.Headshots / p.Kills : 0, p => p.Kills, 1, false, "Highest HS-kill to kill ratio", "HSKR");
+                string? highestHSKR = await this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.Kills > 10 ? (double)p.Headshots / p.Kills : 0, p => p.Kills, 1, false, "Highest HS-kill to kill ratio", "HSKR");
                 if (highestHSKR != null)
                 {
                     honorableMentionsCards.Add(highestHSKR);
@@ -662,25 +662,25 @@ public class PavlovStatisticsService : IDisposable
 
                 List<string> dishonorableMentionsCards = new();
 
-                string? mostDeaths = this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.Deaths, p => p.TotalScore, 0, false, "Most deaths", "Deaths");
+                string? mostDeaths = await this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.Deaths, p => p.TotalScore, 0, false, "Most deaths", "Deaths");
                 if (mostDeaths != null)
                 {
                     dishonorableMentionsCards.Add(mostDeaths);
                 }
 
-                string? mostTeamKills = this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.TeamKills, p => p.Kills, 0, false, "Most teamkills", "Teamkills");
+                string? mostTeamKills = await this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.TeamKills, p => p.Kills, 0, false, "Most teamkills", "Teamkills");
                 if (mostTeamKills != null)
                 {
                     dishonorableMentionsCards.Add(mostTeamKills);
                 }
 
-                string? lowestHSKR = this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.Kills > 10 ? (double) p.Headshots / p.Kills : double.MaxValue, p => p.Kills, 1, true, "Lowest HS-kill to kill ratio", "HSKR");
+                string? lowestHSKR = await this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.Kills > 10 ? (double)p.Headshots / p.Kills : double.MaxValue, p => p.Kills, 1, true, "Lowest HS-kill to kill ratio", "HSKR");
                 if (lowestHSKR != null)
                 {
                     dishonorableMentionsCards.Add(lowestHSKR);
                 }
 
-                string? mostSuicides = this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.Kills > 10 ? p.Suicides : 0, p => p.Kills, 0, false, "Most suicides", "Suicides");
+                string? mostSuicides = await this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.Kills > 10 ? p.Suicides : 0, p => p.Kills, 0, false, "Most suicides", "Suicides");
                 if (mostSuicides != null)
                 {
                     dishonorableMentionsCards.Add(mostSuicides);
@@ -760,7 +760,7 @@ public class PavlovStatisticsService : IDisposable
         return rowCards.ToString();
     }
 
-    private string? getPlayerCardWith(List<CPlayerStats> playerStats, Func<CPlayerStats, double> selector, Func<CPlayerStats, double> secondSort, int round, bool invert, string title, string statName)
+    private async Task<string?> getPlayerCardWith(List<CPlayerStats> playerStats, Func<CPlayerStats, double> selector, Func<CPlayerStats, double> secondSort, int round, bool invert, string title, string statName)
     {
         CPlayerStats? highestValuePlayer = playerStats.OrderByDescending(p => selector(p) * (invert ? -1 : 1)).ThenByDescending(secondSort).FirstOrDefault();
         if (highestValuePlayer == null)
@@ -771,7 +771,7 @@ public class PavlovStatisticsService : IDisposable
         PlayerSummaryModel? playerSummary = null;
         try
         {
-            playerSummary = this.steamService.GetPlayerSummary(highestValuePlayer.UniqueId);
+            playerSummary = await this.steamService.GetPlayerSummary(highestValuePlayer.UniqueId);
         }
         catch (Exception e)
         {
@@ -815,7 +815,7 @@ public class PavlovStatisticsService : IDisposable
             </div></div>";
     }
 
-    public void StatsReader()
+    public async Task StatsReader()
     {
         DateTime lastGenerated = DateTime.MinValue;
 
@@ -825,7 +825,7 @@ public class PavlovStatisticsService : IDisposable
             {
                 Console.WriteLine("Generating stats...");
                 Stopwatch sw = Stopwatch.StartNew();
-                this.generateStatsFiles(this.readStatsToDb());
+                await this.generateStatsFiles(this.readStatsToDb());
                 sw.Stop();
                 Console.WriteLine($"Stats completed in {sw.ElapsedMilliseconds}ms");
                 lastGenerated = DateTime.Now;
