@@ -16,7 +16,7 @@ public class MapsReducers
     [ReducerMethod]
     public static MapsState OnMapsAdd(MapsState mapsState, MapsAddWorkshopAction mapsAddWorkshopAction)
     {
-        Dictionary<long, MapWorkshopModel> maps = (Dictionary<long, MapWorkshopModel>) mapsState.MapDetails;
+        Dictionary<long, MapWorkshopModel> maps = (Dictionary<long, MapWorkshopModel>)mapsState.MapDetails;
         if (maps.ContainsKey(mapsAddWorkshopAction.MapWorkshopModel.Id))
         {
             maps.Remove(mapsAddWorkshopAction.MapWorkshopModel.Id);
@@ -33,7 +33,7 @@ public class MapsReducers
     [ReducerMethod]
     public static MapsState OnMapsServerAdd(MapsState mapsState, MapsAddServerAction mapsAddServerAction)
     {
-        Dictionary<string, ServerMapModel[]> maps = (Dictionary<string, ServerMapModel[]>) mapsState.ServerMaps;
+        Dictionary<string, ServerMapModel[]> maps = (Dictionary<string, ServerMapModel[]>)mapsState.ServerMaps;
 
         if (maps.ContainsKey(mapsAddServerAction.ServerId))
         {
@@ -85,7 +85,7 @@ public class MapsEffects
     [EffectMethod]
     public async Task LoadServerMaps(MapsLoadServerAction mapsLoadServerAction, IDispatcher dispatcher)
     {
-        ServerMapModel[] mapRows = this.pavlovServerService.GetCurrentMapRotation(mapsLoadServerAction.ServerId);
+        ServerMapModel[] mapRows = this.pavlovServerService.GetCurrentMapRotation(mapsLoadServerAction.ApiKey, mapsLoadServerAction.ServerId);
         dispatcher.Dispatch(new MapsAddServerAction(mapsLoadServerAction.ServerId, mapRows));
 
         foreach (ServerMapModel map in mapRows)
@@ -124,11 +124,13 @@ public class MapsAddWorkshopAction
 
 public class MapsLoadServerAction
 {
-    public MapsLoadServerAction(string serverId)
+    public MapsLoadServerAction(string apiKey, string serverId)
     {
+        this.ApiKey = apiKey;
         this.ServerId = serverId;
     }
 
+    public string ApiKey { get; }
     public string ServerId { get; }
 }
 

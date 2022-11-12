@@ -1,5 +1,7 @@
 ﻿@using Fluxor
+@using Microsoft.AspNetCore.Identity
 @using PavlovVR_Rcon.Models.Pavlov
+@using PterodactylPavlovServerController.Areas.Identity.Data
 @using PterodactylPavlovServerController.Stores
 @using PterodactylPavlovServerDomain.Models
 @using Steam.Models.SteamCommunity
@@ -13,12 +15,14 @@
 @inject PavlovRconConnectionService Rcon
 @inject PavlovRconService RconService
 @inject IToastService Toast
+@inject UserManager<PterodactylPavlovServerControllerUser> UserManager
+@inject IHttpContextAccessor httpContextAccessor
 
 @{
     PavlovRconConnection? connection = null;
     if (ServerId != null)
     {
-        connection = Rcon.GetServer(ServerId);
+        connection = Rcon.GetServer(apiKey, ServerId);
     }
 
     PersistentPavlovPlayer? playerListPlayer = null;
@@ -224,6 +228,8 @@
     [EditorRequired]
     public ulong PlayerId { get; set; }
 
+    private string apiKey;
+
     protected override void OnParametersSet()
     {
         if (!PlayersState.Value.PlayerSummaries.ContainsKey(PlayerId))
@@ -239,11 +245,11 @@
         base.OnParametersSet();
     }
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
+        await base.OnInitializedAsync();
         Rcon.OnServersUpdated += refresh;
-
-        base.OnInitialized();
+        apiKey = (await UserManager.GetUserAsync(httpContextAccessor.HttpContext.User)).PterodactylApiKey;
     }
 
     private async void refresh()
@@ -253,9 +259,8 @@
 
     protected override void Dispose(bool disposing)
     {
-        Rcon.OnServersUpdated -= refresh;
-
         base.Dispose(disposing);
+        Rcon.OnServersUpdated -= refresh;
     }
 
     private async Task switchTeam()
@@ -266,7 +271,7 @@
             return;
         }
 
-        PavlovRconConnection? connection = Rcon.GetServer(ServerId);
+        PavlovRconConnection? connection = Rcon.GetServer(apiKey, ServerId);
 
         if (connection == null)
         {
@@ -288,7 +293,7 @@
 
         try
         {
-            if (await RconService.SwitchTeam(ServerId, playerDetail.UniqueId, playerDetail.TeamId == 0 ? 1 : 0))
+            if (await RconService.SwitchTeam(apiKey, ServerId, playerDetail.UniqueId, playerDetail.TeamId == 0 ? 1 : 0))
             {
                 Toast.ShowSuccess("Player has been switched!");
             }
@@ -311,9 +316,17 @@
             return;
         }
 
+        PavlovRconConnection? connection = Rcon.GetServer(apiKey, ServerId);
+        if (connection == null)
+        {
+            Toast.ShowError("Server must be online to kick a player");
+            return;
+        }
+
         try
         {
-            if (await RconService.KickPlayer(ServerId, PlayerId))
+
+            if (await RconService.KickPlayer(apiKey, ServerId, PlayerId))
             {
                 Toast.ShowWarning("Player has been kicked!");
             }
@@ -336,9 +349,17 @@
             return;
         }
 
+        PavlovRconConnection? connection = Rcon.GetServer(apiKey, ServerId);
+        if (connection == null)
+        {
+            // TODO: not technically true, implement fallback to editing banlist.txt
+            Toast.ShowError("Server must be online to ban a player");
+            return;
+        }
+
         try
         {
-            if (await RconService.BanPlayer(ServerId, PlayerId))
+            if (await RconService.BanPlayer(apiKey, ServerId, PlayerId))
             {
                 Toast.ShowWarning("Player has been banned!");
             }
@@ -357,13 +378,21 @@
     {
         if (ServerId == null)
         {
+            // TODO: not technically true, implement fallback to editing banlist.txt
             Toast.ShowError("Can not unban player that is not associated with a server");
+            return;
+        }
+
+        PavlovRconConnection? connection = Rcon.GetServer(apiKey, ServerId);
+        if (connection == null)
+        {
+            Toast.ShowError("Server must be online to unban a player");
             return;
         }
 
         try
         {
-            if (await RconService.UnbanPlayer(ServerId, PlayerId))
+            if (await RconService.UnbanPlayer(apiKey, ServerId, PlayerId))
             {
                 Toast.ShowSuccess("Player has been unbanned!");
             }

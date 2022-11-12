@@ -11,7 +11,7 @@ public class CTeamStats : CBaseStats
     public int TotalTeamkills { get; set; }
     public int TotalVictories { get; set; }
     public ulong? BestPlayer { get; set; }
-    public double BestPlayerAvgScore { get; set; }
+    public double BestPlayerAverageScore { get; set; }
     public string? BestGun { get; set; }
     public int BestGunKillCount { get; set; }
 }

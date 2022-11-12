@@ -16,28 +16,28 @@ public class PavlovServerService
         this.configuration = configuration;
     }
 
-    public string GetServerName(string serverId)
+    public string GetServerName(string apiKey, string serverId)
     {
-        return this.pterodactylService.ReadFile(serverId, this.configuration["pavlov_gameinipath"]!).Split('\n').FirstOrDefault(l => l.StartsWith("ServerName="))?.Replace("ServerName=", "") ?? "Unnamed server";
+        return this.pterodactylService.ReadFile(apiKey, serverId, this.configuration["pavlov_gameinipath"]!).Split('\n').FirstOrDefault(l => l.StartsWith("ServerName="))?.Replace("ServerName=", "") ?? "Unnamed server";
     }
 
-    public GoogleSheetsMapRowModel[] UpdateMaps(string serverId, GoogleSheetsMapRowModel[] mapRows)
+    public GoogleSheetsMapRowModel[] UpdateMaps(string apiKey, string serverId, GoogleSheetsMapRowModel[] mapRows)
     {
         if (mapRows.Any(r => !r.IsValid))
         {
             throw new InvalidMapsException(mapRows.Where(r => !r.IsValid).ToArray());
         }
 
-        List<string> gameIniContent = this.pterodactylService.ReadFile(serverId, this.configuration["pavlov_gameinipath"]!).Split('\n').Select(l => l.Trim('\r')).Where(l => !l.StartsWith("MapRotation=")).ToList();
+        List<string> gameIniContent = this.pterodactylService.ReadFile(apiKey, serverId, this.configuration["pavlov_gameinipath"]!).Split('\n').Select(l => l.Trim('\r')).Where(l => !l.StartsWith("MapRotation=")).ToList();
         gameIniContent.AddRange(mapRows.Select(r => r.MapRotationString));
-        this.pterodactylService.WriteFile(serverId, this.configuration["pavlov_gameinipath"]!, string.Join('\n', gameIniContent));
+        this.pterodactylService.WriteFile(apiKey, serverId, this.configuration["pavlov_gameinipath"]!, string.Join('\n', gameIniContent));
 
         return mapRows;
     }
 
-    public ServerMapModel[] GetCurrentMapRotation(string serverId)
+    public ServerMapModel[] GetCurrentMapRotation(string apiKey, string serverId)
     {
-        return this.pterodactylService.ReadFile(serverId, this.configuration["pavlov_gameinipath"]!).Split('\n').Select(l => l.Trim('\r')).Where(l => l.StartsWith("MapRotation=")).Select(l => PavlovServerService.mapRotationLineRegex.Match(l)).Where(m => m.Success).Select(m => new ServerMapModel
+        return this.pterodactylService.ReadFile(apiKey, serverId, this.configuration["pavlov_gameinipath"]!).Split('\n').Select(l => l.Trim('\r')).Where(l => l.StartsWith("MapRotation=")).Select(l => PavlovServerService.mapRotationLineRegex.Match(l)).Where(m => m.Success).Select(m => new ServerMapModel
         {
             MapLabel = m.Groups["id"].Value,
             GameMode = m.Groups["gamemode"].Value,

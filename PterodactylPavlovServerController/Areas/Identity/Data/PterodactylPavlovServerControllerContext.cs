@@ -1,24 +1,21 @@
-﻿using Microsoft.EntityFrameworkCore;
-using PterodactylPavlovServerDomain.Models;
+﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+using PterodactylPavlovServerController.Areas.Identity.Data;
 
-namespace PterodactylPavlovServerController.Contexts;
+namespace PterodactylPavlovServerController.Data;
 
-public class PavlovServerContext : DbContext
+public class PterodactylPavlovServerControllerContext : IdentityDbContext<PterodactylPavlovServerControllerUser>
 {
     private readonly IConfiguration configuration;
 
-#pragma warning disable CS8618
-    public PavlovServerContext(IConfiguration configuration)
-#pragma warning restore CS8618
+    public PterodactylPavlovServerControllerContext(IConfiguration configuration)
     {
         this.configuration = configuration;
     }
 
-    public DbSet<PersistentPavlovPlayer> Players { get; set; }
-
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        string connectionString = this.configuration.GetConnectionString("PavlovServers")!;
+        string connectionString = this.configuration.GetConnectionString("PPSC")!;
         switch (this.configuration["db_type"])
         {
             case "sqlserver":
@@ -33,14 +30,12 @@ public class PavlovServerContext : DbContext
             default:
                 throw new Exception("Invalid database type provided. Valid DB types are: sqlserver, mysql, sqlite");
         }
+
+        base.OnConfiguring(optionsBuilder);
     }
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    protected override void OnModelCreating(ModelBuilder builder)
     {
-        modelBuilder.Entity<PersistentPavlovPlayer>().HasKey(p => new
-        {
-            p.UniqueId,
-            p.ServerId,
-        });
+        base.OnModelCreating(builder);
     }
 }

@@ -1,11 +1,15 @@
 ﻿@page "/rcon"
 @using Fluxor
+@using Microsoft.AspNetCore.Identity
+@using PterodactylPavlovServerController.Areas.Identity.Data
 @using PterodactylPavlovServerController.Services
 @using PterodactylPavlovServerController.Stores
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 @inject IDispatcher Dispatcher
 @inject PavlovRconConnectionService Rcon
+@inject UserManager<PterodactylPavlovServerControllerUser> UserManager
+@inject IHttpContextAccessor httpContextAccessor
 
 @{
     Dispatcher.Dispatch(new PageTitleSetAction("Select a server"));
@@ -19,7 +23,7 @@
 }
 else
 {
-    @foreach (string serverId in Rcon.GetAllConnections().OrderBy(c => c.PterodactylServer.Name).Select(c => c.ServerId))
+    @foreach (string serverId in Rcon.GetAllConnections(apiKey).OrderBy(c => c.PterodactylServer.Name).Select(c => c.ServerId))
     {
         <ServerSelectorComponent ServerId="@serverId" />
     }
@@ -27,11 +31,13 @@ else
 
 @code
 {
-    protected override void OnInitialized()
-    {
-        Rcon.OnServersUpdated += refresh;
+    private string apiKey;
 
-        base.OnInitialized();
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        Rcon.OnServersUpdated += refresh;
+        apiKey = (await UserManager.GetUserAsync(httpContextAccessor.HttpContext.User)).PterodactylApiKey;
     }
 
     private async void refresh()
@@ -41,8 +47,7 @@ else
 
     protected override void Dispose(bool disposing)
     {
-        Rcon.OnServersUpdated -= refresh;
-
         base.Dispose(disposing);
+        Rcon.OnServersUpdated -= refresh;
     }
 }

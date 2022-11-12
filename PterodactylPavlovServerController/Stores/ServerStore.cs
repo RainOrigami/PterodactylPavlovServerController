@@ -14,7 +14,7 @@ public class PavlovServersReducers
     [ReducerMethod]
     public static PavlovServersState OnServerSetNameFromGameIni(PavlovServersState pavlovServersState, PavlovServerAddNameFromGameIniAction pavlovServerAddNameFromGameIniAction)
     {
-        Dictionary<string, string> serverNames = (Dictionary<string, string>) pavlovServersState.ServerNamesFromGameIni;
+        Dictionary<string, string> serverNames = (Dictionary<string, string>)pavlovServersState.ServerNamesFromGameIni;
 
         if (serverNames.ContainsKey(pavlovServerAddNameFromGameIniAction.ServerId))
         {
@@ -46,7 +46,7 @@ public class PavlovServersEffects
     [EffectMethod]
     public async Task LoadServerNameFromGameIni(PavlovServerLoadNameFromGameIniAction pavlovServerLoadNameFromGameIniAction, IDispatcher dispatcher)
     {
-        dispatcher.Dispatch(new PavlovServerAddNameFromGameIniAction(pavlovServerLoadNameFromGameIniAction.ServerId, this.pavlovServerService.GetServerName(pavlovServerLoadNameFromGameIniAction.ServerId)));
+        dispatcher.Dispatch(new PavlovServerAddNameFromGameIniAction(pavlovServerLoadNameFromGameIniAction.ServerId, this.pavlovServerService.GetServerName(pavlovServerLoadNameFromGameIniAction.ApiKey, pavlovServerLoadNameFromGameIniAction.ServerId)));
 
         await Task.CompletedTask;
     }
@@ -54,11 +54,13 @@ public class PavlovServersEffects
 
 public class PavlovServerLoadNameFromGameIniAction
 {
-    public PavlovServerLoadNameFromGameIniAction(string serverId)
+    public PavlovServerLoadNameFromGameIniAction(string apiKey, string serverId)
     {
+        this.ApiKey = apiKey;
         this.ServerId = serverId;
     }
 
+    public string ApiKey { get; }
     public string ServerId { get; }
 }
 

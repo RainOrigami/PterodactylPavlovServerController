@@ -160,19 +160,19 @@ public class PavlovStatisticsService : IDisposable
 
     public void Run()
     {
-        Task.Run(this.StatsReader);
+        Task.Run(this.statsReader);
     }
 
     private PterodactylServerModel[] readStatsToDb()
     {
-        PterodactylServerModel[] pterodactylServerModels = this.pterodactylService.GetServers();
+        PterodactylServerModel[] pterodactylServerModels = this.pterodactylService.GetServers(this.configuration["pterodactyl_stats_apikey"]);
         foreach (PterodactylServerModel server in pterodactylServerModels)
         {
             Setting? lastStat = this.statsContext.Settings.FirstOrDefault(s => s.Name == "Last Read Statistic" && s.ServerId == server.ServerId);
 
             DateTime lastReadStatistic = lastStat == null ? DateTimeOffset.FromUnixTimeSeconds(0).LocalDateTime : DateTimeOffset.FromUnixTimeSeconds(long.Parse(lastStat.Value)).LocalDateTime;
 
-            PterodactylFile[] files = this.pterodactylService.GetFileList(server.ServerId, "/Pavlov/Saved/Logs");
+            PterodactylFile[] files = this.pterodactylService.GetFileList(this.configuration["pterodactyl_stats_apikey"], server.ServerId, "/Pavlov/Saved/Logs");
             List<string> filesToParse = new();
 
             foreach (PterodactylFile file in files)
@@ -200,7 +200,7 @@ public class PavlovStatisticsService : IDisposable
 
             foreach (string fileName in filesToParse)
             {
-                StatsReader statsReader = new(this.pterodactylService.ReadFile(server.ServerId, $"/Pavlov/Saved/Logs/{fileName}"));
+                StatsReader statsReader = new(this.pterodactylService.ReadFile(this.configuration["pterodactyl_stats_apikey"], server.ServerId, $"/Pavlov/Saved/Logs/{fileName}"));
                 bool startReading = false;
 
                 foreach (BaseStatistic baseStatistic in statsReader.ParsedStats)
@@ -288,46 +288,38 @@ public class PavlovStatisticsService : IDisposable
         {
             StringBuilder serverStatsBuilder = new();
 
-            string serverName = this.pavlovServerService.GetServerName(server.ServerId);
+            string serverName = this.pavlovServerService.GetServerName(this.configuration["pterodactyl_stats_apikey"], server.ServerId);
 
 
-            serverStatsBuilder.AppendLine($@"<!doctype html>
-<html lang=""en"">
-<head>
-    <meta charset=""utf-8"">
-    <meta name=""viewport"" content=""width=device-width, initial-scale=1"">
-    <title>{serverName} server statistics</title>
-    <link href=""https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"" rel=""stylesheet"" integrity=""sha384-Zenh87qX5JnK2Jl0vWa8Ck2rdkQ2Bzep5IDxbcnCeuOxjzrPF/et3URy9Bv1WTRi"" crossorigin=""anonymous"">
+            serverStatsBuilder.AppendLine($@"
     <style>
         .row-alternating {{
-            background: #f0f0f0;
+            background-color: rgba(0, 0, 0, 0.1);
         }}
         .row-alternating:nth-child(2n) {{
-            background: #fcfcfc;
+            background-color: rgba(0, 0, 0, 0.2);
         }}
         a:link {{ text-decoration: none; }}
         a:visited {{ text-decoration: none; }}
         a:hover {{ text-decoration: none; }}
         a:active {{ text-decoration: none; }}
     </style>
-</head>
-<body>
-    <div class=""container-xxl"">
+    <div>
         <h1>{serverName} server statistics</h1>
 
         <h2>Table of contents</h2>
         <ol>
-            <li><a href=""#serverstats"">Server statistics</a></li>
-            <li><a href=""#mapstats"">Map statistics</a></li>
-            <li><a href=""#gunstats"">Gun statistics</a></li>
-            <li><a href=""#teamstats"">Team statistics</a></li>
-            <li><a href=""#playerstats"">Player statistics</a></li>
+            <li><a href=""#serverstats"" class=""link-light"">Server statistics</a></li>
+            <li><a href=""#mapstats"" class=""link-light"">Map statistics</a></li>
+            <li><a href=""#gunstats"" class=""link-light"">Gun statistics</a></li>
+            <li><a href=""#teamstats"" class=""link-light"">Team statistics</a></li>
+            <li><a href=""#playerstats"" class=""link-light"">Player statistics</a></li>
         </ol>");
 
             CBaseStats[] calculatedStats = this.statsCalculator.CalculateStats(server.ServerId);
 
             // Server stats
-            serverStatsBuilder.AppendLine(@"<h2 id=""serverstats"">Server statistics</h2>
+            serverStatsBuilder.AppendLine(@"<h2 id=""serverstats"" class=""mt-3"">Server statistics</h2>
                 <div class=""card-group d-flex flex-wrap"">");
 
             CServerStats serverStats = calculatedStats.OfType<CServerStats>().First();
@@ -381,7 +373,7 @@ public class PavlovStatisticsService : IDisposable
             serverStatsBuilder.AppendLine("</div>");
 
             // Maps stats
-            serverStatsBuilder.AppendLine(@"<h2 id=""mapstats"">Map statistics</h2>
+            serverStatsBuilder.AppendLine(@"<h2 id=""mapstats"" class=""mt-3"">Map statistics</h2>
         <div class=""card-group d-flex flex-wrap"">");
 
             Dictionary<CMapStats, string> mapsStatsContent = new();
@@ -412,10 +404,10 @@ public class PavlovStatisticsService : IDisposable
                             "Wins", $"Blue {mapStats.Team0Wins}, Red {mapStats.Team1Wins}"
                         },
                         {
-                            "Rounds", $"{mapStats.AverageRounds} avg, {mapStats.MaxRounds} max, {mapStats.MinRounds} min"
+                            "Rounds", $"{Math.Round(mapStats.AverageRounds, 2)} avg, {mapStats.MaxRounds} max, {mapStats.MinRounds} min"
                         },
                         {
-                            "Best player", $"{(mapStats.BestPlayer == null ? "Nobody" : $@"<a href=""#player-{mapStats.BestPlayer}"">{bestPlayerUsername}</a><br/>{mapStats.MaxAveragePlayerScore} avg score")}"
+                            "Best player", $"{(mapStats.BestPlayer == null ? "Nobody" : $@"<a href=""#player-{mapStats.BestPlayer}"">{bestPlayerUsername}</a><br/>{Math.Round(mapStats.MaxAveragePlayerScore, 0)} avg score")}"
                         },
                     }));
                 }
@@ -427,7 +419,7 @@ public class PavlovStatisticsService : IDisposable
             serverStatsBuilder.AppendLine("</div>");
 
             // Gun stats
-            serverStatsBuilder.AppendLine(@"<h2 id=""gunstats"">Gun statistics</h2>
+            serverStatsBuilder.AppendLine(@"<h2 id=""gunstats"" class=""mt-3"">Gun statistics</h2>
         <div class=""card-group d-flex flex-wrap"">");
 
             CGunStats[] gunsStats = calculatedStats.OfType<CGunStats>().ToArray();
@@ -458,7 +450,7 @@ public class PavlovStatisticsService : IDisposable
 
 
             // Team stats
-            serverStatsBuilder.AppendLine(@"<h2 id=""teamstats"">Team statistics</h2>
+            serverStatsBuilder.AppendLine(@"<h2 id=""teamstats"" class=""mt-3"">Team statistics</h2>
         <div class=""card-group d-flex flex-wrap"">");
 
             CTeamStats[] teamsStats = calculatedStats.OfType<CTeamStats>().ToArray();
@@ -485,7 +477,7 @@ public class PavlovStatisticsService : IDisposable
                         "Victories", teamStats.TotalVictories.ToString()
                     },
                     {
-                        "Best player", $"{(teamStats.BestPlayer == null ? "Nobody" : $@"<a href=""#player-{teamStats.BestPlayer}"">{bestPlayerUsername}</a><br />{teamStats.BestPlayerAvgScore} avg score")}"
+                        "Best player", $"{(teamStats.BestPlayer == null ? "Nobody" : $@"<a href=""#player-{teamStats.BestPlayer}"">{bestPlayerUsername}</a><br />{Math.Round(teamStats.BestPlayerAverageScore, 0)} avg score")}"
                     },
                     {
                         "Best gun", $"{(teamStats.BestGun == null ? "None" : $@"<a href=""#gun-{teamStats.BestGun}"">{(PavlovStatisticsService.gunMap.ContainsKey(teamStats.BestGun) ? PavlovStatisticsService.gunMap[teamStats.BestGun] : teamStats.BestGun)}</a> ({teamStats.BestGunKillCount} kills)")}"
@@ -499,7 +491,7 @@ public class PavlovStatisticsService : IDisposable
 
             // Player stats
             CPlayerStats[] playersStats = calculatedStats.OfType<CPlayerStats>().ToArray();
-            serverStatsBuilder.AppendLine(@"<h3 id=""playerstats"">Player statistics</h3>");
+            serverStatsBuilder.AppendLine(@"<h3 id=""playerstats"" class=""mt-3"">Player statistics</h3>");
             if (playersStats.Any())
             {
                 int totalKills = playersStats.Sum(p => p.Kills);
@@ -585,7 +577,7 @@ public class PavlovStatisticsService : IDisposable
                                     "Best gun", $"{(playerStats.MostKillsWithGun == null ? "None" : $@"<a href=""#gun-{playerStats.MostKillsWithGun}"">{(PavlovStatisticsService.gunMap.ContainsKey(playerStats.MostKillsWithGun) ? PavlovStatisticsService.gunMap[playerStats.MostKillsWithGun] : playerStats.MostKillsWithGun)}</a><br />{playerStats.MostKillsWithGunAmount} kills ({Math.Round(this.calculateSafePercent(playerStats.MostKillsWithGunAmount, playerStats.Kills), 1)}%<a href=""#asterix-own-kills"">*</a>)")}"
                                 },
                                 {
-                                    "Best map", $"{(playerStats.BestMap == null ? "None" : $@"<a href=""#map-{playerStats.BestMap}-{playerStats.BestMapGameMode}"">{bestMap!.Name}</a><br />{playerStats.BestMapAverageScore} avg score")}"
+                                    "Best map", $"{(playerStats.BestMap == null ? "None" : $@"<a href=""#map-{playerStats.BestMap}-{playerStats.BestMapGameMode}"">{bestMap!.Name}</a><br />{Math.Round(playerStats.BestMapAverageScore, 0)} avg score")}"
                                 },
                                 {
                                     "VAC", $"{(vacCount > 0 ? $@"<span class=""text-danger"">Yes, {vacCount}" : @"<span class=""text-success"">No")}</span>"
@@ -693,38 +685,39 @@ public class PavlovStatisticsService : IDisposable
         <div class=""card-group d-flex flex-wrap"">");
 
                 serverStatsBuilder.AppendLine(this.splitInRows(playerStatsContent.OrderByDescending(kvp => kvp.Key.TotalScore).Select(kvp => kvp.Value).ToArray()));
+                serverStatsBuilder.AppendLine("</div>");
             }
 
-            serverStatsBuilder.AppendLine("</div>");
 
             serverStatsBuilder.AppendLine(@$"
-        <h3 id=""asterix-own-kills"">Percentages marked with *</h3>
-        <p>Percentages marked with * are calculated using own amounts (eg. own kills), not total kill count. Unmarked percentages are calculated using total amounts (eg. total kills).</p>
-        <h3>Score</h3>
-        <p>Score is calculated using the following formula:<br />
-        Kills * {StatsCalculator.SCORE_WEIGHT_KILL} +<br />
-        Deaths * {StatsCalculator.SCORE_WEIGHT_DEATH} +<br />
-        Assists * {StatsCalculator.SCORE_WEIGHT_ASSIST} +<br />
-        Headshots * {StatsCalculator.SCORE_WEIGHT_HEADSHOT} +<br />
-        Teamkills * {StatsCalculator.SCORE_WEIGHT_TEAMKILL} +<br />
-        Bomb Plants * {StatsCalculator.SCORE_WEIGHT_PLANT} +<br />
-        Bomb Defuses * {StatsCalculator.SCORE_WEIGHT_DEFUSE}</p>
-        <h3>Some values don't seem to add up</h3>
-        <p>You may notice that some values don't seem to add up, like Team Blue Kills + Team Red Kills is not equal to Total Kills. This is caused because some statistics have filters applied, like only counting matches with at least two players or with a combined Team Blue and Team Red score of at least 10 (draws and skipped maps). Prerounds often are omitted as well. Total kills however counts each single kill.</p>
+
     </div>
-    <footer class=""text-center text-lg-start bg-light text-muted"">
+        <div>
+            <h3 id=""asterix-own-kills"" class=""mt-3"">Percentages marked with *</h3>
+            <p>Percentages marked with * are calculated using own amounts (eg. own kills), not total kill count.<br />
+            Unmarked percentages are calculated using total amounts (eg. total kills).</p>
+            <h3 class=""mt-3"">Score</h3>
+            <p>Score is calculated using the following formula:<br />
+            Kills * {StatsCalculator.SCORE_WEIGHT_KILL} +<br />
+            Deaths * {StatsCalculator.SCORE_WEIGHT_DEATH} +<br />
+            Assists * {StatsCalculator.SCORE_WEIGHT_ASSIST} +<br />
+            Headshots * {StatsCalculator.SCORE_WEIGHT_HEADSHOT} +<br />
+            Teamkills * {StatsCalculator.SCORE_WEIGHT_TEAMKILL} +<br />
+            Bomb Plants * {StatsCalculator.SCORE_WEIGHT_PLANT} +<br />
+            Bomb Defuses * {StatsCalculator.SCORE_WEIGHT_DEFUSE}</p>
+            <h3>Some values don't seem to add up</h3>
+            <p>You may notice that some values don't seem to add up, like Team Blue Kills + Team Red Kills is not equal to Total Kills. This is caused because some statistics have filters applied, like only counting matches with at least two players or with a combined Team Blue and Team Red score of at least 10 (draws and skipped maps). Prerounds often are omitted as well. Total kills however counts each single kill.</p>
+        </div>
+    <footer class=""text-center text-lg-start bg-dark text-muted"">
       <section class=""d-flex justify-content-center justify-content-lg-between p-4 border-bottom"">
         Stats updated on {DateTime.UtcNow.ToLongDateString()} {DateTime.UtcNow.ToLongTimeString()} UTC.<br />
         Stats are updated every eight hours.
       </section>
-      <div class=""text-center p-4"" style=""background-color: rgba(0, 0, 0, 0.05);"">
+      <div class=""text-center p-4"">
         Provided by: 
         <a class=""text-reset fw-bold"" href=""https://codefreak.net/"">codefreak.net</a> for <a class=""text-reset fw-bold"" href=""https://bloodisgood.net/"">Blood is Good</a>
       </div>
-    </footer>
-    <script src=""https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"" integrity=""sha384-OERcA2EqjJCMA+/3y+gxIOqMEjwtxJY7qPCqsdltbNJuaOe923+mo//f6V8Qbsw3"" crossorigin=""anonymous""></script>
-</body>
-</html>");
+    </footer>");
             File.WriteAllText($"stats/{server.ServerId}.html", serverStatsBuilder.ToString());
         }
 
@@ -799,23 +792,23 @@ public class PavlovStatisticsService : IDisposable
 
     private string createStatsCard(string? id, string? link, bool openInBlank, string imageURL, string title, Dictionary<string, string> values)
     {
-        return @$"<div class=""col""><div class=""card h-100"" style=""width: {PavlovStatisticsService.CARD_WIDTH}px"" {(id == null ? "" : $@"id=""{id}""")}>
+        return @$"<div class=""col""><div class=""card bg-dark h-100"" style=""width: {PavlovStatisticsService.CARD_WIDTH}px"" {(id == null ? "" : $@"id=""{id}""")}>
                 {(link == null ? "" : $@"<a href=""{link}""{(openInBlank ? " target=\"_blank\"" : "")}>")}
                     <img class=""card-img-top"" src=""{imageURL}"" width=""{PavlovStatisticsService.CARD_WIDTH}"" height=""{PavlovStatisticsService.CARD_WIDTH}"" />
                 {(link == null ? "" : "</a>")}
-                <div class=""card-body"">
-                    <h5 class=""card-title"">{(link == null ? "" : $@"<a href=""{link}""{(openInBlank ? " target=\"blank\"" : "")}>")}{title}{(link == null ? "" : @"</a>")}</h5>
+                <div class=""card-body px-0"">
+                    <h5 class=""card-title px-3"">{(link == null ? "" : $@"<a href=""{link}""{(openInBlank ? " target=\"blank\"" : "")}>")}{title}{(link == null ? "" : @"</a>")}</h5>
 
                     <p class=""card-text"">
                         <div class=""container px-0"">
-                            {string.Join(Environment.NewLine, values.Select(kvp => $"<div class=\"row row-alternating gx-0\"><div class=\"col-auto px-1\"><b>{kvp.Key}:</b></div><div class=\"col text-end px-1\">{kvp.Value}</div></div>"))}
+                            {string.Join(Environment.NewLine, values.Select(kvp => $"<div class=\"row row-alternating gx-0\"><div class=\"col-auto ps-3 pe-1\"><b>{kvp.Key}:</b></div><div class=\"col text-end ps-1 pe-3\">{kvp.Value}</div></div>"))}
                         </div>
                     </p>
                 </div>
             </div></div>";
     }
 
-    public async Task StatsReader()
+    private async Task statsReader()
     {
         DateTime lastGenerated = DateTime.MinValue;
 

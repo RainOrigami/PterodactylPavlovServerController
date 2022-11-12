@@ -1,0 +1,21 @@
+﻿@page "/stats/{server?}"
+@model PterodactylPavlovServerController.Pages.Stats.StatsModel
+
+@{
+    Layout = "/Pages/_Layout.cshtml";
+}
+
+<div class="page">
+    <main class="bg-dark">
+        <div class="w-100 p-4 d-flex justify-content-center pb-4">
+            <article class="content px-4 d-flex" style="width: 1320px">
+                <section>
+                    @Html.Raw(Model.StatsContent)
+                </section>
+            </article>
+        </div>
+    </main>
+</div>
+
+@section scripts
+{}

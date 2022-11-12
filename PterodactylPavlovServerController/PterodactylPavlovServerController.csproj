@@ -14,17 +14,18 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Compile Remove="Controllers\MapsController.cs" />
 		<Compile Remove="Controllers\RconController.cs" />
 		<Compile Remove="Controllers\ServerController.cs" />
 		<Compile Remove="Controllers\StatsController.cs" />
 		<Compile Remove="Controllers\SteamController.cs" />
+		<Compile Remove="Models\PterodactylUserStore.cs" />
 		<Compile Remove="Pages\Rcon\Server.razor.cs" />
 		<Compile Remove="Services\RconToFluxorForwarderService.cs" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<Content Remove="buoyant-imagery-255718-b7158a794e35.json" />
+		<Content Remove="Pages\Login.razor" />
 		<Content Remove="steambans.json" />
 		<Content Remove="steamprofiles.json" />
 		<Content Remove="workshopmapscache.json" />
@@ -53,9 +54,15 @@
 		<PackageReference Include="Fluxor.Blazor.Web" Version="5.5.0" />
 		<PackageReference Include="Fluxor.Blazor.Web.ReduxDevTools" Version="5.5.0" />
 		<PackageReference Include="GoogleSheetsWrapper" Version="1.0.37" />
+		<PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="6.0.10" />
+		<PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="6.0.10" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="6.0.11" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="6.0.11" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="6.0.11" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="6.0.10">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
 		<PackageReference Include="Microsoft.Extensions.Identity.Core" Version="6.0.11" />
 		<PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="6.0.10" />
 		<PackageReference Include="MySql.EntityFrameworkCore" Version="6.0.7" />
@@ -74,10 +81,6 @@
 		<None Update="RustRconReplies.txt">
 			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
 		</None>
-	</ItemGroup>
-
-	<ItemGroup>
-	  <Folder Include="Controllers\" />
 	</ItemGroup>
 
 </Project>

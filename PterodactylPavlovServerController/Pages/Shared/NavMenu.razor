@@ -1,10 +1,14 @@
 ﻿@using Fluxor
+@using Microsoft.AspNetCore.Identity
+@using PterodactylPavlovServerController.Areas.Identity.Data
 @using PterodactylPavlovServerController.Services
 @using PterodactylPavlovServerController.Models
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 @inject IDispatcher Dispatcher
 @inject PavlovRconConnectionService Rcon
+@inject UserManager<PterodactylPavlovServerControllerUser> UserManager
+@inject IHttpContextAccessor httpContextAccessor
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
@@ -27,7 +31,7 @@
                 <i class="fa-solid fa-terminal pe-2"></i> RCON
             </NavLink>
             <div class="submenu flex-column ms-3">
-                @if (!Rcon.Initialised)
+                @if (!Rcon.Initialised || apiKey == null)
                 {
                     <div class="spinner-border text-info" role="status">
                         <span class="visually-hidden">Loading...</span>
@@ -35,10 +39,10 @@
                 }
                 else
                 {
-                    @foreach (PavlovRconConnection connection in Rcon.GetAllConnections().OrderBy(c => c.PterodactylServer.Name))
+                    @foreach (PavlovRconConnection connection in Rcon.GetAllConnections(apiKey).OrderBy(c => c.PterodactylServer.Name))
                     {
                         <div class="nav-item">
-                            <NavLink class="nav-link" style="" href="@($"/rcon/{connection.ServerId}")">
+                            <NavLink class="nav-link" style="" href="@($"rcon/{connection.ServerId}")">
                                 @if (connection.Online.HasValue)
                                 {
                                     @if (connection.Online.Value)
@@ -61,12 +65,16 @@
                 }
             </div>
         </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="Identity/Account/Logout" Match="NavLinkMatch.All">
+                <i class="fa-solid fa-user-lock pe-2"></i> Logout
+            </NavLink>
+        </div>
     </div>
 </div>
 
 @code {
     private bool collapseNavMenu = true;
-
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
 
     private void toggleNavMenu()
@@ -74,11 +82,13 @@
         collapseNavMenu = !collapseNavMenu;
     }
 
-    protected override void OnInitialized()
-    {
-        Rcon.OnServersUpdated += refresh;
+    private string? apiKey;
 
-        base.OnInitialized();
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        Rcon.OnServersUpdated += refresh;
+        apiKey = (await UserManager.GetUserAsync(httpContextAccessor.HttpContext.User)).PterodactylApiKey;
     }
 
     private async void refresh()
@@ -88,9 +98,8 @@
 
     protected override void Dispose(bool disposing)
     {
-        Rcon.OnServersUpdated -= refresh;
-
         base.Dispose(disposing);
+        Rcon.OnServersUpdated -= refresh;
     }
 
 }

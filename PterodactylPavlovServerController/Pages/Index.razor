@@ -1,14 +1,19 @@
 ﻿@page "/"
 @using Fluxor
+@using Microsoft.AspNetCore.Identity
+@using PterodactylPavlovServerController.Areas.Identity.Data
 @using PterodactylPavlovServerController.Stores
+@using PterodactylPavlovServerController.Pages.Player
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
-
+@inject SignInManager<PterodactylPavlovServerControllerUser> SignInManager
+@inject UserManager<PterodactylPavlovServerControllerUser> UserManager
+@inject IHttpContextAccessor httpContextAccessor
 @inject IDispatcher Dispatcher
 
 @{
     Dispatcher.Dispatch(new PageTitleSetAction("Home"));
 }
 
-<h1>Hello, world!</h1>
+<h1>Hello, @UserManager.GetUserName(httpContextAccessor.HttpContext.User)!</h1>
 
-Welcome to your new app.
+Welcome to Pterodactyl Pavlov RCON.

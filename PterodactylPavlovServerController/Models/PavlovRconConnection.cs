@@ -21,12 +21,14 @@ public class PavlovRconConnection : IDisposable
     private Dictionary<ulong, PlayerDetail>? playerDetails;
     private Dictionary<ulong, Player>? playerListPlayers;
     private ulong[]? banList;
+    public string ApiKey { get; }
 
-    public PavlovRconConnection(PterodactylServerModel pterodactylServer, PavlovRconService pavlovRconService, IConfiguration configuration)
+    public PavlovRconConnection(string apiKey, PterodactylServerModel pterodactylServer, PavlovRconService pavlovRconService, IConfiguration configuration)
     {
         this.PterodactylServer = pterodactylServer;
         this.pavlovRconService = pavlovRconService;
         this.configuration = configuration;
+        this.ApiKey = apiKey;
     }
 
     public string ServerId => this.PterodactylServer.ServerId;
@@ -79,8 +81,8 @@ public class PavlovRconConnection : IDisposable
     {
         try
         {
-            this.ServerInfo = await this.pavlovRconService.GetServerInfo(this.ServerId);
-            this.banList = await this.pavlovRconService.Banlist(this.ServerId);
+            this.ServerInfo = await this.pavlovRconService.GetServerInfo(this.ApiKey, this.ServerId);
+            this.banList = await this.pavlovRconService.Banlist(this.ApiKey, this.ServerId);
         }
         catch (Exception ex)
         {
@@ -117,7 +119,7 @@ public class PavlovRconConnection : IDisposable
 
         try
         {
-            Player[] playerListPlayerModels = await this.pavlovRconService.GetActivePlayers(this.ServerId);
+            Player[] playerListPlayerModels = await this.pavlovRconService.GetActivePlayers(this.ApiKey, this.ServerId);
             this.playerListPlayers = playerListPlayerModels.ToDictionary(k => k.UniqueId, v => v);
         }
         catch (Exception ex)
@@ -165,7 +167,7 @@ public class PavlovRconConnection : IDisposable
         {
             try
             {
-                PlayerDetail playerDetail = await this.pavlovRconService.GetActivePlayerDetail(this.ServerId, playerId);
+                PlayerDetail playerDetail = await this.pavlovRconService.GetActivePlayerDetail(this.ApiKey, this.ServerId, playerId);
 
                 if (playerDetail == null)
                 {

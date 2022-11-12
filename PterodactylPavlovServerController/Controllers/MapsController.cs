@@ -4,7 +4,6 @@ using PterodactylPavlovServerController.Exceptions;
 using PterodactylPavlovServerController.Services;
 using PterodactylPavlovServerDomain.Exceptions;
 using PterodactylPavlovServerDomain.Models;
-using System.Text.RegularExpressions;
 
 namespace PterodactylPavlovServerController.Controllers;
 
@@ -12,20 +11,19 @@ namespace PterodactylPavlovServerController.Controllers;
 [ApiController]
 public class MapsController : ControllerBase
 {
-    internal static readonly Regex mapIdRegex = new(@"(?<id>\d+)");
+    //internal static readonly Regex mapIdRegex = new(@"(?<id>\d+)");
     private readonly GoogleSheetService googleSheetService;
     private readonly PavlovServerService serverControlService;
-    private readonly SteamWorkshopService steamWorkshopService;
+    //private readonly SteamWorkshopService steamWorkshopService;
 
-    public MapsController(PavlovServerService serverControlService, GoogleSheetService googleSheetService, SteamWorkshopService steamWorkshopService)
+    public MapsController(PavlovServerService serverControlService, GoogleSheetService googleSheetService)
     {
         this.serverControlService = serverControlService;
         this.googleSheetService = googleSheetService;
-        this.steamWorkshopService = steamWorkshopService;
     }
 
     [HttpPost("update")]
-    public IActionResult Update(string serverId, string spreadsheetId, string tabName)
+    public IActionResult Update(string apiKey, string serverId, string spreadsheetId, string tabName)
     {
         GoogleSheetsMapRowModel[] mapRows;
 
@@ -44,7 +42,7 @@ public class MapsController : ControllerBase
 
         try
         {
-            mapRows = this.serverControlService.UpdateMaps(serverId, mapRows);
+            mapRows = this.serverControlService.UpdateMaps(apiKey, serverId, mapRows);
         }
         catch (InvalidMapsException ime)
         {
@@ -58,39 +56,39 @@ public class MapsController : ControllerBase
         return this.Ok(mapRows);
     }
 
-    [HttpGet("details")]
-    public IActionResult GetDetails(string mapId)
-    {
-        Match mapIdMatch = MapsController.mapIdRegex.Match(mapId);
-        if (!mapIdMatch.Success)
-        {
-            return this.ValidationProblem("Map id must be in format UGC0000000000 or 0000000000");
-        }
+    //[HttpGet("details")]
+    //public IActionResult GetDetails(string mapId)
+    //{
+    //    Match mapIdMatch = MapsController.mapIdRegex.Match(mapId);
+    //    if (!mapIdMatch.Success)
+    //    {
+    //        return this.ValidationProblem("Map id must be in format UGC0000000000 or 0000000000");
+    //    }
 
-        try
-        {
-            return this.Ok(this.steamWorkshopService.GetMapDetail(long.Parse(mapIdMatch.Groups["id"].Value)));
-        }
-        catch (SteamWorkshopException)
-        {
-            return this.Problem("Error while retrieving map details from steam workshop");
-        }
-        catch (Exception e)
-        {
-            return this.Problem(e.Message);
-        }
-    }
+    //    try
+    //    {
+    //        return this.Ok(this.steamWorkshopService.GetMapDetail(long.Parse(mapIdMatch.Groups["id"].Value)));
+    //    }
+    //    catch (SteamWorkshopException)
+    //    {
+    //        return this.Problem("Error while retrieving map details from steam workshop");
+    //    }
+    //    catch (Exception e)
+    //    {
+    //        return this.Problem(e.Message);
+    //    }
+    //}
 
-    [HttpGet("current")]
-    public IActionResult GetRotation(string serverId)
-    {
-        try
-        {
-            return this.Ok(this.serverControlService.GetCurrentMapRotation(serverId));
-        }
-        catch (Exception e)
-        {
-            return this.Problem(e.Message);
-        }
-    }
+    //[HttpGet("current")]
+    //public IActionResult GetRotation(string serverId)
+    //{
+    //    try
+    //    {
+    //        return this.Ok(this.serverControlService.GetCurrentMapRotation(serverId));
+    //    }
+    //    catch (Exception e)
+    //    {
+    //        return this.Problem(e.Message);
+    //    }
+    //}
 }

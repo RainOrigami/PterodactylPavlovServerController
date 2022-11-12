@@ -1,5 +1,7 @@
 ﻿@using Fluxor
+@using Microsoft.AspNetCore.Identity
 @using PavlovVR_Rcon.Models.Pavlov
+@using PterodactylPavlovServerController.Areas.Identity.Data
 @using PterodactylPavlovServerController.Services
 @using PterodactylPavlovServerController.Stores
 @using PterodactylPavlovServerDomain.Models
@@ -8,6 +10,8 @@
 @inject IDispatcher Dispatcher
 @inject PavlovRconConnectionService Rcon
 @inject IState<PavlovServersState> PavlovServersState
+@inject UserManager<PterodactylPavlovServerControllerUser> UserManager
+@inject IHttpContextAccessor httpContextAccessor
 
 @if (!Rcon.Initialised)
 {
@@ -15,7 +19,7 @@
     return;
 }
 
-@if (Rcon.GetServer(ServerId) is not PavlovRconConnection connection)
+@if (Rcon.GetServer(apiKey, ServerId) is not PavlovRconConnection connection)
 {
     <div>Server does not exist</div>
     return;
@@ -27,7 +31,7 @@
 }
 
 <div>
-    <a href="/rcon/@server.ServerId">@server.Name (@(serverInfo == null ? PavlovServersState.Value.ServerNamesFromGameIni.ContainsKey(server.ServerId) ? PavlovServersState.Value.ServerNamesFromGameIni[server.ServerId] : "..." : serverInfo.ServerName))</a>
+    <a href="rcon/@server.ServerId">@server.Name (@(serverInfo == null ? PavlovServersState.Value.ServerNamesFromGameIni.ContainsKey(server.ServerId) ? PavlovServersState.Value.ServerNamesFromGameIni[server.ServerId] : "..." : serverInfo.ServerName))</a>
 </div>
 
 @code {
@@ -35,12 +39,13 @@
     [Parameter]
     [EditorRequired]
     public string ServerId { get; set; } = string.Empty;
+    private string apiKey;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
+        await base.OnInitializedAsync();
         Rcon.OnServersUpdated += refresh;
-
-        base.OnInitialized();
+        apiKey = (await UserManager.GetUserAsync(httpContextAccessor.HttpContext.User)).PterodactylApiKey;
     }
 
     private async void refresh()
@@ -50,14 +55,18 @@
 
     protected override void Dispose(bool disposing)
     {
-        Rcon.OnServersUpdated -= refresh;
-
         base.Dispose(disposing);
+        Rcon.OnServersUpdated -= refresh;
     }
 
     protected override void OnParametersSet()
     {
-        Dispatcher.Dispatch(new PavlovServerLoadNameFromGameIniAction(ServerId));
+        if (Rcon.GetServer(apiKey, ServerId) is not PavlovRconConnection connection)
+        {
+            return;
+        }
+
+        Dispatcher.Dispatch(new PavlovServerLoadNameFromGameIniAction(connection.ApiKey, ServerId));
         base.OnParametersSet();
     }
 

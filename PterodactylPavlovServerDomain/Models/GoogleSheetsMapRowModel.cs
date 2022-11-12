@@ -29,7 +29,7 @@ public class GoogleSheetsMapRowModel : BaseRecord
 
     public long MapId => !this.IsValid ? throw new Exception("Invalid map URL") : long.Parse(GoogleSheetsMapRowModel.mapIdRegex.Match(this.URL!).Groups["MapID"].Value);
 
-    public string MapRotationString => $"MapRotation=(MapLabel=\"UGC{this.MapId}\", GameMode=\"{this.GameMode}\")";
+    public string MapRotationString => $"MapRotation=(MapId=\"UGC{this.MapId}\", GameMode=\"{this.GameMode}\")";
 }
 
 public class MapRepository : BaseRepository<GoogleSheetsMapRowModel>

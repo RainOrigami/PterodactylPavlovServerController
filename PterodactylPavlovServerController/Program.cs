@@ -1,12 +1,18 @@
 using Blazored.Toast;
 using Fluxor;
+using Microsoft.AspNetCore.HttpOverrides;
 using PavlovStatsReader;
+using PterodactylPavlovServerController.Areas.Identity.Data;
 using PterodactylPavlovServerController.Contexts;
-using PterodactylPavlovServerController.Middleware;
-using PterodactylPavlovServerController.Models;
+using PterodactylPavlovServerController.Data;
 using PterodactylPavlovServerController.Services;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddDbContext<PterodactylPavlovServerControllerContext>();
+
+builder.Services.AddDefaultIdentity<PterodactylPavlovServerControllerUser>()
+    .AddEntityFrameworkStores<PterodactylPavlovServerControllerContext>();
 
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
@@ -36,8 +42,6 @@ builder.Services.AddBlazoredToast();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-//builder.Services.AddAuthentication().AddApplicationCookie();
-
 WebApplication app = builder.Build();
 
 if (app.Environment.IsDevelopment())
@@ -50,37 +54,37 @@ else
     app.Services.GetRequiredService<PavlovStatisticsService>().Run();
 }
 
+app.Use(async (context, next) =>
+{
+    context.Request.PathBase = context.RequestServices.GetRequiredService<IConfiguration>()["basePath"];
+    await next.Invoke();
+});
+
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.All
+});
+
 app.UseHttpsRedirection();
 
 app.MapControllers();
 
-if (!app.Environment.IsDevelopment())
-{
-    app.UseMiddleware<BasicApiKeyMiddleware>();
-}
-
 app.UseStaticFiles();
 
 app.UseRouting();
-
-//app.UseAuthentication();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
 
-using (PterodactylContext context = new PterodactylContext(app.Services.GetRequiredService<IConfiguration>()))
-{
-    foreach (PterodactylUserModel user in context.Users)
-    {
-        Console.WriteLine(user.Username);
-    }
-}
-
 using (IServiceScope scope = app.Services.CreateScope())
 {
+    scope.ServiceProvider.GetRequiredService<PterodactylPavlovServerControllerContext>().Database.EnsureCreated();
     scope.ServiceProvider.GetRequiredService<PavlovServerContext>().Database.EnsureCreated();
 }
 
 app.Services.GetRequiredService<PavlovRconConnectionService>().Run();
+
 
 app.Run();

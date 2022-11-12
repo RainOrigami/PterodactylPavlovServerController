@@ -1,6 +1,8 @@
 ﻿@page "/rcon/{ServerId}"
 @using Fluxor
+@using Microsoft.AspNetCore.Identity
 @using PavlovVR_Rcon.Models.Pavlov
+@using PterodactylPavlovServerController.Areas.Identity.Data
 @using PterodactylPavlovServerController.Contexts
 @using PterodactylPavlovServerController.Services
 @using PterodactylPavlovServerController.Stores
@@ -17,6 +19,8 @@
 @inject PavlovRconService RconService
 @inject IToastService Toast
 @inject PavlovServerContext PavlovServerContext
+@inject UserManager<PterodactylPavlovServerControllerUser> UserManager
+@inject IHttpContextAccessor httpContextAccessor
 
 @if (!Rcon.Initialised)
 {
@@ -26,7 +30,7 @@
     return;
 }
 
-@if (Rcon.GetServer(ServerId) is not PavlovRconConnection connection)
+@if (Rcon.GetServer(apiKey, ServerId) is not PavlovRconConnection connection)
 {
     Dispatcher.Dispatch(new PageTitleSetAction("Invalid server"));
     <div>Server does not exist</div>
@@ -305,13 +309,15 @@
     [EditorRequired]
     public string ServerId { get; set; } = string.Empty;
 
-    private async Task loadMaps()
+    private string apiKey;
+
+    private async Task loadMaps(PavlovRconConnection connection)
     {
         if (!MapsState.Value.ServerMaps.ContainsKey(ServerId))
         {
             lock (Dispatcher)
             {
-                Dispatcher.Dispatch(new MapsLoadServerAction(ServerId));
+                Dispatcher.Dispatch(new MapsLoadServerAction(connection.ApiKey, ServerId));
             }
         }
 
@@ -320,11 +326,11 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        if (Rcon.GetServer(ServerId) is PavlovRconConnection connection)
+        if (Rcon.GetServer(apiKey, ServerId) is PavlovRconConnection connection)
         {
             connection.OnServerErrorRaised += (id, error) =>
             {
-                bool? online = Rcon.GetServer(ServerId)?.Online;
+                bool? online = Rcon.GetServer(apiKey, ServerId)?.Online;
                 if (!online.HasValue || !online.Value || id != ServerId)
                 {
                     return;
@@ -334,19 +340,19 @@
             };
             if (!PavlovServersState.Value.ServerNamesFromGameIni.ContainsKey(ServerId))
             {
-                Dispatcher.Dispatch(new PavlovServerLoadNameFromGameIniAction(ServerId));
+                Dispatcher.Dispatch(new PavlovServerLoadNameFromGameIniAction(connection.ApiKey, ServerId));
             }
-            await loadMaps();
+            await loadMaps(connection);
         }
 
         await base.OnParametersSetAsync();
     }
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
+        await base.OnInitializedAsync();
         Rcon.OnServersUpdated += refresh;
-
-        base.OnInitialized();
+        apiKey = (await UserManager.GetUserAsync(httpContextAccessor.HttpContext.User)).PterodactylApiKey;
     }
 
     private async void refresh()
@@ -356,9 +362,8 @@
 
     protected override void Dispose(bool disposing)
     {
-        Rcon.OnServersUpdated -= refresh;
-
         base.Dispose(disposing);
+        Rcon.OnServersUpdated -= refresh;
     }
 
     private async Task changeMap(ServerMapModel serverMap)
@@ -369,10 +374,16 @@
             MapsState.Value.MapDetails.TryGetValue(serverMap.WorkshopId, out mapDetail);
         }
 
+        if (Rcon.GetServer(apiKey, ServerId) is not PavlovRconConnection connection)
+        {
+            Toast.ShowError("Server must be online to change the map");
+            return;
+        }
+
         try
         {
             GameMode gameMode = Enum.Parse<GameMode>(serverMap.GameMode);
-            await RconService.SwitchMap(ServerId, serverMap.MapLabel, gameMode);
+            await RconService.SwitchMap(connection.ApiKey, ServerId, serverMap.MapLabel, gameMode);
         }
         catch (Exception e)
         {

@@ -113,7 +113,7 @@ public class StatsCalculator
                 TotalTeamkills = teamPlayerStatsStats.Where(p => p.StatType == "TeamKill").Sum(p => p.Amount),
                 TotalVictories = winCount,
                 BestPlayer = bestPlayer?.Player,
-                BestPlayerAvgScore = bestPlayer?.AvgScore ?? 0d,
+                BestPlayerAverageScore = bestPlayer?.AvgScore ?? 0d,
                 BestGun = bestGun?.Gun,
                 BestGunKillCount = bestGun?.Count ?? 0,
             });

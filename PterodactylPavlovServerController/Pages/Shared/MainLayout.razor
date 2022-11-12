@@ -3,10 +3,11 @@
 @inherits Fluxor.Blazor.Web.Components.FluxorLayout
 
 @inject IState<PageTitleState> PageTitleState
+@inject NavigationManager NavigationManager
 
-@*<CascadingAuthenticationState>
+<CascadingAuthenticationState>
     <AuthorizeView>
-        <Authorized>*@
+        <Authorized>
             <PageTitle>@PageTitleState.Value.Title - PPSC</PageTitle>
 
             <div class="page">
@@ -26,21 +27,23 @@
             </div>
 
             <BlazoredToasts />
-@*        </Authorized>
-        <NotAuthorized>
-            <PageTitle>Login - PPSC</PageTitle>
-            <div class="page h-100">
-                <main class="bg-dark">
-                    <div class="top-row navbar-dark px-4 pt-5 justify-content-center">
-                        <h1>Login</h1>
-                    </div>
-                    <div class="w-100 p-4 d-flex justify-content-center pb-4">
-                        <article class="content px-4">
-                            <Login />
-                        </article>
-                    </div>
-                </main>
-            </div>
-        </NotAuthorized>
+        </Authorized>
     </AuthorizeView>
-</CascadingAuthenticationState>*@
+</CascadingAuthenticationState>
+
+@code {
+
+    [CascadingParameter] protected Task<AuthenticationState> AuthStat { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        var user = (await AuthStat).User;
+        if (!user.Identity.IsAuthenticated)
+        {
+            string returnUrl = Uri.EscapeDataString(NavigationManager.ToBaseRelativePath(NavigationManager.Uri));
+            NavigationManager.NavigateTo($"Identity/Account/Login{(string.IsNullOrEmpty(returnUrl) ? "" : $"?returnUrl={returnUrl}")}");
+        }
+
+    }
+}
