@@ -1,0 +1,73 @@
+﻿@using Fluxor
+@using Microsoft.AspNetCore.Identity
+@using PavlovVR_Rcon.Models.Pavlov
+@using PterodactylPavlovServerController.Areas.Identity.Data
+@using PterodactylPavlovServerController.Services
+@using PterodactylPavlovServerController.Stores
+@using PterodactylPavlovServerDomain.Models
+@using PterodactylPavlovServerController.Models
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+@inject IDispatcher Dispatcher
+@inject PavlovRconConnectionService Rcon
+@inject IState<PavlovServersState> PavlovServersState
+@inject UserManager<PterodactylPavlovServerControllerUser> UserManager
+@inject IHttpContextAccessor httpContextAccessor
+
+@if (!Rcon.Initialised)
+{
+    <div>Loading...</div>
+    return;
+}
+
+@if (Rcon.GetServer(apiKey, ServerId) is not PavlovRconConnection connection)
+{
+    <div>Server does not exist</div>
+    return;
+}
+
+@{
+    PterodactylServerModel server = connection.PterodactylServer;
+    ServerInfo? serverInfo = connection.ServerInfo;
+}
+
+<div>
+    <a href="rcon/@server.ServerId">@server.Name (@(serverInfo == null ? PavlovServersState.Value.ServerNamesFromGameIni.ContainsKey(server.ServerId) ? PavlovServersState.Value.ServerNamesFromGameIni[server.ServerId] : "..." : serverInfo.ServerName))</a>
+</div>
+
+@code {
+
+    [Parameter]
+    [EditorRequired]
+    public string ServerId { get; set; } = string.Empty;
+    private string apiKey;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        Rcon.OnServersUpdated += refresh;
+        apiKey = (await UserManager.GetUserAsync(httpContextAccessor.HttpContext.User)).PterodactylApiKey;
+    }
+
+    private async void refresh()
+    {
+        await InvokeAsync(StateHasChanged);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+        Rcon.OnServersUpdated -= refresh;
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (Rcon.GetServer(apiKey, ServerId) is not PavlovRconConnection connection)
+        {
+            return;
+        }
+
+        Dispatcher.Dispatch(new PavlovServerLoadNameFromGameIniAction(connection.ApiKey, ServerId));
+        base.OnParametersSet();
+    }
+
+}

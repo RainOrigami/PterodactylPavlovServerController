@@ -1,9 +1,8 @@
-﻿namespace PavlovStatsReader.Models
+﻿namespace PavlovStatsReader.Models;
+
+public class Setting
 {
-    public class Setting
-    {
-        public string ServerId { get; set; }
-        public string Name { get; set; }
-        public string Value { get; set; }
-    }
+    public string ServerId { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string Value { get; set; } = string.Empty;
 }

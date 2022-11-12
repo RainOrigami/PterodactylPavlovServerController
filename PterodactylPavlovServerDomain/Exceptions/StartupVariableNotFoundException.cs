@@ -1,12 +1,11 @@
-﻿namespace PterodactylPavlovServerController.Exceptions
-{
-    public class StartupVariableNotFoundException : Exception
-    {
-        public StartupVariableNotFoundException(string envVariable)
-        {
-            this.EnvVariable = envVariable;
-        }
+﻿namespace PterodactylPavlovServerController.Exceptions;
 
-        public string EnvVariable { get; }
+public class StartupVariableNotFoundException : Exception
+{
+    public StartupVariableNotFoundException(string envVariable)
+    {
+        this.EnvVariable = envVariable;
     }
+
+    public string EnvVariable { get; }
 }

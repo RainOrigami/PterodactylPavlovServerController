@@ -1,6 +1,3 @@
-﻿namespace PterodactylPavlovServerController.Exceptions
-{
-    public class GoogleSheetsHeaderMismatch : Exception
-    {
-    }
-}
+﻿namespace PterodactylPavlovServerController.Exceptions;
+
+public class GoogleSheetsHeaderMismatch : Exception { }

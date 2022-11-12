@@ -1,0 +1,53 @@
+﻿@page "/rcon"
+@using Fluxor
+@using Microsoft.AspNetCore.Identity
+@using PterodactylPavlovServerController.Areas.Identity.Data
+@using PterodactylPavlovServerController.Services
+@using PterodactylPavlovServerController.Stores
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+
+@inject IDispatcher Dispatcher
+@inject PavlovRconConnectionService Rcon
+@inject UserManager<PterodactylPavlovServerControllerUser> UserManager
+@inject IHttpContextAccessor httpContextAccessor
+
+@{
+    Dispatcher.Dispatch(new PageTitleSetAction("Select a server"));
+}
+
+@if (!Rcon.Initialised)
+{
+    <div class="spinner-border text-info" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+}
+else
+{
+    @foreach (string serverId in Rcon.GetAllConnections(apiKey).OrderBy(c => c.PterodactylServer.Name).Select(c => c.ServerId))
+    {
+        <ServerSelectorComponent ServerId="@serverId" />
+    }
+}
+
+@code
+{
+    private string apiKey;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        Rcon.OnServersUpdated += refresh;
+        apiKey = (await UserManager.GetUserAsync(httpContextAccessor.HttpContext.User)).PterodactylApiKey;
+    }
+
+    private async void refresh()
+    {
+        await InvokeAsync(StateHasChanged);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+        Rcon.OnServersUpdated -= refresh;
+    }
+}

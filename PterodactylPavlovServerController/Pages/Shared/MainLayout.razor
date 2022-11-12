@@ -1,0 +1,49 @@
+﻿@using PterodactylPavlovServerController.Stores
+@using Fluxor
+@inherits Fluxor.Blazor.Web.Components.FluxorLayout
+
+@inject IState<PageTitleState> PageTitleState
+@inject NavigationManager NavigationManager
+
+<CascadingAuthenticationState>
+    <AuthorizeView>
+        <Authorized>
+            <PageTitle>@PageTitleState.Value.Title - PPSC</PageTitle>
+
+            <div class="page">
+                <div class="sidebar col-12">
+                    <NavMenu />
+                </div>
+
+                <main class="bg-dark">
+                    <div class="top-row navbar-dark px-4">
+                        <h3 class="navbar-brand">@PageTitleState.Value.Title</h3>
+                    </div>
+
+                    <article class="content px-4">
+                        @Body
+                    </article>
+                </main>
+            </div>
+
+            <BlazoredToasts />
+        </Authorized>
+    </AuthorizeView>
+</CascadingAuthenticationState>
+
+@code {
+
+    [CascadingParameter] protected Task<AuthenticationState> AuthStat { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        var user = (await AuthStat).User;
+        if (!user.Identity.IsAuthenticated)
+        {
+            string returnUrl = Uri.EscapeDataString(NavigationManager.ToBaseRelativePath(NavigationManager.Uri));
+            NavigationManager.NavigateTo($"Identity/Account/Login{(string.IsNullOrEmpty(returnUrl) ? "" : $"?returnUrl={returnUrl}")}");
+        }
+
+    }
+}

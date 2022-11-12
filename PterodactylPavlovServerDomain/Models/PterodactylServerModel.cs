@@ -1,8 +1,7 @@
-﻿namespace PterodactylPavlovServerDomain.Models
+﻿namespace PterodactylPavlovServerDomain.Models;
+
+public class PterodactylServerModel
 {
-    public class PterodactylServerModel
-    {
-        public string Name { get; set; } = String.Empty;
-        public string ServerId { get; set; } = String.Empty;
-    }
+    public string Name { get; set; } = string.Empty;
+    public string ServerId { get; set; } = string.Empty;
 }

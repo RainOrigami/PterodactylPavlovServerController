@@ -4,157 +4,157 @@ using Steam.Models.SteamCommunity;
 using SteamWebAPI2.Interfaces;
 using SteamWebAPI2.Utilities;
 
-namespace PterodactylPavlovServerController.Services
+namespace PterodactylPavlovServerController.Services;
+
+public class SteamService
 {
-    public class SteamService
+    private static readonly string lastRequestLock = string.Empty;
+    private static DateTime lastRequest = DateTime.MinValue;
+    private readonly IConfiguration configuration;
+    private readonly SteamWebInterfaceFactory factory;
+    private readonly Dictionary<ulong, (DateTime lastUpdated, IReadOnlyCollection<PlayerBansModel> playerBans)> playerBansCache;
+
+    private readonly Dictionary<ulong, (DateTime lastUpdated, PlayerSummaryModel playerSummary)> playerSummariesCache;
+
+    public SteamService(IConfiguration configuration)
     {
-        private readonly IConfiguration configuration;
-        private readonly SteamWebInterfaceFactory factory;
+        this.configuration = configuration;
 
-        private Dictionary<ulong, (DateTime lastUpdated, PlayerSummaryModel playerSummary)> playerSummariesCache;
-        private Dictionary<ulong, (DateTime lastUpdated, IReadOnlyCollection<PlayerBansModel> playerBans)> playerBansCache;
+        this.factory = new SteamWebInterfaceFactory(configuration["steam_apikey"]);
 
-        private static String lastRequestLock = String.Empty;
-        private static DateTime lastRequest = DateTime.MinValue;
-
-        public SteamService(IConfiguration configuration)
+        try
         {
-            this.configuration = configuration;
+            this.playerSummariesCache = JsonConvert.DeserializeObject<Dictionary<ulong, (DateTime lastUpdated, PlayerSummaryModel playerSummary)>>(File.ReadAllText(configuration["steam_summarycache"]!)) ?? new Dictionary<ulong, (DateTime lastUpdated, PlayerSummaryModel playerSummary)>();
+        }
+        catch (Exception)
+        {
+            this.playerSummariesCache = new Dictionary<ulong, (DateTime lastUpdated, PlayerSummaryModel playerSummary)>();
+        }
 
-            factory = new(configuration["steam_apikey"]);
+        try
+        {
+            this.playerBansCache = JsonConvert.DeserializeObject<Dictionary<ulong, (DateTime lastUpdated, IReadOnlyCollection<PlayerBansModel> playerBans)>>(File.ReadAllText(configuration["steam_bancache"]!)) ?? new Dictionary<ulong, (DateTime lastUpdated, IReadOnlyCollection<PlayerBansModel> playerBans)>();
+        }
+        catch (Exception)
+        {
+            this.playerBansCache = new Dictionary<ulong, (DateTime lastUpdated, IReadOnlyCollection<PlayerBansModel> playerBans)>();
+        }
+    }
 
-            try
+    public async Task<PlayerSummaryModel> GetPlayerSummary(ulong steamId)
+    {
+        DateTime? lastUpdated = null;
+        PlayerSummaryModel? playerSummary = null;
+        lock (this.playerSummariesCache)
+        {
+            if (this.playerSummariesCache.ContainsKey(steamId))
             {
-                playerSummariesCache = JsonConvert.DeserializeObject<Dictionary<ulong, (DateTime lastUpdated, PlayerSummaryModel playerSummary)>>(File.ReadAllText(configuration["steam_summarycache"])) ?? new Dictionary<ulong, (DateTime lastUpdated, PlayerSummaryModel playerSummary)>();
-            }
-            catch (Exception)
-            {
-                playerSummariesCache = new Dictionary<ulong, (DateTime lastUpdated, PlayerSummaryModel playerSummary)>();
-            }
-
-            try
-            {
-                playerBansCache = JsonConvert.DeserializeObject<Dictionary<ulong, (DateTime lastUpdated, IReadOnlyCollection<PlayerBansModel> playerBans)>>(File.ReadAllText(configuration["steam_bancache"])) ?? new Dictionary<ulong, (DateTime lastUpdated, IReadOnlyCollection<PlayerBansModel> playerBans)>();
-            }
-            catch (Exception)
-            {
-                playerBansCache = new Dictionary<ulong, (DateTime lastUpdated, IReadOnlyCollection<PlayerBansModel> playerBans)>();
+                (lastUpdated, playerSummary) = this.playerSummariesCache[steamId];
             }
         }
 
-        public PlayerSummaryModel GetPlayerSummary(ulong steamId)
+        if (!lastUpdated.HasValue || lastUpdated.Value < DateTime.Now.AddDays(-7))
         {
-            DateTime? lastUpdated = null;
-            PlayerSummaryModel? playerSummary = null;
-            lock (playerSummariesCache)
+            lock (SteamService.lastRequestLock)
             {
-                if (playerSummariesCache.ContainsKey(steamId))
+                if (SteamService.lastRequest < DateTime.Now.AddSeconds(-2))
                 {
-                    (lastUpdated, playerSummary) = playerSummariesCache[steamId];
+                    Thread.Sleep(2000);
                 }
+
+                SteamService.lastRequest = DateTime.Now;
             }
 
-            if (!lastUpdated.HasValue || lastUpdated.Value < DateTime.Now.AddDays(-7))
+            SteamUser user = this.factory.CreateSteamWebInterface<SteamUser>();
+            ISteamWebResponse<PlayerSummaryModel> response = await user.GetPlayerSummaryAsync(steamId);
+
+            if (response.Data is null)
             {
-                lock (lastRequestLock)
-                {
-                    if (lastRequest < DateTime.Now.AddSeconds(-2))
-                    {
-                        Thread.Sleep(2000);
-                    }
-                    lastRequest = DateTime.Now;
-                }
-
-                SteamUser user = factory.CreateSteamWebInterface<SteamUser>();
-                ISteamWebResponse<PlayerSummaryModel> response = user.GetPlayerSummaryAsync(steamId).GetAwaiter().GetResult();
-
-                if (response.Data is null)
-                {
-                    throw new SteamException();
-                }
-
-                playerSummary = response.Data;
-                lastUpdated = DateTime.Now;
-
-                lock (playerSummariesCache)
-                {
-                    if (playerSummariesCache.ContainsKey(steamId))
-                    {
-                        playerSummariesCache.Remove(steamId);
-                    }
-
-                    playerSummariesCache.Add(steamId, (lastUpdated.Value, playerSummary));
-                    File.WriteAllText(configuration["steam_summarycache"], JsonConvert.SerializeObject(playerSummariesCache));
-                }
+                throw new SteamException();
             }
 
-            lock (playerSummariesCache)
+            playerSummary = response.Data;
+            lastUpdated = DateTime.Now;
+
+            lock (this.playerSummariesCache)
             {
-                return playerSummariesCache[steamId].playerSummary;
+                if (this.playerSummariesCache.ContainsKey(steamId))
+                {
+                    this.playerSummariesCache.Remove(steamId);
+                }
+
+                this.playerSummariesCache.Add(steamId, (lastUpdated.Value, playerSummary));
+                File.WriteAllText(this.configuration["steam_summarycache"]!, JsonConvert.SerializeObject(this.playerSummariesCache));
             }
         }
 
-        private IReadOnlyCollection<PlayerBansModel> getPlayerBans(ulong steamId)
+        lock (this.playerSummariesCache)
         {
-            DateTime? lastUpdated = null;
-            IReadOnlyCollection<PlayerBansModel>? playerBans = null;
+            return this.playerSummariesCache[steamId].playerSummary;
+        }
+    }
 
-            lock (playerBansCache)
+    private async Task<IReadOnlyCollection<PlayerBansModel>> getPlayerBans(ulong steamId)
+    {
+        DateTime? lastUpdated = null;
+        IReadOnlyCollection<PlayerBansModel>? playerBans = null;
+
+        lock (this.playerBansCache)
+        {
+            if (this.playerBansCache.ContainsKey(steamId))
             {
-                if (playerBansCache.ContainsKey(steamId))
-                {
-                    (lastUpdated, playerBans) = playerBansCache[steamId];
-                }
-            }
-
-            if (!lastUpdated.HasValue || lastUpdated.Value < DateTime.Now.AddDays(-7))
-            {
-                lock (lastRequestLock)
-                {
-                    if (lastRequest < DateTime.Now.AddSeconds(-2))
-                    {
-                        Thread.Sleep(2000);
-                    }
-                    lastRequest = DateTime.Now;
-                }
-
-                SteamUser user = factory.CreateSteamWebInterface<SteamUser>();
-                ISteamWebResponse<IReadOnlyCollection<PlayerBansModel>> response = user.GetPlayerBansAsync(steamId).GetAwaiter().GetResult();
-
-                if (response.Data is null)
-                {
-                    throw new SteamException();
-                }
-
-                playerBans = response.Data;
-                lastUpdated = DateTime.Now;
-
-                lock (playerBansCache)
-                {
-                    if (playerBansCache.ContainsKey(steamId))
-                    {
-                        playerBansCache.Remove(steamId);
-                    }
-
-                    playerBansCache.Add(steamId, (lastUpdated.Value, playerBans));
-                    File.WriteAllText(configuration["steam_bancache"], JsonConvert.SerializeObject(playerBansCache));
-                }
-            }
-
-            lock (playerBansCache)
-            {
-                return playerBansCache[steamId].playerBans;
+                (lastUpdated, playerBans) = this.playerBansCache[steamId];
             }
         }
 
-        public string GetUsername(ulong steamId)
+        if (!lastUpdated.HasValue || lastUpdated.Value < DateTime.Now.AddDays(-7))
         {
-            return GetPlayerSummary(steamId).Nickname;
+            lock (SteamService.lastRequestLock)
+            {
+                if (SteamService.lastRequest < DateTime.Now.AddSeconds(-2))
+                {
+                    Thread.Sleep(2000);
+                }
+
+                SteamService.lastRequest = DateTime.Now;
+            }
+
+            SteamUser user = this.factory.CreateSteamWebInterface<SteamUser>();
+            ISteamWebResponse<IReadOnlyCollection<PlayerBansModel>> response = await user.GetPlayerBansAsync(steamId);
+
+            if (response.Data is null)
+            {
+                throw new SteamException();
+            }
+
+            playerBans = response.Data;
+            lastUpdated = DateTime.Now;
+
+            lock (this.playerBansCache)
+            {
+                if (this.playerBansCache.ContainsKey(steamId))
+                {
+                    this.playerBansCache.Remove(steamId);
+                }
+
+                this.playerBansCache.Add(steamId, (lastUpdated.Value, playerBans));
+                File.WriteAllText(this.configuration["steam_bancache"]!, JsonConvert.SerializeObject(this.playerBansCache));
+            }
         }
 
-        public IReadOnlyCollection<PlayerBansModel> GetBans(ulong steamId)
+        lock (this.playerBansCache)
         {
-            return getPlayerBans(steamId);
+            return this.playerBansCache[steamId].playerBans;
         }
+    }
+
+    public async Task<string> GetUsername(ulong steamId)
+    {
+        return (await this.GetPlayerSummary(steamId)).Nickname;
+    }
+
+    public async Task<IReadOnlyCollection<PlayerBansModel>> GetBans(ulong steamId)
+    {
+        return await this.getPlayerBans(steamId);
     }
 }

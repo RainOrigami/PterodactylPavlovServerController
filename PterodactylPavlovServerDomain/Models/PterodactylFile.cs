@@ -1,10 +1,9 @@
 ﻿using Newtonsoft.Json;
 
-namespace PterodactylPavlovServerDomain.Models
+namespace PterodactylPavlovServerDomain.Models;
+
+public class PterodactylFile
 {
-    public class PterodactylFile
-    {
-        [JsonProperty("name")]
-        public string Name { get; set; }
-    }
+    [JsonProperty("name")]
+    public string Name { get; set; } = string.Empty;
 }

@@ -1,0 +1,47 @@
+﻿@page
+@model LoginModel
+@using PterodactylPavlovServerController.Stores
+@using Fluxor
+@using Microsoft.AspNetCore.Mvc.TagHelpers
+
+<div class="page h-100">
+    <main class="bg-dark h-100">
+        <div class="top-row navbar-dark px-4 pt-5 justify-content-center d-flex">
+            <h1>Login</h1>
+        </div>
+        <div class="w-100 p-4 d-flex justify-content-center pb-4">
+            <article class="content px-4 col-lg-4 col-xl-3 col-10 col-md-8 col-sm-12">
+                <section>
+                    <form id="account" method="post">
+                        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                        <div class="form-floating mb-2">
+                            <input asp-for="Input.Username" class="form-control" autocomplete="username" aria-required="true" />
+                            <label asp-for="Input.Username" class="form-label"></label>
+                            <span asp-validation-for="Input.Username" class="text-danger"></span>
+                        </div>
+                        <div class="form-floating mb-2">
+                            <input asp-for="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" />
+                            <label asp-for="Input.Password" class="form-label"></label>
+                            <span asp-validation-for="Input.Password" class="text-danger"></span>
+                        </div>
+                        <div>
+                            <div class="checkbox">
+                                <label asp-for="Input.RememberMe" class="form-label">
+                                    <input class="form-check-input" asp-for="Input.RememberMe" />
+                                    @Html.DisplayNameFor(m => m.Input.RememberMe)
+                                </label>
+                            </div>
+                        </div>
+                        <div>
+                            <button id="login-submit" type="submit" class="w-100 btn btn-lg btn-primary">Log in</button>
+                        </div>
+                    </form>
+                    <a href="Identity/Account/Register" class="w-100 btn btn-lg btn-outline-secondary mt-2">Register</a>
+                </section>
+            </article>
+        </div>
+    </main>
+</div>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
