@@ -5,8 +5,6 @@ VisualStudioVersion = 17.3.32929.385
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PterodactylPavlovServerController", "PterodactylPavlovServerController\PterodactylPavlovServerController.csproj", "{A0D24402-B69F-4745-957B-C5C4D12C82A1}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PavlovVR-Rcon", "..\PavlovVR-Rcon\PavlovVR-Rcon\PavlovVR-Rcon.csproj", "{CD7D0344-3C02-45DC-A12E-610552BAADBF}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PterodactylPavlovServerDomain", "PterodactylPavlovServerDomain\PterodactylPavlovServerDomain.csproj", "{2579D18C-3EB2-48EB-8309-30F60F2A6660}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PavlovStatsReader", "PavlovStatsReader\PavlovStatsReader.csproj", "{8F48D0EB-FF9C-42C3-B2B0-6D4B02005BC5}"
@@ -26,10 +24,6 @@ Global
 		{A0D24402-B69F-4745-957B-C5C4D12C82A1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A0D24402-B69F-4745-957B-C5C4D12C82A1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A0D24402-B69F-4745-957B-C5C4D12C82A1}.Release|Any CPU.Build.0 = Release|Any CPU
-		{CD7D0344-3C02-45DC-A12E-610552BAADBF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{CD7D0344-3C02-45DC-A12E-610552BAADBF}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{CD7D0344-3C02-45DC-A12E-610552BAADBF}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{CD7D0344-3C02-45DC-A12E-610552BAADBF}.Release|Any CPU.Build.0 = Release|Any CPU
 		{2579D18C-3EB2-48EB-8309-30F60F2A6660}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{2579D18C-3EB2-48EB-8309-30F60F2A6660}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2579D18C-3EB2-48EB-8309-30F60F2A6660}.Release|Any CPU.ActiveCfg = Release|Any CPU
