@@ -3,7 +3,6 @@ using PterodactylPavlovServerController.Exceptions;
 using PterodactylPavlovServerDomain.Models;
 using RestSharp;
 using System.Net;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -26,62 +25,84 @@ public class PterodactylService
 
     public async Task<string> ReadFile(string apiKey, string serverId, string path)
     {
-        string fileContent = null!;
-
         RestResponse readFileResponse = this.executeRestRequest(apiKey, $"client/servers/{serverId}/files/contents?file={path}", false);
         if (readFileResponse.IsSuccessStatusCode)
         {
-            fileContent = readFileResponse.Content!;
+            return readFileResponse.Content!;
         }
-        else if (readFileResponse.StatusCode == HttpStatusCode.BadRequest && readFileResponse.Content!.Contains("too large to view"))
-        {
-            bool success = false;
-            while (!success)
-            {
-                StringBuilder result = new StringBuilder();
-                long totalRead = 0;
-                long contentlength = 0;
-                try
-                {
-                    string downloadUrl = this.DownloadFileUrl(apiKey, serverId, path);
 
-                    HttpClient httpClient = new();
-                    HttpResponseMessage httpResponse = await httpClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead);
-                    if (!httpResponse.IsSuccessStatusCode)
-                    {
-                        throw new Exception($"Could not download large file: {httpResponse.StatusCode}: {httpResponse.Content!}");
-                    }
-
-                    contentlength = httpResponse.Content.Headers.ContentLength.Value;
-
-                    success = true;
-
-                    using StreamReader reader = new(await httpResponse.Content.ReadAsStreamAsync());
-                    char[] buffer = new char[1024];
-                    int readBytes;
-                    while ((readBytes = reader.Read(buffer)) != 0)
-                    {
-                        totalRead += readBytes;
-                        result.Append(new string(buffer[..readBytes]));
-                    }
-
-                    // Note: this nonsense is necessary as Pterodactyl sends a different Content-Length than is received, which errors while reading
-                    // We just read as much as possible, the remainder is not relevant.
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e.Message);
-                }
-
-                fileContent = result.ToString();
-            }
-        }
-        else
+        if (readFileResponse.StatusCode != HttpStatusCode.BadRequest || !readFileResponse.Content!.Contains("too large to view"))
         {
             throw new Exception($"Could not download file: {readFileResponse.StatusCode}: {readFileResponse.Content!}");
         }
 
-        return fileContent;
+        string downloadUrl;
+        HttpClient httpClient;
+        HttpResponseMessage httpResponse;
+
+        // Try to download large file
+        try
+        {
+            downloadUrl = this.DownloadFileUrl(apiKey, serverId, path);
+
+            using (httpClient = new HttpClient())
+            {
+                httpResponse = await httpClient.GetAsync(downloadUrl);
+                if (!httpResponse.IsSuccessStatusCode)
+                {
+                    throw new Exception($"Could not download large file: {httpResponse.StatusCode}: {httpResponse.Content!}");
+                }
+
+                return readFileResponse.Content!;
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"Failed to download large file ({e.Message}), falling back on copy process.");
+        }
+
+        // At this point, the file was so large that it has been written to while being downloaded, causing an error due to a wings bug.
+        // So we will instead create a copy of the file, download that, and delete it afterwards.
+
+        RestRequest copyFileRequest = new($"client/servers/{serverId}/files/copy", Method.Post);
+        copyFileRequest.AddHeader("Content-Type", "application/json");
+
+        RestResponse copyFileResponse = this.executeRestRequest(apiKey, copyFileRequest, $"{{\"location\": \"{path}\"}}");
+
+        if (!copyFileResponse.IsSuccessStatusCode)
+        {
+            throw new Exception($"Could not download file: {copyFileResponse.StatusCode}: {copyFileResponse.Content}");
+        }
+
+        string newFileName = $"{Path.GetDirectoryName(path)}/{Path.GetFileNameWithoutExtension(path)} copy{Path.GetExtension(path)}";
+
+        downloadUrl = this.DownloadFileUrl(apiKey, serverId, newFileName);
+
+        string content;
+        using (httpClient = new HttpClient())
+        {
+
+            httpResponse = await httpClient.GetAsync(downloadUrl);
+            if (!httpResponse.IsSuccessStatusCode)
+            {
+                throw new Exception($"Could not download large file: {httpResponse.StatusCode}: {httpResponse.Content!}");
+            }
+
+            content = readFileResponse.Content!;
+        }
+
+        RestRequest deleteFileRequest = new($"client/servers/{serverId}/files/delete", Method.Post);
+        deleteFileRequest.AddHeader("Content-Type", "application/json");
+
+        RestResponse deleteFileResponse = this.executeRestRequest(apiKey, deleteFileRequest, $"{{ \"root\": \"{Path.GetDirectoryName(newFileName)}\",\"files\": [ \"{Path.GetFileName(newFileName)}\" ] }}");
+
+        if (!deleteFileResponse.IsSuccessStatusCode)
+        {
+            await Console.Error.WriteLineAsync($"BAD! Could not delete copied file, polluting the directory! Server {serverId}, path {newFileName}");
+            throw new Exception($"Could not delete copied file, polluting the directory! Server {serverId}, path {newFileName}");
+        }
+
+        return content;
     }
 
     public string DownloadFileUrl(string apiKey, string serverId, string path)
