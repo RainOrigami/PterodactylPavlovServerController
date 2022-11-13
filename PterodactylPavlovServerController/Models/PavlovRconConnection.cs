@@ -112,7 +112,7 @@ public class PavlovRconConnection : IDisposable
 
     private async Task updatePlayerList()
     {
-        if (!this.Online.HasValue || !this.Online.Value)
+        if (!this.Online.HasValue || !this.Online.Value || failCount > 0)
         {
             return;
         }
@@ -157,7 +157,7 @@ public class PavlovRconConnection : IDisposable
 
     private async Task updatePlayerDetails()
     {
-        if (!this.Online.HasValue || !this.Online.Value || this.PlayerListPlayers == null)
+        if (!this.Online.HasValue || !this.Online.Value || this.PlayerListPlayers == null || failCount > 0)
         {
             return;
         }
