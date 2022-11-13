@@ -133,6 +133,10 @@
                                             <div class="col px-1">@(serverInfo.Team1Score?.ToString() ?? "Unavailable")</div>
                                         </div>
                                     }
+                                    @if (File.Exists($"stats/{ServerId}.html"))
+                                    {
+                                        <a href="stats/@ServerId" target="_blank" class="btn btn-outline-primary mt-5">Open statistics</a>
+                                    }
                                 </div>
                             </p>
                         </div>
