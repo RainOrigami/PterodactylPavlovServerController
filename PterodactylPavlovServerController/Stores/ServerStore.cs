@@ -46,7 +46,7 @@ public class PavlovServersEffects
     [EffectMethod]
     public async Task LoadServerNameFromGameIni(PavlovServerLoadNameFromGameIniAction pavlovServerLoadNameFromGameIniAction, IDispatcher dispatcher)
     {
-        dispatcher.Dispatch(new PavlovServerAddNameFromGameIniAction(pavlovServerLoadNameFromGameIniAction.ServerId, this.pavlovServerService.GetServerName(pavlovServerLoadNameFromGameIniAction.ApiKey, pavlovServerLoadNameFromGameIniAction.ServerId)));
+        dispatcher.Dispatch(new PavlovServerAddNameFromGameIniAction(pavlovServerLoadNameFromGameIniAction.ServerId, await this.pavlovServerService.GetServerName(pavlovServerLoadNameFromGameIniAction.ApiKey, pavlovServerLoadNameFromGameIniAction.ServerId)));
 
         await Task.CompletedTask;
     }

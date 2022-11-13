@@ -85,7 +85,7 @@ public class MapsEffects
     [EffectMethod]
     public async Task LoadServerMaps(MapsLoadServerAction mapsLoadServerAction, IDispatcher dispatcher)
     {
-        ServerMapModel[] mapRows = this.pavlovServerService.GetCurrentMapRotation(mapsLoadServerAction.ApiKey, mapsLoadServerAction.ServerId);
+        ServerMapModel[] mapRows = await this.pavlovServerService.GetCurrentMapRotation(mapsLoadServerAction.ApiKey, mapsLoadServerAction.ServerId);
         dispatcher.Dispatch(new MapsAddServerAction(mapsLoadServerAction.ServerId, mapRows));
 
         foreach (ServerMapModel map in mapRows)

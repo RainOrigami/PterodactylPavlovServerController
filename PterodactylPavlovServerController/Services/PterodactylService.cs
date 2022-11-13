@@ -3,6 +3,7 @@ using PterodactylPavlovServerController.Exceptions;
 using PterodactylPavlovServerDomain.Models;
 using RestSharp;
 using System.Net;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
@@ -23,7 +24,7 @@ public class PterodactylService
         //restClient.AddDefaultHeader("Authorization", $"Bearer {configuration["pterodactyl_bearertoken"]}");
     }
 
-    public string ReadFile(string apiKey, string serverId, string path)
+    public async Task<string> ReadFile(string apiKey, string serverId, string path)
     {
         string fileContent = null!;
 
@@ -37,28 +38,42 @@ public class PterodactylService
             bool success = false;
             while (!success)
             {
+                StringBuilder result = new StringBuilder();
+                long totalRead = 0;
+                long contentlength = 0;
                 try
                 {
                     string downloadUrl = this.DownloadFileUrl(apiKey, serverId, path);
 
                     HttpClient httpClient = new();
-                    HttpResponseMessage httpResponse = httpClient.Send(new HttpRequestMessage(HttpMethod.Get, downloadUrl));
+                    HttpResponseMessage httpResponse = await httpClient.GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead);
                     if (!httpResponse.IsSuccessStatusCode)
                     {
                         throw new Exception($"Could not download large file: {httpResponse.StatusCode}: {httpResponse.Content!}");
                     }
 
-                    using (StreamReader reader = new(httpResponse.Content.ReadAsStream()))
-                    {
-                        fileContent = reader.ReadToEnd();
-                    }
+                    contentlength = httpResponse.Content.Headers.ContentLength.Value;
 
                     success = true;
+
+                    using StreamReader reader = new(await httpResponse.Content.ReadAsStreamAsync());
+                    char[] buffer = new char[1024];
+                    int readBytes;
+                    while ((readBytes = reader.Read(buffer)) != 0)
+                    {
+                        totalRead += readBytes;
+                        result.Append(new string(buffer[..readBytes]));
+                    }
+
+                    // Note: this nonsense is necessary as Pterodactyl sends a different Content-Length than is received, which errors while reading
+                    // We just read as much as possible, the remainder is not relevant.
                 }
                 catch (Exception e)
                 {
                     Console.WriteLine(e.Message);
                 }
+
+                fileContent = result.ToString();
             }
         }
         else

@@ -23,7 +23,7 @@ public class MapsController : ControllerBase
     }
 
     [HttpPost("update")]
-    public IActionResult Update(string apiKey, string serverId, string spreadsheetId, string tabName)
+    public async Task<IActionResult> Update(string apiKey, string serverId, string spreadsheetId, string tabName)
     {
         GoogleSheetsMapRowModel[] mapRows;
 
@@ -42,7 +42,7 @@ public class MapsController : ControllerBase
 
         try
         {
-            mapRows = this.serverControlService.UpdateMaps(apiKey, serverId, mapRows);
+            mapRows = await this.serverControlService.UpdateMaps(apiKey, serverId, mapRows);
         }
         catch (InvalidMapsException ime)
         {
