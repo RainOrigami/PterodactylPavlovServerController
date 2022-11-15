@@ -628,24 +628,6 @@
                         }
 
                         <div class="me-2" style="width: 425px; display: inline-block; vertical-align: top;">
-                            <h3 class="mb-0">Shutdown</h3>
-                            <small class="text-muted">
-                                Prompts the server to shutdown. <b>Warning!</b> If your server does not auto-restart it will stay offline!
-                            </small>
-                            <EditForm Model="@shutdown" OnValidSubmit="@shutdownSubmitted" class="mt-3">
-                                <div class="mb-3">
-                                    <label class="form-label">
-                                        Yes, shutdown this server
-                                        <InputCheckbox @bind-Value="shutdown.Verified" />
-                                    </label>
-                                </div>
-                                <div class="mb-3">
-                                    <button type="submit" class="btn btn-danger form-control">Shutdown</button>
-                                </div>
-                            </EditForm>
-                        </div>
-
-                        <div class="me-2" style="width: 425px; display: inline-block; vertical-align: top;">
                             <h3 class="mb-0">Set or remove pin</h3>
                             <small class="text-muted">
                                 Immediately set or remove the pin password protection on the server.<br />
@@ -875,7 +857,6 @@
     private readonly SetLimitedAmmoTypeModel limitedAmmoType = new();
     private readonly SetPlayerSkinModel playerSkin = new();
     private readonly SlapModel slap = new();
-    private readonly ShutdownModel shutdown = new();
     private readonly SetPinModel pin = new();
     private readonly TTTKarma karma = new();
 
@@ -992,19 +973,6 @@
         else
         {
             Toast.ShowError("Server refused to reset SND round");
-        }
-    }
-
-    private async Task shutdownSubmitted()
-    {
-        if (shutdown.Verified)
-        {
-            await RconService.Shutdown(ApiKey.ApiKey, ServerId);
-            Toast.ShowSuccess("Server is shutting down");
-        }
-        else
-        {
-            Toast.ShowError("Please check the verification checkbox to shutdown the server.");
         }
     }
 

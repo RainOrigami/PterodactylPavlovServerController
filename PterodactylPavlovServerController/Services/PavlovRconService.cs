@@ -161,12 +161,6 @@ public class PavlovRconService
         return (await new ResetSNDCommand().ExecuteCommand(await this.openConnection(apiKey, serverId))).ResetSND;
     }
 
-    public async Task Shutdown(string apiKey, string serverId)
-    {
-        await this.delay();
-        await new ShutdownCommand().ExecuteCommand(await this.openConnection(apiKey, serverId));
-    }
-
     public async Task SetPin(string apiKey, string serverId, int? pin)
     {
         await this.delay();
