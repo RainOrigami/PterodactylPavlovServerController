@@ -201,7 +201,7 @@ public class PavlovRconService
     public async Task<(bool success, bool state)> TTTPauseTimer(string apiKey, string serverId)
     {
         await this.delay();
-        TTTPauseTimerReply pauseTimerReply = await new TTTPauseTimer().ExecuteCommand(await this.openConnection(apiKey, serverId));
+        TTTPauseTimerReply pauseTimerReply = await new TTTPauseTimerCommand().ExecuteCommand(await this.openConnection(apiKey, serverId));
         return (pauseTimerReply.TTTPauseTimer, pauseTimerReply.TTTPauseState);
     }
 
