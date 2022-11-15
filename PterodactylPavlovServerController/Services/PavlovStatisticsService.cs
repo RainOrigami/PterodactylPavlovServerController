@@ -11,8 +11,8 @@ namespace PterodactylPavlovServerController.Services;
 
 public class PavlovStatisticsService : IDisposable
 {
-    private const int CARD_WIDTH = 300;
-    private const int CARDS_PER_ROW = 4;
+    private const int cardWidth = 300;
+    private const int cardsPerRow = 4;
 
     private static readonly Dictionary<string, string> gunMap = new()
     {
@@ -273,7 +273,7 @@ public class PavlovStatisticsService : IDisposable
             }
         }
 
-        this.statsContext.SaveChanges();
+        await this.statsContext.SaveChangesAsync();
         return pterodactylServerModels;
     }
 
@@ -309,11 +309,11 @@ public class PavlovStatisticsService : IDisposable
 
         <h2>Table of contents</h2>
         <ol>
-            <li><a href=""#serverstats"" onclick=""scrollToId('serverstats'); return false;"" class=""link-light"">Server statistics</a></li>
-            <li><a href=""#mapstats"" onclick=""scrollToId('mapstats'); return false;"" class=""link-light"">Map statistics</a></li>
-            <li><a href=""#gunstats"" onclick=""scrollToId('gunstats'); return false;"" class=""link-light"">Gun statistics</a></li>
-            <li><a href=""#teamstats"" onclick=""scrollToId('teamstats'); return false;"" class=""link-light"">Team statistics</a></li>
-            <li><a href=""#playerstats"" onclick=""scrollToId('playerstats'); return false;"" class=""link-light"">Player statistics</a></li>
+            <li><a href=""stats/{server.ServerId}#serverstats"" onclick=""scrollToId('serverstats'); return false;"" class=""link-light"">Server statistics</a></li>
+            <li><a href=""stats/{server.ServerId}#mapstats"" onclick=""scrollToId('mapstats'); return false;"" class=""link-light"">Map statistics</a></li>
+            <li><a href=""stats/{server.ServerId}#gunstats"" onclick=""scrollToId('gunstats'); return false;"" class=""link-light"">Gun statistics</a></li>
+            <li><a href=""stats/{server.ServerId}#teamstats"" onclick=""scrollToId('teamstats'); return false;"" class=""link-light"">Team statistics</a></li>
+            <li><a href=""stats/{server.ServerId}#playerstats"" onclick=""scrollToId('playerstats'); return false;"" class=""link-light"">Player statistics</a></li>
         </ol>");
 
             CBaseStats[] calculatedStats = this.statsCalculator.CalculateStats(server.ServerId);
@@ -395,7 +395,7 @@ public class PavlovStatisticsService : IDisposable
 
                 lock (mapsStatsContent)
                 {
-                    mapsStatsContent.Add(mapStats, this.createStatsCard($"map-{mapStats.MapId}-{mapStats.GameMode}", mapWorkshop.URL, true, $"{mapWorkshop.ImageURL}/?imw={PavlovStatisticsService.CARD_WIDTH}&imh={PavlovStatisticsService.CARD_WIDTH}&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true", $"{mapWorkshop.Name} ({mapStats.GameMode})", new Dictionary<string, string>
+                    mapsStatsContent.Add(mapStats, this.createStatsCard($"map-{mapStats.MapId}-{mapStats.GameMode}", mapWorkshop.URL, true, $"{mapWorkshop.ImageURL}/?imw={PavlovStatisticsService.cardWidth}&imh={PavlovStatisticsService.cardWidth}&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true", $"{mapWorkshop.Name} ({mapStats.GameMode})", new Dictionary<string, string>
                     {
                         {
                             "Played", $"{mapStats.PlayCount} time{(mapStats.PlayCount != 1 ? "s" : "")}"
@@ -407,7 +407,7 @@ public class PavlovStatisticsService : IDisposable
                             "Rounds", $"{Math.Round(mapStats.AverageRounds, 2)} avg, {mapStats.MaxRounds} max, {mapStats.MinRounds} min"
                         },
                         {
-                            "Best player", $"{(mapStats.BestPlayer == null ? "Nobody" : $@"<a href=""#player-{mapStats.BestPlayer}"" onclick=""scrollToId('player-{mapStats.BestPlayer}'); return false;"">{bestPlayerUsername}</a><br/>{Math.Round(mapStats.MaxAveragePlayerScore, 0)} avg score")}"
+                            "Best player", $"{(mapStats.BestPlayer == null ? "Nobody" : $@"<a href=""stats/{server.ServerId}#player-{mapStats.BestPlayer}"" onclick=""scrollToId('player-{mapStats.BestPlayer}'); return false;"">{bestPlayerUsername}</a><br/>{Math.Round(mapStats.MaxAveragePlayerScore, 0)} avg score")}"
                         },
                     }));
                 }
@@ -436,10 +436,10 @@ public class PavlovStatisticsService : IDisposable
                         "Kills", $"{gunStats.Kills} ({Math.Round(this.calculateSafePercent(gunStats.Kills, serverStats.TotalKills), 1)}%)"
                     },
                     {
-                        "Headshots", $"{gunStats.Headshots} ({Math.Round(this.calculateSafePercent(gunStats.Headshots, gunStats.Kills))}%<a href=\"#asterix-own-kills\" onclick=\"scrollToId('asterix-own-kills'); return false;\">*</a>)"
+                        "Headshots", $"{gunStats.Headshots} ({Math.Round(this.calculateSafePercent(gunStats.Headshots, gunStats.Kills))}%<a href=\"stats/{server.ServerId}#asterix-own-kills\" onclick=\"scrollToId('asterix-own-kills'); return false;\">*</a>)"
                     },
                     {
-                        "Best player", $"{(gunStats.BestPlayer == null ? "Nobody" : $@"<a href=""#player-{gunStats.BestPlayer}"" onclick=""scrollToId('player-{gunStats.BestPlayer}'); return false;"">{bestPlayerUsername}</a> ({gunStats.BestPlayerKills}&nbsp;kills)")}"
+                        "Best player", $"{(gunStats.BestPlayer == null ? "Nobody" : $@"<a href=""stats/{server.ServerId}#player-{gunStats.BestPlayer}"" onclick=""scrollToId('player-{gunStats.BestPlayer}'); return false;"">{bestPlayerUsername}</a> ({gunStats.BestPlayerKills}&nbsp;kills)")}"
                     },
                 }));
             }
@@ -465,7 +465,7 @@ public class PavlovStatisticsService : IDisposable
                         "Kills", $"{teamStats.TotalKills} ({Math.Round(this.calculateSafePercent(teamStats.TotalKills, serverStats.TotalKills), 1)}%)"
                     },
                     {
-                        "HS kills", $"{teamStats.TotalHeadshots} ({Math.Round(this.calculateSafePercent(teamStats.TotalHeadshots, teamStats.TotalKills), 1)}%<a href=\"#asterix-own-kills\" onclick=\"scrollToId('asterix-own-kills'); return false;\">*</a>)"
+                        "HS kills", $"{teamStats.TotalHeadshots} ({Math.Round(this.calculateSafePercent(teamStats.TotalHeadshots, teamStats.TotalKills), 1)}%<a href=\"stats/{server.ServerId}#asterix-own-kills\" onclick=\"scrollToId('asterix-own-kills'); return false;\">*</a>)"
                     },
                     {
                         "Assists", $"{teamStats.TotalAssists} ({Math.Round(this.calculateSafePercent(teamStats.TotalAssists, serverStats.TotalAssists), 1)}%)"
@@ -477,10 +477,10 @@ public class PavlovStatisticsService : IDisposable
                         "Victories", teamStats.TotalVictories.ToString()
                     },
                     {
-                        "Best player", $"{(teamStats.BestPlayer == null ? "Nobody" : $@"<a href=""#player-{teamStats.BestPlayer}"" onclick=""scrollToId('player-{teamStats.BestPlayer}'); return false;"">{bestPlayerUsername}</a><br />{Math.Round(teamStats.BestPlayerAverageScore, 0)} avg score")}"
+                        "Best player", $"{(teamStats.BestPlayer == null ? "Nobody" : $@"<a href=""stats/{server.ServerId}#player-{teamStats.BestPlayer}"" onclick=""scrollToId('player-{teamStats.BestPlayer}'); return false;"">{bestPlayerUsername}</a><br />{Math.Round(teamStats.BestPlayerAverageScore, 0)} avg score")}"
                     },
                     {
-                        "Best gun", $"{(teamStats.BestGun == null ? "None" : $@"<a href=""#gun-{teamStats.BestGun}"" onclick=""scrollToId('gun-{teamStats.BestGun}'); return false;"">{(PavlovStatisticsService.gunMap.ContainsKey(teamStats.BestGun) ? PavlovStatisticsService.gunMap[teamStats.BestGun] : teamStats.BestGun)}</a> ({teamStats.BestGunKillCount} kills)")}"
+                        "Best gun", $"{(teamStats.BestGun == null ? "None" : $@"<a href=""stats/{server.ServerId}#gun-{teamStats.BestGun}"" onclick=""scrollToId('gun-{teamStats.BestGun}'); return false;"">{(PavlovStatisticsService.gunMap.ContainsKey(teamStats.BestGun) ? PavlovStatisticsService.gunMap[teamStats.BestGun] : teamStats.BestGun)}</a> ({teamStats.BestGunKillCount} kills)")}"
                     },
                 }));
             }
@@ -556,10 +556,10 @@ public class PavlovStatisticsService : IDisposable
                                     "Assists", $"{playerStats.Assists} ({Math.Round(this.calculateSafePercent(playerStats.Assists, totalAssists), 1)}%)"
                                 },
                                 {
-                                    "Team kills", $"{playerStats.TeamKills} ({Math.Round(this.calculateSafePercent(playerStats.TeamKills, playerStats.Kills), 1)}%<a href=\"#asterix-own-kills\" onclick=\"scrollToId('asterix-own-kills'); return false;\">*</a>)"
+                                    "Team kills", $"{playerStats.TeamKills} ({Math.Round(this.calculateSafePercent(playerStats.TeamKills, playerStats.Kills), 1)}%<a href=\"stats/{server.ServerId}#asterix-own-kills\" onclick=\"scrollToId('asterix-own-kills'); return false;\">*</a>)"
                                 },
                                 {
-                                    "HS kills", $"{playerStats.Headshots} ({Math.Round(this.calculateSafePercent(playerStats.Headshots, playerStats.Kills), 1)}%<a href=\"#asterix-own-kills\" onclick=\"scrollToId('asterix-own-kills'); return false;\">*</a>)"
+                                    "HS kills", $"{playerStats.Headshots} ({Math.Round(this.calculateSafePercent(playerStats.Headshots, playerStats.Kills), 1)}%<a href=\"stats/{server.ServerId}#asterix-own-kills\" onclick=\"scrollToId('asterix-own-kills'); return false;\">*</a>)"
                                 },
                                 {
                                     "Suicides", playerStats.Suicides.ToString()
@@ -574,10 +574,13 @@ public class PavlovStatisticsService : IDisposable
                                     "Bombs", $"{playerStats.BombsPlanted} planted, {playerStats.BombsDefused} defused"
                                 },
                                 {
-                                    "Best gun", $"{(playerStats.MostKillsWithGun == null ? "None" : $@"<a href=""#gun-{playerStats.MostKillsWithGun}"" onclick=""scrollToId('gun-{playerStats.MostKillsWithGun}'); return false;"">{(PavlovStatisticsService.gunMap.ContainsKey(playerStats.MostKillsWithGun) ? PavlovStatisticsService.gunMap[playerStats.MostKillsWithGun] : playerStats.MostKillsWithGun)}</a><br />{playerStats.MostKillsWithGunAmount} kills ({Math.Round(this.calculateSafePercent(playerStats.MostKillsWithGunAmount, playerStats.Kills), 1)}%<a href=""#asterix-own-kills"" onclick=""scrollToId('asterix-own-kills'); return false;"">*</a>)")}"
+                                    "Rounds played", $"{playerStats.RoundsPlayed}"
                                 },
                                 {
-                                    "Best map", $"{(playerStats.BestMap == null ? "None" : $@"<a href=""#map-{playerStats.BestMap}-{playerStats.BestMapGameMode}"" onclick=""scrollToId('map-{playerStats.BestMap}-{playerStats.BestMapGameMode}'); return false;"">{bestMap!.Name}</a><br />{Math.Round(playerStats.BestMapAverageScore, 0)} avg score")}"
+                                    "Best gun", $"{(playerStats.MostKillsWithGun == null ? "None" : $@"<a href=""stats/{server.ServerId}#gun-{playerStats.MostKillsWithGun}"" onclick=""scrollToId('gun-{playerStats.MostKillsWithGun}'); return false;"">{(PavlovStatisticsService.gunMap.ContainsKey(playerStats.MostKillsWithGun) ? PavlovStatisticsService.gunMap[playerStats.MostKillsWithGun] : playerStats.MostKillsWithGun)}</a><br />{playerStats.MostKillsWithGunAmount} kills ({Math.Round(this.calculateSafePercent(playerStats.MostKillsWithGunAmount, playerStats.Kills), 1)}%<a href=""stats/{server.ServerId}#asterix-own-kills"" onclick=""scrollToId('asterix-own-kills'); return false;"">*</a>)")}"
+                                },
+                                {
+                                    "Best map", $"{(playerStats.BestMap == null ? "None" : $@"<a href=""stats/{server.ServerId}#map-{playerStats.BestMap}-{playerStats.BestMapGameMode}"" onclick=""scrollToId('map-{playerStats.BestMap}-{playerStats.BestMapGameMode}'); return false;"">{bestMap!.Name}</a><br />{Math.Round(playerStats.BestMapAverageScore, 0)} avg score")}"
                                 },
                                 {
                                     "VAC", $"{(vacCount > 0 ? $@"<span class=""text-danger"">Yes, {vacCount}" : @"<span class=""text-success"">No")}</span>"
@@ -592,55 +595,55 @@ public class PavlovStatisticsService : IDisposable
 
                 List<string> honorableMentionsCards = new();
 
-                string? highestKDR = await this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.Kills > 10 ? (double)p.Kills / (p.Deaths == 0 ? 1 : p.Deaths) : 0, p => p.Kills, 1, false, "Highest K/D ratio", "K/D ratio");
+                string? highestKDR = await this.getPlayerCardWith(server, playerStatsContent.Keys.ToList(), p => p.Kills > 10 ? (double)p.Kills / (p.Deaths == 0 ? 1 : p.Deaths) : 0, p => p.Kills, 1, false, "Highest K/D ratio", "K/D ratio");
                 if (highestKDR != null)
                 {
                     honorableMentionsCards.Add(highestKDR);
                 }
 
-                string? mostKills = await this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.Kills, p => p.TotalScore, 0, false, "Most kills", "Kills");
+                string? mostKills = await this.getPlayerCardWith(server, playerStatsContent.Keys.ToList(), p => p.Kills, p => p.TotalScore, 0, false, "Most kills", "Kills");
                 if (mostKills != null)
                 {
                     honorableMentionsCards.Add(mostKills);
                 }
 
-                string? mostAssists = await this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.Assists, p => p.TotalScore, 0, false, "Most assists", "Assists");
+                string? mostAssists = await this.getPlayerCardWith(server, playerStatsContent.Keys.ToList(), p => p.Assists, p => p.TotalScore, 0, false, "Most assists", "Assists");
                 if (mostAssists != null)
                 {
                     honorableMentionsCards.Add(mostAssists);
                 }
 
-                string? highestTotalScore = await this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.TotalScore, p => p.Kills, 0, false, "Highest total score", "Score");
+                string? highestTotalScore = await this.getPlayerCardWith(server, playerStatsContent.Keys.ToList(), p => p.TotalScore, p => p.Kills, 0, false, "Highest total score", "Score");
                 if (highestTotalScore != null)
                 {
                     honorableMentionsCards.Add(highestTotalScore);
                 }
 
-                string? highestAverageScore = await this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.AverageScore, p => p.TotalScore, 0, false, "Highest average score", "Score");
+                string? highestAverageScore = await this.getPlayerCardWith(server, playerStatsContent.Keys.ToList(), p => p.AverageScore, p => p.TotalScore, 0, false, "Highest average score", "Score");
                 if (highestAverageScore != null)
                 {
                     honorableMentionsCards.Add(highestAverageScore);
                 }
 
-                string? mostPlants = await this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.BombsPlanted, p => p.TotalScore, 0, false, "Most bomb plants", "Plants");
+                string? mostPlants = await this.getPlayerCardWith(server, playerStatsContent.Keys.ToList(), p => p.BombsPlanted, p => p.TotalScore, 0, false, "Most bomb plants", "Plants");
                 if (mostPlants != null)
                 {
                     honorableMentionsCards.Add(mostPlants);
                 }
 
-                string? mostDefuses = await this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.BombsDefused, p => p.TotalScore, 0, false, "Most bomb defuses", "Defuses");
+                string? mostDefuses = await this.getPlayerCardWith(server, playerStatsContent.Keys.ToList(), p => p.BombsDefused, p => p.TotalScore, 0, false, "Most bomb defuses", "Defuses");
                 if (mostDefuses != null)
                 {
                     honorableMentionsCards.Add(mostDefuses);
                 }
 
-                string? mostHeadshots = await this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.Headshots, p => p.Kills, 0, false, "Most headshot kills", "HS kills");
+                string? mostHeadshots = await this.getPlayerCardWith(server, playerStatsContent.Keys.ToList(), p => p.Headshots, p => p.Kills, 0, false, "Most headshot kills", "HS kills");
                 if (mostHeadshots != null)
                 {
                     honorableMentionsCards.Add(mostHeadshots);
                 }
 
-                string? highestHSKR = await this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.Kills > 10 ? (double)p.Headshots / p.Kills : 0, p => p.Kills, 1, false, "Highest HS-kill to kill ratio", "HSKR");
+                string? highestHSKR = await this.getPlayerCardWith(server, playerStatsContent.Keys.ToList(), p => p.Kills > 10 ? (double)p.Headshots / p.Kills : 0, p => p.Kills, 1, false, "Highest HS-kill to kill ratio", "HSKR");
                 if (highestHSKR != null)
                 {
                     honorableMentionsCards.Add(highestHSKR);
@@ -654,25 +657,25 @@ public class PavlovStatisticsService : IDisposable
 
                 List<string> dishonorableMentionsCards = new();
 
-                string? mostDeaths = await this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.Deaths, p => p.TotalScore, 0, false, "Most deaths", "Deaths");
+                string? mostDeaths = await this.getPlayerCardWith(server, playerStatsContent.Keys.ToList(), p => p.Deaths, p => p.TotalScore, 0, false, "Most deaths", "Deaths");
                 if (mostDeaths != null)
                 {
                     dishonorableMentionsCards.Add(mostDeaths);
                 }
 
-                string? mostTeamKills = await this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.TeamKills, p => p.Kills, 0, false, "Most teamkills", "Teamkills");
+                string? mostTeamKills = await this.getPlayerCardWith(server, playerStatsContent.Keys.ToList(), p => p.TeamKills, p => p.Kills, 0, false, "Most teamkills", "Teamkills");
                 if (mostTeamKills != null)
                 {
                     dishonorableMentionsCards.Add(mostTeamKills);
                 }
 
-                string? lowestHSKR = await this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.Kills > 10 ? (double)p.Headshots / p.Kills : double.MaxValue, p => p.Kills, 1, true, "Lowest HS-kill to kill ratio", "HSKR");
+                string? lowestHSKR = await this.getPlayerCardWith(server, playerStatsContent.Keys.ToList(), p => p.Kills > 10 ? (double)p.Headshots / p.Kills : double.MaxValue, p => p.Kills, 1, true, "Lowest HS-kill to kill ratio", "HSKR");
                 if (lowestHSKR != null)
                 {
                     dishonorableMentionsCards.Add(lowestHSKR);
                 }
 
-                string? mostSuicides = await this.getPlayerCardWith(playerStatsContent.Keys.ToList(), p => p.Kills > 10 ? p.Suicides : 0, p => p.Kills, 0, false, "Most suicides", "Suicides");
+                string? mostSuicides = await this.getPlayerCardWith(server, playerStatsContent.Keys.ToList(), p => p.Kills > 10 ? p.Suicides : 0, p => p.Kills, 0, false, "Most suicides", "Suicides");
                 if (mostSuicides != null)
                 {
                     dishonorableMentionsCards.Add(mostSuicides);
@@ -730,7 +733,7 @@ public class PavlovStatisticsService : IDisposable
         <a class=""text-reset fw-bold"" href=""https://codefreak.net/"">codefreak.net</a> for <a class=""text-reset fw-bold"" href=""https://bloodisgood.net/"">Blood is Good</a>
       </div>
     </footer>");
-            File.WriteAllText($"stats/{server.ServerId}.html", serverStatsBuilder.ToString());
+            await File.WriteAllTextAsync($"stats/{server.ServerId}.html", serverStatsBuilder.ToString());
         }
 
         Console.WriteLine("Stats written");
@@ -751,7 +754,7 @@ public class PavlovStatisticsService : IDisposable
             {
                 rowCards.AppendLine("<div class=\"row mt-3\">");
             }
-            else if (i % PavlovStatisticsService.CARDS_PER_ROW == 0)
+            else if (i % PavlovStatisticsService.cardsPerRow == 0)
             {
                 rowCards.AppendLine("</div>");
                 rowCards.AppendLine("<div class=\"row mt-3\">");
@@ -765,7 +768,7 @@ public class PavlovStatisticsService : IDisposable
         return rowCards.ToString();
     }
 
-    private async Task<string?> getPlayerCardWith(List<CPlayerStats> playerStats, Func<CPlayerStats, double> selector, Func<CPlayerStats, double> secondSort, int round, bool invert, string title, string statName)
+    private async Task<string?> getPlayerCardWith(PterodactylServerModel server, List<CPlayerStats> playerStats, Func<CPlayerStats, double> selector, Func<CPlayerStats, double> secondSort, int round, bool invert, string title, string statName)
     {
         CPlayerStats? highestValuePlayer = playerStats.OrderByDescending(p => selector(p) * (invert ? -1 : 1)).ThenByDescending(secondSort).FirstOrDefault();
         if (highestValuePlayer == null)
@@ -786,10 +789,10 @@ public class PavlovStatisticsService : IDisposable
 
         double highestValue = selector(highestValuePlayer);
 
-        return this.createStatsCard(null, $"#player-{highestValuePlayer.UniqueId}", false, playerSummary.AvatarFullUrl, title, new Dictionary<string, string>
+        return this.createStatsCard(null, $"stats/{server.ServerId}#player-{highestValuePlayer.UniqueId}", false, playerSummary.AvatarFullUrl, title, new Dictionary<string, string>
         {
             {
-                "Player", $"<a href=\"#player-{highestValuePlayer.UniqueId}\" onclick=\"scrollToId('player-{highestValuePlayer.UniqueId}'); return false;\">{playerSummary.Nickname}</a>"
+                "Player", $"<a href=\"stats/{server.ServerId}#player-{highestValuePlayer.UniqueId}\" onclick=\"scrollToId('player-{highestValuePlayer.UniqueId}'); return false;\">{playerSummary.Nickname}</a>"
             },
             {
                 statName, Math.Round(highestValue == -0 ? 0 : highestValue, round).ToString($"0{(round == 0 ? "" : ".".PadRight(round + 1, '0'))}")
@@ -809,9 +812,9 @@ public class PavlovStatisticsService : IDisposable
         {
             onClick = $"  onclick=\"scrollToId('{link[1..]}'); return false;\"";
         }
-        return @$"<div class=""col""><div class=""card bg-dark h-100"" style=""width: {PavlovStatisticsService.CARD_WIDTH}px"" {(id == null ? "" : $@"id=""{id}""")}>
+        return @$"<div class=""col""><div class=""card bg-dark h-100"" style=""width: {PavlovStatisticsService.cardWidth}px"" {(id == null ? "" : $@"id=""{id}""")}>
                 {(link == null ? "" : $@"<a href=""{link}""{(openInBlank ? " target=\"_blank\"" : "")}{onClick}>")}
-                    <img class=""card-img-top"" src=""{imageURL}"" width=""{PavlovStatisticsService.CARD_WIDTH}"" height=""{PavlovStatisticsService.CARD_WIDTH}"" />
+                    <img class=""card-img-top"" src=""{imageURL}"" width=""{PavlovStatisticsService.cardWidth}"" height=""{PavlovStatisticsService.cardWidth}"" />
                 {(link == null ? "" : "</a>")}
                 <div class=""card-body px-0"">
                     <h5 class=""card-title px-3"">{(link == null ? "" : $@"<a href=""{link}""{(openInBlank ? " target=\"blank\"" : "")}{onClick}>")}{title}{(link == null ? "" : @"</a>")}</h5>
