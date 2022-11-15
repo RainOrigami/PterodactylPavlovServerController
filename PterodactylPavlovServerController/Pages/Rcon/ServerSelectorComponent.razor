@@ -10,22 +10,21 @@
 @inject IDispatcher Dispatcher
 @inject PavlovRconConnectionService Rcon
 @inject IState<PavlovServersState> PavlovServersState
-@inject UserManager<PterodactylPavlovServerControllerUser> UserManager
-@inject IHttpContextAccessor httpContextAccessor
-
-@if (!Rcon.Initialised)
-{
-    <div>Loading...</div>
-    return;
-}
-
-@if (Rcon.GetServer(apiKey, ServerId) is not PavlovRconConnection connection)
-{
-    <div>Server does not exist</div>
-    return;
-}
+@inject ApiKeyService ApiKey
 
 @{
+    if (!Rcon.Initialised)
+    {
+        <div>Loading...</div>
+        return;
+    }
+
+    if (Rcon.GetServer(ApiKey.ApiKey, ServerId) is not PavlovRconConnection connection)
+    {
+        <div>Server does not exist</div>
+        return;
+    }
+
     PterodactylServerModel server = connection.PterodactylServer;
     ServerInfo? serverInfo = connection.ServerInfo;
 }
@@ -39,13 +38,11 @@
     [Parameter]
     [EditorRequired]
     public string ServerId { get; set; } = string.Empty;
-    private string apiKey;
 
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
         Rcon.OnServersUpdated += refresh;
-        apiKey = (await UserManager.GetUserAsync(httpContextAccessor.HttpContext.User)).PterodactylApiKey;
     }
 
     private async void refresh()
@@ -61,7 +58,7 @@
 
     protected override void OnParametersSet()
     {
-        if (Rcon.GetServer(apiKey, ServerId) is not PavlovRconConnection connection)
+        if (Rcon.GetServer(ApiKey.ApiKey, ServerId) is not PavlovRconConnection connection)
         {
             return;
         }

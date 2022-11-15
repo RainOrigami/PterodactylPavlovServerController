@@ -1,9 +1,15 @@
 ﻿@using PterodactylPavlovServerController.Stores
 @using Fluxor
+@using Microsoft.AspNetCore.Identity
+@using PterodactylPavlovServerController.Areas.Identity.Data
+@using PterodactylPavlovServerController.Services
 @inherits Fluxor.Blazor.Web.Components.FluxorLayout
 
 @inject IState<PageTitleState> PageTitleState
 @inject NavigationManager NavigationManager
+@inject UserManager<PterodactylPavlovServerControllerUser> UserManager
+@inject IHttpContextAccessor HttpContextAccessor
+@inject ApiKeyService ApiKey
 
 <CascadingAuthenticationState>
     <AuthorizeView>
@@ -41,9 +47,46 @@
         var user = (await AuthStat).User;
         if (!user.Identity.IsAuthenticated)
         {
-            string returnUrl = Uri.EscapeDataString(NavigationManager.ToBaseRelativePath(NavigationManager.Uri));
-            NavigationManager.NavigateTo($"Identity/Account/Login{(string.IsNullOrEmpty(returnUrl) ? "" : $"?returnUrl={returnUrl}")}");
+            redirectToLogin();
+            return;
         }
 
+        if (HttpContextAccessor.HttpContext == null)
+        {
+            throw new Exception("THE LAST ERROR WITH THIS SHIT");
+        }
+
+        try
+        {
+            // SURELY THERE MUST EXIST A BETTER WAY THAN THIS FUCKING SHIT
+
+            string? userId = UserManager.GetUserId(user);
+
+            if (userId == null)
+            {
+                redirectToLogin();
+                return;
+            }
+
+            PterodactylPavlovServerControllerUser? pterodactylUser = UserManager.Users.FirstOrDefault(u => u.Id == userId);
+
+            if (pterodactylUser == null)
+            {
+                redirectToLogin();
+                return;
+            }
+
+            ApiKey.ApiKey = pterodactylUser.PterodactylApiKey;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+    }
+
+    private void redirectToLogin()
+    {
+        string returnUrl = Uri.EscapeDataString(NavigationManager.ToBaseRelativePath(NavigationManager.Uri));
+        NavigationManager.NavigateTo($"Identity/Account/Login{(string.IsNullOrEmpty(returnUrl) ? "" : $"?returnUrl={returnUrl}")}");
     }
 }

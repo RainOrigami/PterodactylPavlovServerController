@@ -9,7 +9,7 @@ using PterodactylPavlovServerController.Services;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddDbContext<PterodactylPavlovServerControllerContext>();
+builder.Services.AddDbContextFactory<PterodactylPavlovServerControllerContext>();
 
 builder.Services.AddDefaultIdentity<PterodactylPavlovServerControllerUser>()
     .AddEntityFrameworkStores<PterodactylPavlovServerControllerContext>();
@@ -19,6 +19,7 @@ builder.Services.AddServerSideBlazor();
 builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
 
+builder.Services.AddScoped<ApiKeyService>();
 builder.Services.AddScoped<PavlovServerContext>();
 builder.Services.AddScoped<PterodactylContext>();
 builder.Services.AddSingleton<PavlovRconService>();

@@ -15,14 +15,13 @@
 @inject PavlovRconConnectionService Rcon
 @inject PavlovRconService RconService
 @inject IToastService Toast
-@inject UserManager<PterodactylPavlovServerControllerUser> UserManager
-@inject IHttpContextAccessor httpContextAccessor
+@inject ApiKeyService ApiKey
 
 @{
     PavlovRconConnection? connection = null;
     if (ServerId != null)
     {
-        connection = Rcon.GetServer(apiKey, ServerId);
+        connection = Rcon.GetServer(ApiKey.ApiKey, ServerId);
     }
 
     PersistentPavlovPlayer? playerListPlayer = null;
@@ -228,8 +227,6 @@
     [EditorRequired]
     public ulong PlayerId { get; set; }
 
-    private string apiKey;
-
     protected override void OnParametersSet()
     {
         if (!PlayersState.Value.PlayerSummaries.ContainsKey(PlayerId))
@@ -249,7 +246,6 @@
     {
         await base.OnInitializedAsync();
         Rcon.OnServersUpdated += refresh;
-        apiKey = (await UserManager.GetUserAsync(httpContextAccessor.HttpContext.User)).PterodactylApiKey;
     }
 
     private async void refresh()
@@ -271,7 +267,7 @@
             return;
         }
 
-        PavlovRconConnection? connection = Rcon.GetServer(apiKey, ServerId);
+        PavlovRconConnection? connection = Rcon.GetServer(ApiKey.ApiKey, ServerId);
 
         if (connection == null)
         {
@@ -293,14 +289,8 @@
 
         try
         {
-            if (await RconService.SwitchTeam(apiKey, ServerId, playerDetail.UniqueId, playerDetail.TeamId == 0 ? 1 : 0))
-            {
-                Toast.ShowSuccess("Player has been switched!");
-            }
-            else
-            {
-                Toast.ShowError("Server refused to switch player");
-            }
+            await RconService.SwitchTeam(ApiKey.ApiKey, ServerId, playerDetail.UniqueId, playerDetail.TeamId == 0 ? 1 : 0);
+            Toast.ShowSuccess("Player has been switched!");
         }
         catch (Exception ex)
         {
@@ -316,7 +306,7 @@
             return;
         }
 
-        PavlovRconConnection? connection = Rcon.GetServer(apiKey, ServerId);
+        PavlovRconConnection? connection = Rcon.GetServer(ApiKey.ApiKey, ServerId);
         if (connection == null)
         {
             Toast.ShowError("Server must be online to kick a player");
@@ -326,7 +316,7 @@
         try
         {
 
-            if (await RconService.KickPlayer(apiKey, ServerId, PlayerId))
+            if (await RconService.KickPlayer(ApiKey.ApiKey, ServerId, PlayerId))
             {
                 Toast.ShowWarning("Player has been kicked!");
             }
@@ -349,7 +339,7 @@
             return;
         }
 
-        PavlovRconConnection? connection = Rcon.GetServer(apiKey, ServerId);
+        PavlovRconConnection? connection = Rcon.GetServer(ApiKey.ApiKey, ServerId);
         if (connection == null)
         {
             // TODO: not technically true, implement fallback to editing banlist.txt
@@ -359,7 +349,7 @@
 
         try
         {
-            if (await RconService.BanPlayer(apiKey, ServerId, PlayerId))
+            if (await RconService.BanPlayer(ApiKey.ApiKey, ServerId, PlayerId))
             {
                 Toast.ShowWarning("Player has been banned!");
             }
@@ -383,7 +373,7 @@
             return;
         }
 
-        PavlovRconConnection? connection = Rcon.GetServer(apiKey, ServerId);
+        PavlovRconConnection? connection = Rcon.GetServer(ApiKey.ApiKey, ServerId);
         if (connection == null)
         {
             Toast.ShowError("Server must be online to unban a player");
@@ -392,7 +382,7 @@
 
         try
         {
-            if (await RconService.UnbanPlayer(apiKey, ServerId, PlayerId))
+            if (await RconService.UnbanPlayer(ApiKey.ApiKey, ServerId, PlayerId))
             {
                 Toast.ShowSuccess("Player has been unbanned!");
             }

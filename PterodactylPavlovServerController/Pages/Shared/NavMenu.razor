@@ -3,12 +3,12 @@
 @using PterodactylPavlovServerController.Areas.Identity.Data
 @using PterodactylPavlovServerController.Services
 @using PterodactylPavlovServerController.Models
+@using PterodactylPavlovServerController.Stores
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 @inject IDispatcher Dispatcher
 @inject PavlovRconConnectionService Rcon
-@inject UserManager<PterodactylPavlovServerControllerUser> UserManager
-@inject IHttpContextAccessor httpContextAccessor
+@inject ApiKeyService ApiKey
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
@@ -31,7 +31,7 @@
                 <i class="fa-solid fa-terminal pe-2"></i> RCON
             </NavLink>
             <div class="submenu flex-column ms-3">
-                @if (!Rcon.Initialised || apiKey == null)
+                @if (!Rcon.Initialised)
                 {
                     <div class="spinner-border text-info" role="status">
                         <span class="visually-hidden">Loading...</span>
@@ -39,7 +39,7 @@
                 }
                 else
                 {
-                    @foreach (PavlovRconConnection connection in Rcon.GetAllConnections(apiKey).OrderBy(c => c.PterodactylServer.Name))
+                    @foreach (PavlovRconConnection connection in Rcon.GetAllConnections(ApiKey.ApiKey).OrderBy(c => c.PterodactylServer.Name))
                     {
                         <div class="nav-item">
                             <NavLink class="nav-link" style="" href="@($"rcon/{connection.ServerId}")">
@@ -82,13 +82,11 @@
         collapseNavMenu = !collapseNavMenu;
     }
 
-    private string? apiKey;
-
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
+
         Rcon.OnServersUpdated += refresh;
-        apiKey = (await UserManager.GetUserAsync(httpContextAccessor.HttpContext.User)).PterodactylApiKey;
     }
 
     private async void refresh()
