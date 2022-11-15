@@ -1,6 +1,7 @@
 ﻿using PavlovVR_Rcon;
 using PavlovVR_Rcon.Models.Commands;
 using PavlovVR_Rcon.Models.Pavlov;
+using PavlovVR_Rcon.Models.Replies;
 
 namespace PterodactylPavlovServerController.Services;
 
@@ -43,10 +44,10 @@ public class PavlovRconService
         return (await new ServerInfoCommand().ExecuteCommand(await this.openConnection(apiKey, serverId))).ServerInfo;
     }
 
-    public async Task SwitchMap(string apiKey, string serverId, string mapLabel, GameMode gameMode)
+    public async Task<bool> SwitchMap(string apiKey, string serverId, string mapLabel, GameMode gameMode)
     {
         await this.delay();
-        await new SwitchMapCommand(mapLabel, gameMode).ExecuteCommand(await this.openConnection(apiKey, serverId));
+        return (await new SwitchMapCommand(mapLabel, gameMode).ExecuteCommand(await this.openConnection(apiKey, serverId))).SwitchMap;
     }
 
     public async Task RotateMap(string apiKey, string serverId)
@@ -94,28 +95,28 @@ public class PavlovRconService
         return PavlovRconService.pavlovRconConnections[serverId];
     }
 
-    public async Task GiveItem(string apiKey, string serverId, ulong uniqueId, string item)
+    public async Task<bool> GiveItem(string apiKey, string serverId, ulong uniqueId, string item)
     {
         await this.delay();
-        await new GiveItemCommand(uniqueId, item).ExecuteCommand(await this.openConnection(apiKey, serverId));
+        return (await new GiveItemCommand(uniqueId, item).ExecuteCommand(await this.openConnection(apiKey, serverId))).GiveItem;
     }
 
-    public async Task GiveCash(string apiKey, string serverId, ulong uniqueId, int amount)
+    public async Task<bool> GiveCash(string apiKey, string serverId, ulong uniqueId, int amount)
     {
         await this.delay();
-        await new GiveCashCommand(uniqueId, amount).ExecuteCommand(await this.openConnection(apiKey, serverId));
+        return (await new GiveCashCommand(uniqueId, amount).ExecuteCommand(await this.openConnection(apiKey, serverId))).GiveCash;
     }
 
-    public async Task GiveVehicle(string apiKey, string serverId, ulong uniqueId, string vehicle)
+    public async Task<bool> GiveVehicle(string apiKey, string serverId, ulong uniqueId, string vehicle)
     {
         await this.delay();
-        await new GiveVehicleCommand(uniqueId, vehicle).ExecuteCommand(await this.openConnection(apiKey, serverId));
+        return (await new GiveVehicleCommand(uniqueId, vehicle).ExecuteCommand(await this.openConnection(apiKey, serverId))).GiveVehicle;
     }
 
-    public async Task SetSkin(string apiKey, string serverId, ulong uniqueId, string skin)
+    public async Task<bool> SetSkin(string apiKey, string serverId, ulong uniqueId, string skin)
     {
         await this.delay();
-        await new SetPlayerSkinCommand(uniqueId, skin).ExecuteCommand(await this.openConnection(apiKey, serverId));
+        return (await new SetPlayerSkinCommand(uniqueId, skin).ExecuteCommand(await this.openConnection(apiKey, serverId))).SetPlayerSkin;
     }
 
     public async Task Slap(string apiKey, string serverId, ulong uniqueId, int amount)
@@ -124,9 +125,90 @@ public class PavlovRconService
         await new SlapCommand(uniqueId, amount).ExecuteCommand(await this.openConnection(apiKey, serverId));
     }
 
-    public async Task<bool> SwitchTeam(string apiKey, string serverId, ulong uniqueId, int team)
+    public async Task SwitchTeam(string apiKey, string serverId, ulong uniqueId, int team)
     {
         await this.delay();
-        return (await new SwitchTeamCommand(uniqueId, team).ExecuteCommand(await this.openConnection(apiKey, serverId))).Successful;
+        await new SwitchTeamCommand(uniqueId, team).ExecuteCommand(await this.openConnection(apiKey, serverId));
+    }
+
+    public async Task<bool> AddMod(string apiKey, string serverId, ulong uniqueId)
+    {
+        await this.delay();
+        return (await new AddModCommand(uniqueId).ExecuteCommand(await this.openConnection(apiKey, serverId))).AddMod;
+    }
+
+    public async Task<bool> RemoveMod(string apiKey, string serverId, ulong uniqueId)
+    {
+        await this.delay();
+        return (await new RemoveModCommand(uniqueId).ExecuteCommand(await this.openConnection(apiKey, serverId))).RemoveMod;
+    }
+
+    public async Task<bool> GiveTeamCash(string apiKey, string serverId, int teamId, int amount)
+    {
+        await this.delay();
+        return (await new GiveTeamCashCommand(teamId, amount).ExecuteCommand(await this.openConnection(apiKey, serverId))).GiveTeamCash;
+    }
+
+    public async Task<bool> SetLimitedAmmoType(string apiKey, string serverId, int ammoType)
+    {
+        await this.delay();
+        return (await new SetLimitedAmmoTypeCommand((AmmoType)ammoType).ExecuteCommand(await this.openConnection(apiKey, serverId))).SetLimitedAmmoType;
+    }
+
+    public async Task<bool> ResetSND(string apiKey, string serverId)
+    {
+        await this.delay();
+        return (await new ResetSNDCommand().ExecuteCommand(await this.openConnection(apiKey, serverId))).ResetSND;
+    }
+
+    public async Task Shutdown(string apiKey, string serverId)
+    {
+        await this.delay();
+        await new ShutdownCommand().ExecuteCommand(await this.openConnection(apiKey, serverId));
+    }
+
+    public async Task SetPin(string apiKey, string serverId, int? pin)
+    {
+        await this.delay();
+        await new SetPinCommand(pin).ExecuteCommand(await this.openConnection(apiKey, serverId));
+    }
+
+    public async Task<bool> Shownametags(string apiKey, string serverId, bool show)
+    {
+        await this.delay();
+        ShownametagsReply shownametagsReply = await new ShownametagsCommand(show).ExecuteCommand(await this.openConnection(apiKey, serverId));
+        return shownametagsReply.ShowNametags && shownametagsReply.NametagsEnabled == show;
+    }
+
+    public async Task<bool> TTTFlushKarma(string apiKey, string serverId, ulong uniqueId)
+    {
+        await this.delay();
+        return (await new TTTFlushKarmaCommand(uniqueId).ExecuteCommand(await this.openConnection(apiKey, serverId))).TTTFlushKarma;
+    }
+
+    public async Task<bool> TTTSetKarma(string apiKey, string serverId, ulong uniqueId, int amount)
+    {
+        await this.delay();
+        return (await new TTTSetKarmaCommand(uniqueId, amount).ExecuteCommand(await this.openConnection(apiKey, serverId))).TTTSetKarma;
+    }
+
+    public async Task<bool> TTTEndRound(string apiKey, string serverId)
+    {
+        await this.delay();
+        return (await new TTTEndRoundCommand().ExecuteCommand(await this.openConnection(apiKey, serverId))).TTTEndRound;
+    }
+
+    public async Task<(bool success, bool state)> TTTPauseTimer(string apiKey, string serverId)
+    {
+        await this.delay();
+        TTTPauseTimerReply pauseTimerReply = await new TTTPauseTimer().ExecuteCommand(await this.openConnection(apiKey, serverId));
+        return (pauseTimerReply.TTTPauseTimer, pauseTimerReply.TTTPauseState);
+    }
+
+    public async Task<(bool success, bool state)> TTTAlwaysEnableSkinMenu(string apiKey, string serverId)
+    {
+        await this.delay();
+        TTTAlwaysEnableSkinMenuReply alwaysEnableSkinMenuReply = await new TTTAlwaysEnableSkinMenuCommand().ExecuteCommand(await this.openConnection(apiKey, serverId));
+        return (alwaysEnableSkinMenuReply.TTTAlwaysEnableSkinMenu, alwaysEnableSkinMenuReply.TTTSkinMenuState);
     }
 }
