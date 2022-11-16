@@ -1,7 +1,9 @@
 ﻿@using Fluxor
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
 @using PavlovVR_Rcon.Models.Pavlov
 @using PterodactylPavlovServerController.Areas.Identity.Data
+@using PterodactylPavlovServerController.Contexts
 @using PterodactylPavlovServerController.Stores
 @using PterodactylPavlovServerDomain.Models
 @using Steam.Models.SteamCommunity
@@ -16,6 +18,7 @@
 @inject PavlovRconService RconService
 @inject IToastService Toast
 @inject ApiKeyService ApiKey
+@inject IConfiguration Configuration
 
 @{
     PavlovRconConnection? connection = null;
@@ -24,14 +27,14 @@
         connection = Rcon.GetServer(ApiKey.ApiKey, ServerId);
     }
 
-    PersistentPavlovPlayer? playerListPlayer = null;
-    if (connection is { PlayerListPlayers: IReadOnlyDictionary<ulong, PersistentPavlovPlayer> playerListPlayers, })
+    Player? playerListPlayer = null;
+    if (connection is { PlayerListPlayers:  { } playerListPlayers, })
     {
         playerListPlayers.TryGetValue(PlayerId, out playerListPlayer);
     }
 
     PlayerDetail? playerDetail = null;
-    if (connection is { PlayerDetails: IReadOnlyDictionary<ulong, PlayerDetail> playerDetails, })
+    if (connection is { PlayerDetails:  { } playerDetails, })
     {
         playerDetails.TryGetValue(PlayerId, out playerDetail);
     }
@@ -61,6 +64,10 @@
     else if (playerSummary != null)
     {
         playerName = playerSummary.Nickname;
+    }
+    else if (dbPlayer != null)
+    {
+        playerName = dbPlayer.Username;
     }
     else
     {
@@ -115,6 +122,16 @@
                                             <i class="fa-solid fa-handshake-angle"></i>
                                         </div>
                                         <div class="col px-1">@playerDetail.Assists()</div>
+                                    </div>
+                                }
+
+                                @if (ServerId != null && playerListPlayer == null && dbPlayer != null)
+                                {
+                                    <div class="row gx-0">
+                                        <div class="col-auto px-1">
+                                            <i class="fa-solid fa-calendar"></i>
+                                        </div>
+                                        <div class="col px-1">@dbPlayer.LastSeen.ToString("dd.MM.yyyy HH:mm:ss") UTC</div>
                                     </div>
                                 }
 
@@ -220,6 +237,8 @@
 
 @code {
 
+        private const bool seperateConnection = false;
+
     [Parameter]
     public string? ServerId { get; set; } = null;
 
@@ -227,7 +246,9 @@
     [EditorRequired]
     public ulong PlayerId { get; set; }
 
-    protected override void OnParametersSet()
+    private PersistentPavlovPlayer? dbPlayer;
+
+    protected override async Task OnParametersSetAsync()
     {
         if (!PlayersState.Value.PlayerSummaries.ContainsKey(PlayerId))
         {
@@ -239,7 +260,13 @@
             Dispatcher.Dispatch(new PlayersLoadBansAction(PlayerId));
         }
 
-        base.OnParametersSet();
+        if (ServerId != null)
+        {
+            await using PavlovServerContext pavlovServerContext = new(Configuration);
+            dbPlayer = await pavlovServerContext.Players.SingleOrDefaultAsync(p => p.ServerId == ServerId && p.UniqueId == PlayerId);
+        }
+
+        await base.OnParametersSetAsync();
     }
 
     protected override async Task OnInitializedAsync()
@@ -289,7 +316,7 @@
 
         try
         {
-            await RconService.SwitchTeam(ApiKey.ApiKey, ServerId, playerDetail.UniqueId, playerDetail.TeamId == 0 ? 1 : 0);
+            await RconService.SwitchTeam(ApiKey.ApiKey, ServerId, playerDetail.UniqueId, playerDetail.TeamId == 0 ? 1 : 0, seperateConnection);
             Toast.ShowSuccess("Player has been switched!");
         }
         catch (Exception ex)
@@ -316,7 +343,7 @@
         try
         {
 
-            if (await RconService.KickPlayer(ApiKey.ApiKey, ServerId, PlayerId))
+            if (await RconService.KickPlayer(ApiKey.ApiKey, ServerId, PlayerId, seperateConnection))
             {
                 Toast.ShowWarning("Player has been kicked!");
             }
@@ -349,7 +376,7 @@
 
         try
         {
-            if (await RconService.BanPlayer(ApiKey.ApiKey, ServerId, PlayerId))
+            if (await RconService.BanPlayer(ApiKey.ApiKey, ServerId, PlayerId, seperateConnection))
             {
                 Toast.ShowWarning("Player has been banned!");
             }
@@ -382,7 +409,7 @@
 
         try
         {
-            if (await RconService.UnbanPlayer(ApiKey.ApiKey, ServerId, PlayerId))
+            if (await RconService.UnbanPlayer(ApiKey.ApiKey, ServerId, PlayerId, seperateConnection))
             {
                 Toast.ShowSuccess("Player has been unbanned!");
             }

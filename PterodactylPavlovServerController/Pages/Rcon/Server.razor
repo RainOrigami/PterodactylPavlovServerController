@@ -335,7 +335,7 @@
                         @*TODO: PavlovServerContext is sometimes disposed??*@
                         @try
                         {
-                            foreach (PersistentPavlovPlayer player in PavlovServerContext.Players.Where(p => p.ServerId == ServerId).AsEnumerable().Where(p => !(connection?.PlayerListPlayers?.ContainsKey(p.UniqueId) ?? false)).OrderBy(p => (connection?.BanList?.Contains(p.UniqueId) ?? false) ? 1 : 0))
+                            foreach (PersistentPavlovPlayer player in PavlovServerContext.Players.Where(p => p.ServerId == ServerId).AsEnumerable().Where(p => !(connection?.PlayerListPlayers?.ContainsKey(p.UniqueId) ?? false)).OrderBy(p => (connection?.BanList?.Contains(p.UniqueId) ?? false) ? 1 : 0).ThenByDescending(p => p.LastSeen))
                             {
                                 <PlayerCard PlayerId="@player.UniqueId" ServerId="@ServerId" />
                             }
@@ -737,6 +737,8 @@
 
 @code {
 
+    private const bool seperateConnection = false;
+
     [Parameter]
     [EditorRequired]
     public string ServerId { get; set; } = string.Empty;
@@ -812,7 +814,14 @@
         try
         {
             GameMode gameMode = Enum.Parse<GameMode>(serverMap.GameMode);
-            await RconService.SwitchMap(connection.ApiKey, ServerId, serverMap.MapLabel, gameMode);
+            if (await RconService.SwitchMap(connection.ApiKey, ServerId, serverMap.MapLabel, gameMode, seperateConnection))
+            {
+                Toast.ShowSuccess($"Map switching to {(mapDetail == null ? serverMap.MapLabel : mapDetail.Name)} ({serverMap.GameMode})");
+            }
+            else
+            {
+                Toast.ShowError("Server refuses to switch map");
+            }
         }
         catch (Exception e)
         {
@@ -820,7 +829,6 @@
             return;
         }
 
-        Toast.ShowSuccess($"Map switching to {(mapDetail == null ? serverMap.MapLabel : mapDetail.Name)} ({serverMap.GameMode})");
     }
 
     private readonly MapChangeInputModel mapChangeInput = new();
@@ -833,19 +841,27 @@
             return;
         }
 
-        if (await RconService.SwitchMap(ApiKey.ApiKey, ServerId, mapChangeInput.MapLabel, mapChangeInput.GameMode.Value))
+        try
         {
-            string mapName = mapChangeInput.MapLabel;
-            if (mapChangeInput.IsWorkshopMap)
+            if (await RconService.SwitchMap(ApiKey.ApiKey, ServerId, mapChangeInput.MapLabel, mapChangeInput.GameMode.Value, seperateConnection))
             {
-                mapName = SteamWorkshopService.GetMapDetail(mapChangeInput.MapId!.Value).Name;
-            }
+                string mapName = mapChangeInput.MapLabel;
+                if (mapChangeInput.IsWorkshopMap)
+                {
+                    mapName = SteamWorkshopService.GetMapDetail(mapChangeInput.MapId!.Value).Name;
+                }
 
-            Toast.ShowSuccess($"Changing map to {mapName}");
+                Toast.ShowSuccess($"Changing map to {mapName}");
+            }
+            else
+            {
+                Toast.ShowError("Server refused to switch map");
+            }
         }
-        else
+        catch (Exception e)
         {
-            Toast.ShowError("Server refused to switch map");
+            Toast.ShowError(e.Message);
+            return;
         }
     }
 
@@ -862,117 +878,180 @@
 
     private async Task addOrRemoveModSubmitted()
     {
-        if (addOrRemoveMod.Add!.Value)
+        try
         {
-            if (await RconService.AddMod(ApiKey.ApiKey, ServerId, addOrRemoveMod.UniqueId!.Value))
+            if (addOrRemoveMod.Add!.Value)
             {
-                Toast.ShowSuccess("Player is now a moderator");
+                if (await RconService.AddMod(ApiKey.ApiKey, ServerId, addOrRemoveMod.UniqueId!.Value, seperateConnection))
+                {
+                    Toast.ShowSuccess("Player is now a moderator");
+                }
+                else
+                {
+                    Toast.ShowError("Server refused to make player into a moderator");
+                }
             }
             else
             {
-                Toast.ShowError("Server refused to make player into a moderator");
+                if (await RconService.RemoveMod(ApiKey.ApiKey, ServerId, addOrRemoveMod.UniqueId!.Value, seperateConnection))
+                {
+                    Toast.ShowSuccess("Player is no longer a moderator");
+                }
+                else
+                {
+                    Toast.ShowError("Server refused to revoke moderator from player");
+                }
             }
         }
-        else
+        catch (Exception e)
         {
-            if (await RconService.RemoveMod(ApiKey.ApiKey, ServerId, addOrRemoveMod.UniqueId!.Value))
-            {
-                Toast.ShowSuccess("Player is no longer a moderator");
-            }
-            else
-            {
-                Toast.ShowError("Server refused to revoke moderator from player");
-            }
+            Toast.ShowError(e.Message);
         }
     }
 
     private async Task giveCashSubmitted()
     {
-        if (await RconService.GiveCash(ApiKey.ApiKey, ServerId, giveCash.UniqueId!.Value, giveCash.Amount!.Value))
+        try
         {
-            Toast.ShowSuccess("Player received cash", "Player cheat executed");
+            if (await RconService.GiveCash(ApiKey.ApiKey, ServerId, giveCash.UniqueId!.Value, giveCash.Amount!.Value, seperateConnection))
+            {
+                Toast.ShowSuccess("Player received cash", "Player cheat executed");
+            }
+            else
+            {
+                Toast.ShowError("Server refused to give cash", "Player cheat failed");
+            }
         }
-        else
+        catch (Exception e)
         {
-            Toast.ShowError("Server refused to give cash", "Player cheat failed");
+            Toast.ShowError(e.Message);
         }
     }
 
     private async Task giveItemSubmitted()
     {
-        if (await RconService.GiveItem(ApiKey.ApiKey, ServerId, giveItem.UniqueId!.Value, giveItem.Item!.Value.ToString()))
+        try
         {
-            Toast.ShowSuccess("Player received item", "Player cheat executed");
+            if (await RconService.GiveItem(ApiKey.ApiKey, ServerId, giveItem.UniqueId!.Value, giveItem.Item!.Value.ToString(), seperateConnection))
+            {
+                Toast.ShowSuccess("Player received item", "Player cheat executed");
+            }
+            else
+            {
+                Toast.ShowError("Server refused to give item", "Player cheat failed");
+            }
         }
-        else
+        catch (Exception e)
         {
-            Toast.ShowError("Server refused to give item", "Player cheat failed");
+            Toast.ShowError(e.Message);
         }
     }
 
     private async Task giveTeamCashSubmitted()
     {
-        if (await RconService.GiveTeamCash(ApiKey.ApiKey, ServerId, giveTeamCash.TeamId!.Value, giveTeamCash.Amount!.Value))
+        try
         {
-            Toast.ShowSuccess("Team received cash", "Player cheat executed");
+            if (await RconService.GiveTeamCash(ApiKey.ApiKey, ServerId, giveTeamCash.TeamId!.Value, giveTeamCash.Amount!.Value, seperateConnection))
+            {
+                Toast.ShowSuccess("Team received cash", "Player cheat executed");
+            }
+            else
+            {
+                Toast.ShowError("Server refused to give team cash", "Player cheat failed");
+            }
         }
-        else
+        catch (Exception e)
         {
-            Toast.ShowError("Server refused to give team cash", "Player cheat failed");
+            Toast.ShowError(e.Message);
         }
     }
 
     private async Task giveVehicleSubmitted()
     {
-        if (await RconService.GiveVehicle(ApiKey.ApiKey, ServerId, giveVehicle.UniqueId!.Value, giveVehicle.Vehicle!.Value.ToString()))
+        try
         {
-            Toast.ShowSuccess("Player received vehicle", "Player cheat executed");
+            if (await RconService.GiveVehicle(ApiKey.ApiKey, ServerId, giveVehicle.UniqueId!.Value, giveVehicle.Vehicle!.Value.ToString(), seperateConnection))
+            {
+                Toast.ShowSuccess("Player received vehicle", "Player cheat executed");
+            }
+            else
+            {
+                Toast.ShowError("Server refused to give vehicle", "Player cheat failed");
+            }
         }
-        else
+        catch (Exception e)
         {
-            Toast.ShowError("Server refused to give vehicle", "Player cheat failed");
+            Toast.ShowError(e.Message);
         }
     }
 
     private async Task setLimitedAmmoTypeSubmitted()
     {
-        if (await RconService.SetLimitedAmmoType(ApiKey.ApiKey, ServerId, (int)limitedAmmoType.AmmoType!.Value))
+        try
         {
-            Toast.ShowSuccess("Ammo type has been set");
+            if (await RconService.SetLimitedAmmoType(ApiKey.ApiKey, ServerId, (int)limitedAmmoType.AmmoType!.Value, seperateConnection))
+            {
+                Toast.ShowSuccess("Ammo type has been set");
+            }
+            else
+            {
+                Toast.ShowError("Server refused to set ammo type");
+            }
         }
-        else
+        catch (Exception e)
         {
-            Toast.ShowError("Server refused to set ammo type");
+            Toast.ShowError(e.Message);
         }
     }
 
     private async Task setPlayerSkinSubmitted()
     {
-        if (await RconService.SetSkin(ApiKey.ApiKey, ServerId, playerSkin.UniqueId!.Value, playerSkin.Skin!.Value.ToString()))
+        try
         {
-            Toast.ShowSuccess("Player skin has been set", "Player cheat executed");
+            if (await RconService.SetSkin(ApiKey.ApiKey, ServerId, playerSkin.UniqueId!.Value, playerSkin.Skin!.Value.ToString(), seperateConnection))
+            {
+                Toast.ShowSuccess("Player skin has been set", "Player cheat executed");
+            }
+            else
+            {
+                Toast.ShowError("Server refused to set player skin", "Player cheat failed");
+            }
         }
-        else
+        catch (Exception e)
         {
-            Toast.ShowError("Server refused to set player skin", "Player cheat failed");
+            Toast.ShowError(e.Message);
         }
     }
 
     private async Task slapSubmitted()
     {
-        await RconService.GiveItem(ApiKey.ApiKey, ServerId, slap.UniqueId!.Value, slap.Amount!.Value.ToString());
-        Toast.ShowSuccess("Player has been slapped", "Player cheat executed");
+        try
+        {
+            await RconService.Slap(ApiKey.ApiKey, ServerId, slap.UniqueId!.Value, slap.Amount!.Value, seperateConnection);
+            Toast.ShowSuccess("Player has been slapped", "Player cheat executed");
+        }
+        catch (Exception e)
+        {
+            Toast.ShowError(e.Message);
+        }
     }
 
     private async Task resetSndSubmitted()
     {
-        if (await RconService.ResetSND(ApiKey.ApiKey, ServerId))
+        try
         {
-            Toast.ShowSuccess("SND round has been reset");
+            if (await RconService.ResetSND(ApiKey.ApiKey, ServerId, seperateConnection))
+            {
+                Toast.ShowSuccess("SND round has been reset");
+            }
+            else
+            {
+                Toast.ShowError("Server refused to reset SND round");
+            }
         }
-        else
+        catch (Exception e)
         {
-            Toast.ShowError("Server refused to reset SND round");
+            Toast.ShowError(e.Message);
         }
     }
 
@@ -984,56 +1063,84 @@
             return;
         }
 
-        if (this.pin.Set!.Value)
+        try
         {
-            if (!int.TryParse(this.pin.Pin, out int pin))
+            if (this.pin.Set!.Value)
             {
-                Toast.ShowError("The server pin must be numeric");
+                if (!int.TryParse(this.pin.Pin, out int pin))
+                {
+                    Toast.ShowError("The server pin must be numeric");
+                    return;
+                }
+
+                await RconService.SetPin(ApiKey.ApiKey, ServerId, pin, seperateConnection);
+                Toast.ShowSuccess("Pin has been set");
                 return;
             }
 
-            await RconService.SetPin(ApiKey.ApiKey, ServerId, pin);
-            Toast.ShowSuccess("Pin has been set");
-            return;
+            await RconService.SetPin(ApiKey.ApiKey, ServerId, null, seperateConnection);
+            Toast.ShowSuccess("Pin has been removed");
         }
-
-        await RconService.SetPin(ApiKey.ApiKey, ServerId, null);
-        Toast.ShowSuccess("Pin has been removed");
+        catch (Exception e)
+        {
+            Toast.ShowError(e.Message);
+        }
     }
 
     private async Task enableNametags()
     {
-        if (await RconService.Shownametags(ApiKey.ApiKey, ServerId, true))
+        try
         {
-            Toast.ShowSuccess("Nametags have been made visible");
+            if (await RconService.Shownametags(ApiKey.ApiKey, ServerId, true, seperateConnection))
+            {
+                Toast.ShowSuccess("Nametags have been made visible");
+            }
+            else
+            {
+                Toast.ShowError("Server refused make nametags visible");
+            }
         }
-        else
+        catch (Exception e)
         {
-            Toast.ShowError("Server refused make nametags visible");
+            Toast.ShowError(e.Message);
         }
     }
 
     private async Task disableNametags()
     {
-        if (await RconService.Shownametags(ApiKey.ApiKey, ServerId, false))
+        try
         {
-            Toast.ShowSuccess("Nametags have been made invisible");
+            if (await RconService.Shownametags(ApiKey.ApiKey, ServerId, false, seperateConnection))
+            {
+                Toast.ShowSuccess("Nametags have been made invisible");
+            }
+            else
+            {
+                Toast.ShowError("Server refused make nametags invisible");
+            }
         }
-        else
+        catch (Exception e)
         {
-            Toast.ShowError("Server refused make nametags invisible");
+            Toast.ShowError(e.Message);
         }
     }
 
     private async Task tttEndRoundSubmitted()
     {
-        if (await RconService.TTTEndRound(ApiKey.ApiKey, ServerId))
+        try
         {
-            Toast.ShowSuccess("Round has been ended");
+            if (await RconService.TTTEndRound(ApiKey.ApiKey, ServerId, seperateConnection))
+            {
+                Toast.ShowSuccess("Round has been ended");
+            }
+            else
+            {
+                Toast.ShowError("Server refused to end the round");
+            }
         }
-        else
+        catch (Exception e)
         {
-            Toast.ShowError("Server refused to end the round");
+            Toast.ShowError(e.Message);
         }
     }
 
@@ -1046,51 +1153,72 @@
             return;
         }
 
-        if (karma.Set!.Value)
+        try
         {
-            if (await RconService.TTTSetKarma(ApiKey.ApiKey, ServerId, karma.UniqueId!.Value, karma.Amount!.Value))
+            if (karma.Set!.Value)
             {
-                Toast.ShowSuccess("Player karma has been set");
+                if (await RconService.TTTSetKarma(ApiKey.ApiKey, ServerId, karma.UniqueId!.Value, karma.Amount!.Value, seperateConnection))
+                {
+                    Toast.ShowSuccess("Player karma has been set");
+                }
+                else
+                {
+                    Toast.ShowError("Server refused to set player karma");
+                }
+                return;
+            }
+
+            if (await RconService.TTTFlushKarma(ApiKey.ApiKey, ServerId, karma.UniqueId!.Value, seperateConnection))
+            {
+                Toast.ShowSuccess("Player karma has been reset");
             }
             else
             {
-                Toast.ShowError("Server refused to set player karma");
+                Toast.ShowError("Server refused to reset player karma");
             }
-            return;
         }
-
-        if (await RconService.TTTFlushKarma(ApiKey.ApiKey, ServerId, karma.UniqueId!.Value))
+        catch (Exception e)
         {
-            Toast.ShowSuccess("Player karma has been reset");
-        }
-        else
-        {
-            Toast.ShowError("Server refused to reset player karma");
+            Toast.ShowError(e.Message);
         }
     }
 
     private async Task tttToggleTimerSubmitted()
     {
-        (bool success, bool state) = await RconService.TTTPauseTimer(ApiKey.ApiKey, ServerId);
-        if (!success)
+        try
         {
-            Toast.ShowError("Server refused to toggle pause timer");
-        }
+            (bool success, bool state) = await RconService.TTTPauseTimer(ApiKey.ApiKey, ServerId, seperateConnection);
+            if (!success)
+            {
+                Toast.ShowError("Server refused to toggle pause timer");
+            }
 
-        Toast.ShowSuccess(state ? "Timer has been paused" : "Timer has been unpaused");
+            Toast.ShowSuccess(state ? "Timer has been paused" : "Timer has been unpaused");
+        }
+        catch (Exception e)
+        {
+            Toast.ShowError(e.Message);
+        }
     }
 
     private async Task tttToggleSkinMenuSubmitted()
     {
-        (bool success, bool state) = await RconService.TTTAlwaysEnableSkinMenu(ApiKey.ApiKey, ServerId);
-
-        if (!success)
+        try
         {
-            Toast.ShowError("Server refused to toggle skin menu");
-            return;
-        }
+            (bool success, bool state) = await RconService.TTTAlwaysEnableSkinMenu(ApiKey.ApiKey, ServerId, seperateConnection);
 
-        Toast.ShowSuccess(state ? "Skin menu has been enabled" : "Skin menu has been disabled");
+            if (!success)
+            {
+                Toast.ShowError("Server refused to toggle skin menu");
+                return;
+            }
+
+            Toast.ShowSuccess(state ? "Skin menu has been enabled" : "Skin menu has been disabled");
+        }
+        catch (Exception e)
+        {
+            Toast.ShowError(e.Message);
+        }
     }
 
 }

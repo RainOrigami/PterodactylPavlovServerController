@@ -14,6 +14,13 @@
     Dispatcher.Dispatch(new PageTitleSetAction("Home"));
 }
 
-<h1>Hello, @UserManager.GetUserName(httpContextAccessor.HttpContext.User)!</h1>
+@if (httpContextAccessor.HttpContext != null)
+{
+    <h1>Hello, @UserManager.GetUserName(httpContextAccessor.HttpContext.User)!</h1>
+}
+else
+{
+    <h1>Hello!</h1>
+}
 
 Welcome to Pterodactyl Pavlov RCON.

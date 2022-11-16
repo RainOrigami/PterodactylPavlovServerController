@@ -4,6 +4,7 @@
 @using PterodactylPavlovServerController.Services
 @using PterodactylPavlovServerController.Models
 @using PterodactylPavlovServerController.Stores
+@using PterodactylPavlovServerDomain.Extensions
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 @inject IDispatcher Dispatcher
@@ -59,6 +60,10 @@
                                     <i class="fa-regular fa-circle pe-2"></i>
                                 }
                                 @connection.PterodactylServer.Name
+                                @if (connection.Online.HasValue && connection.Online.Value && connection.PlayerListPlayers is { } playerList && connection.ServerInfo is {} serverInfo)
+                                {
+                                    @: (@playerList.Count()&nbsp;/&nbsp;@serverInfo.MaximumPlayerCount())
+                                }
                             </NavLink>
                         </div>
                     }

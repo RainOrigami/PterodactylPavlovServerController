@@ -10,4 +10,6 @@ public class PersistentPavlovPlayer
     public string ServerId { get; set; } = string.Empty;
 
     public string Username { get; set; } = string.Empty;
+
+    public DateTime LastSeen { get; set; } = DateTime.MinValue;
 }

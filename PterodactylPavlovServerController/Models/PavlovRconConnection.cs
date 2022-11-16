@@ -141,12 +141,18 @@ public class PavlovRconConnection : IDisposable
                 {
                     ServerId = this.ServerId,
                     UniqueId = player.UniqueId,
-                    Username = player.Username
+                    Username = player.Username,
+                    LastSeen = DateTime.Now.ToUniversalTime()
                 });
             }
-            else if (dbPlayer.Username != player.Username)
+            else
             {
-                dbPlayer.Username = player.Username;
+                if (dbPlayer.Username != player.Username)
+                {
+                    dbPlayer.Username = player.Username;
+                }
+
+                dbPlayer.LastSeen = DateTime.Now.ToUniversalTime();
             }
         }
 
