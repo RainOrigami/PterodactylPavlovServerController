@@ -10,6 +10,7 @@
 @using PterodactylPavlovServerController.Models
 @using PterodactylPavlovServerController.Pages.Player
 @using PterodactylPavlovServerDomain.Extensions
+@using System.ComponentModel.DataAnnotations
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 @inject IDispatcher Dispatcher
@@ -613,6 +614,24 @@
                             </EditForm>
                         </div>
 
+                        <div class="me-2" style="width: 425px; display: inline-block; vertical-align: top;">
+                            <h3 class="mb-0">Custom command</h3>
+                            <small class="text-muted">
+                                Execute a custom command on the server
+                            </small>
+                            <EditForm Model="@customCommand" OnValidSubmit="@customCommandSubmitted" class="mt-3">
+                                <DataAnnotationsValidator />
+                                <ValidationSummary />
+
+                                <div class="mb-3">
+                                    <InputText @bind-Value="customCommand.Command" class="form-control" />
+                                </div>
+                                <div class="mb-3">
+                                    <button type="submit" class="btn btn-outline-success form-control">Execute</button>
+                                </div>
+                            </EditForm>
+                        </div>
+
 
                         @if (serverInfo.GameMode == GameMode.SND.ToString())
                         {
@@ -737,7 +756,7 @@
 
 @code {
 
-    private const bool seperateConnection = false;
+    private const bool separateConnection = false;
 
     [Parameter]
     [EditorRequired]
@@ -814,7 +833,7 @@
         try
         {
             GameMode gameMode = Enum.Parse<GameMode>(serverMap.GameMode);
-            if (await RconService.SwitchMap(connection.ApiKey, ServerId, serverMap.MapLabel, gameMode, seperateConnection))
+            if (await RconService.SwitchMap(connection.ApiKey, ServerId, serverMap.MapLabel, gameMode, separateConnection))
             {
                 Toast.ShowSuccess($"Map switching to {(mapDetail == null ? serverMap.MapLabel : mapDetail.Name)} ({serverMap.GameMode})");
             }
@@ -843,7 +862,7 @@
 
         try
         {
-            if (await RconService.SwitchMap(ApiKey.ApiKey, ServerId, mapChangeInput.MapLabel, mapChangeInput.GameMode.Value, seperateConnection))
+            if (await RconService.SwitchMap(ApiKey.ApiKey, ServerId, mapChangeInput.MapLabel, mapChangeInput.GameMode.Value, separateConnection))
             {
                 string mapName = mapChangeInput.MapLabel;
                 if (mapChangeInput.IsWorkshopMap)
@@ -875,6 +894,7 @@
     private readonly SlapModel slap = new();
     private readonly SetPinModel pin = new();
     private readonly TTTKarmaModel karma = new();
+    private readonly CustomCommandModel customCommand = new();
 
     private async Task addOrRemoveModSubmitted()
     {
@@ -882,7 +902,7 @@
         {
             if (addOrRemoveMod.Add!.Value)
             {
-                if (await RconService.AddMod(ApiKey.ApiKey, ServerId, addOrRemoveMod.UniqueId!.Value, seperateConnection))
+                if (await RconService.AddMod(ApiKey.ApiKey, ServerId, addOrRemoveMod.UniqueId!.Value, separateConnection))
                 {
                     Toast.ShowSuccess("Player is now a moderator");
                 }
@@ -893,7 +913,7 @@
             }
             else
             {
-                if (await RconService.RemoveMod(ApiKey.ApiKey, ServerId, addOrRemoveMod.UniqueId!.Value, seperateConnection))
+                if (await RconService.RemoveMod(ApiKey.ApiKey, ServerId, addOrRemoveMod.UniqueId!.Value, separateConnection))
                 {
                     Toast.ShowSuccess("Player is no longer a moderator");
                 }
@@ -913,7 +933,7 @@
     {
         try
         {
-            if (await RconService.GiveCash(ApiKey.ApiKey, ServerId, giveCash.UniqueId!.Value, giveCash.Amount!.Value, seperateConnection))
+            if (await RconService.GiveCash(ApiKey.ApiKey, ServerId, giveCash.UniqueId!.Value, giveCash.Amount!.Value, separateConnection))
             {
                 Toast.ShowSuccess("Player received cash", "Player cheat executed");
             }
@@ -932,7 +952,7 @@
     {
         try
         {
-            if (await RconService.GiveItem(ApiKey.ApiKey, ServerId, giveItem.UniqueId!.Value, giveItem.Item!.Value.ToString(), seperateConnection))
+            if (await RconService.GiveItem(ApiKey.ApiKey, ServerId, giveItem.UniqueId!.Value, giveItem.Item!.Value.ToString(), separateConnection))
             {
                 Toast.ShowSuccess("Player received item", "Player cheat executed");
             }
@@ -951,7 +971,7 @@
     {
         try
         {
-            if (await RconService.GiveTeamCash(ApiKey.ApiKey, ServerId, giveTeamCash.TeamId!.Value, giveTeamCash.Amount!.Value, seperateConnection))
+            if (await RconService.GiveTeamCash(ApiKey.ApiKey, ServerId, giveTeamCash.TeamId!.Value, giveTeamCash.Amount!.Value, separateConnection))
             {
                 Toast.ShowSuccess("Team received cash", "Player cheat executed");
             }
@@ -970,7 +990,7 @@
     {
         try
         {
-            if (await RconService.GiveVehicle(ApiKey.ApiKey, ServerId, giveVehicle.UniqueId!.Value, giveVehicle.Vehicle!.Value.ToString(), seperateConnection))
+            if (await RconService.GiveVehicle(ApiKey.ApiKey, ServerId, giveVehicle.UniqueId!.Value, giveVehicle.Vehicle!.Value.ToString(), separateConnection))
             {
                 Toast.ShowSuccess("Player received vehicle", "Player cheat executed");
             }
@@ -989,7 +1009,7 @@
     {
         try
         {
-            if (await RconService.SetLimitedAmmoType(ApiKey.ApiKey, ServerId, (int)limitedAmmoType.AmmoType!.Value, seperateConnection))
+            if (await RconService.SetLimitedAmmoType(ApiKey.ApiKey, ServerId, (int)limitedAmmoType.AmmoType!.Value, separateConnection))
             {
                 Toast.ShowSuccess("Ammo type has been set");
             }
@@ -1008,7 +1028,7 @@
     {
         try
         {
-            if (await RconService.SetSkin(ApiKey.ApiKey, ServerId, playerSkin.UniqueId!.Value, playerSkin.Skin!.Value.ToString(), seperateConnection))
+            if (await RconService.SetSkin(ApiKey.ApiKey, ServerId, playerSkin.UniqueId!.Value, playerSkin.Skin!.Value.ToString(), separateConnection))
             {
                 Toast.ShowSuccess("Player skin has been set", "Player cheat executed");
             }
@@ -1027,7 +1047,7 @@
     {
         try
         {
-            await RconService.Slap(ApiKey.ApiKey, ServerId, slap.UniqueId!.Value, slap.Amount!.Value, seperateConnection);
+            await RconService.Slap(ApiKey.ApiKey, ServerId, slap.UniqueId!.Value, slap.Amount!.Value, separateConnection);
             Toast.ShowSuccess("Player has been slapped", "Player cheat executed");
         }
         catch (Exception e)
@@ -1040,7 +1060,7 @@
     {
         try
         {
-            if (await RconService.ResetSND(ApiKey.ApiKey, ServerId, seperateConnection))
+            if (await RconService.ResetSND(ApiKey.ApiKey, ServerId, separateConnection))
             {
                 Toast.ShowSuccess("SND round has been reset");
             }
@@ -1073,12 +1093,12 @@
                     return;
                 }
 
-                await RconService.SetPin(ApiKey.ApiKey, ServerId, pin, seperateConnection);
+                await RconService.SetPin(ApiKey.ApiKey, ServerId, pin, separateConnection);
                 Toast.ShowSuccess("Pin has been set");
                 return;
             }
 
-            await RconService.SetPin(ApiKey.ApiKey, ServerId, null, seperateConnection);
+            await RconService.SetPin(ApiKey.ApiKey, ServerId, null, separateConnection);
             Toast.ShowSuccess("Pin has been removed");
         }
         catch (Exception e)
@@ -1091,7 +1111,7 @@
     {
         try
         {
-            if (await RconService.Shownametags(ApiKey.ApiKey, ServerId, true, seperateConnection))
+            if (await RconService.Shownametags(ApiKey.ApiKey, ServerId, true, separateConnection))
             {
                 Toast.ShowSuccess("Nametags have been made visible");
             }
@@ -1110,7 +1130,7 @@
     {
         try
         {
-            if (await RconService.Shownametags(ApiKey.ApiKey, ServerId, false, seperateConnection))
+            if (await RconService.Shownametags(ApiKey.ApiKey, ServerId, false, separateConnection))
             {
                 Toast.ShowSuccess("Nametags have been made invisible");
             }
@@ -1129,7 +1149,7 @@
     {
         try
         {
-            if (await RconService.TTTEndRound(ApiKey.ApiKey, ServerId, seperateConnection))
+            if (await RconService.TTTEndRound(ApiKey.ApiKey, ServerId, separateConnection))
             {
                 Toast.ShowSuccess("Round has been ended");
             }
@@ -1157,7 +1177,7 @@
         {
             if (karma.Set!.Value)
             {
-                if (await RconService.TTTSetKarma(ApiKey.ApiKey, ServerId, karma.UniqueId!.Value, karma.Amount!.Value, seperateConnection))
+                if (await RconService.TTTSetKarma(ApiKey.ApiKey, ServerId, karma.UniqueId!.Value, karma.Amount!.Value, separateConnection))
                 {
                     Toast.ShowSuccess("Player karma has been set");
                 }
@@ -1168,7 +1188,7 @@
                 return;
             }
 
-            if (await RconService.TTTFlushKarma(ApiKey.ApiKey, ServerId, karma.UniqueId!.Value, seperateConnection))
+            if (await RconService.TTTFlushKarma(ApiKey.ApiKey, ServerId, karma.UniqueId!.Value, separateConnection))
             {
                 Toast.ShowSuccess("Player karma has been reset");
             }
@@ -1187,7 +1207,7 @@
     {
         try
         {
-            (bool success, bool state) = await RconService.TTTPauseTimer(ApiKey.ApiKey, ServerId, seperateConnection);
+            (bool success, bool state) = await RconService.TTTPauseTimer(ApiKey.ApiKey, ServerId, separateConnection);
             if (!success)
             {
                 Toast.ShowError("Server refused to toggle pause timer");
@@ -1205,7 +1225,7 @@
     {
         try
         {
-            (bool success, bool state) = await RconService.TTTAlwaysEnableSkinMenu(ApiKey.ApiKey, ServerId, seperateConnection);
+            (bool success, bool state) = await RconService.TTTAlwaysEnableSkinMenu(ApiKey.ApiKey, ServerId, separateConnection);
 
             if (!success)
             {
@@ -1214,6 +1234,18 @@
             }
 
             Toast.ShowSuccess(state ? "Skin menu has been enabled" : "Skin menu has been disabled");
+        }
+        catch (Exception e)
+        {
+            Toast.ShowError(e.Message);
+        }
+    }
+
+    private async Task customCommandSubmitted()
+    {
+        try
+        {
+            Toast.ShowSuccess(await RconService.CustomCommand(ApiKey.ApiKey, ServerId, customCommand.Command, Server.separateConnection));
         }
         catch (Exception e)
         {

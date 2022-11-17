@@ -29,14 +29,14 @@ public class PavlovRconService
         this.lastCommand = DateTime.Now;
     }
 
-    private async Task<T> execute<T>(Func<PavlovRcon, Task<T>> action, string apiKey, string serverId, bool seperateConnection)
+    private async Task<T> execute<T>(Func<PavlovRcon, Task<T>> action, string apiKey, string serverId, bool separateConnectionion)
     {
         if (!this.commandRuning.ContainsKey(serverId))
         {
             this.commandRuning.Add(serverId, false);
         }
 
-        while (!seperateConnection && this.commandRuning[serverId])
+        while (!separateConnectionion && this.commandRuning[serverId])
         {
             Console.WriteLine($"Command running for server {serverId}, delaying");
             await Task.Delay(50);
@@ -44,7 +44,7 @@ public class PavlovRconService
 
         await this.delay();
 
-        if (!seperateConnection)
+        if (!separateConnectionion)
         {
             this.commandRuning[serverId] = true;
         }
@@ -52,9 +52,9 @@ public class PavlovRconService
         T result;
         try
         {
-            PavlovRcon rcon = await openConnection(apiKey, serverId, seperateConnection);
+            PavlovRcon rcon = await openConnection(apiKey, serverId, separateConnectionion);
             result = await action(rcon);
-            if (seperateConnection)
+            if (separateConnectionion)
             {
                 try
                 {
@@ -65,7 +65,7 @@ public class PavlovRconService
         }
         catch
         {
-            if (!seperateConnection)
+            if (!separateConnectionion)
             {
                 this.commandRuning[serverId] = false;
             }
@@ -73,7 +73,7 @@ public class PavlovRconService
             throw;
         }
 
-        if (!seperateConnection)
+        if (!separateConnectionion)
         {
             this.commandRuning[serverId] = false;
         }
@@ -81,27 +81,27 @@ public class PavlovRconService
         return result;
     }
 
-    public async Task<Player[]> GetActivePlayers(string apiKey, string serverId, bool seperateConnect = false)
+    public async Task<Player[]> GetActivePlayers(string apiKey, string serverId, bool separateConnection = false)
     {
-        return await execute(async (rcon) => (await new RefreshListCommand().ExecuteCommand(rcon)).PlayerList, apiKey, serverId, seperateConnect);
+        return await execute(async (rcon) => (await new RefreshListCommand().ExecuteCommand(rcon)).PlayerList, apiKey, serverId, separateConnection);
     }
 
-    public async Task<PlayerDetail> GetActivePlayerDetail(string apiKey, string serverId, ulong uniqueId, bool seperateConnect = false)
+    public async Task<PlayerDetail> GetActivePlayerDetail(string apiKey, string serverId, ulong uniqueId, bool separateConnection = false)
     {
-        return await execute(async (rcon) => (await new InspectPlayerCommand(uniqueId).ExecuteCommand(rcon)).PlayerInfo, apiKey, serverId, seperateConnect);
+        return await execute(async (rcon) => (await new InspectPlayerCommand(uniqueId).ExecuteCommand(rcon)).PlayerInfo, apiKey, serverId, separateConnection);
 
     }
 
-    public async Task<ServerInfo> GetServerInfo(string apiKey, string serverId, bool seperateConnect = false)
+    public async Task<ServerInfo> GetServerInfo(string apiKey, string serverId, bool separateConnection = false)
     {
-        return await execute(async (rcon) => (await new ServerInfoCommand().ExecuteCommand(rcon)).ServerInfo, apiKey, serverId, seperateConnect);
+        return await execute(async (rcon) => (await new ServerInfoCommand().ExecuteCommand(rcon)).ServerInfo, apiKey, serverId, separateConnection);
     }
 
-    public async Task<bool> SwitchMap(string apiKey, string serverId, string mapLabel, GameMode gameMode, bool seperateConnect = false)
+    public async Task<bool> SwitchMap(string apiKey, string serverId, string mapLabel, GameMode gameMode, bool separateConnection = false)
     {
         try
         {
-            return await execute(async (rcon) => (await new SwitchMapCommand(mapLabel, gameMode).ExecuteCommand(rcon)).SwitchMap, apiKey, serverId, seperateConnect);
+            return await execute(async (rcon) => (await new SwitchMapCommand(mapLabel, gameMode).ExecuteCommand(rcon)).SwitchMap, apiKey, serverId, separateConnection);
         }
         catch (CommandFailedException ex)
         {
@@ -114,16 +114,16 @@ public class PavlovRconService
         }
     }
 
-    public async Task RotateMap(string apiKey, string serverId, bool seperateConnect = false)
+    public async Task RotateMap(string apiKey, string serverId, bool separateConnection = false)
     {
-        await execute(async (rcon) => await new RotateMapCommand().ExecuteCommand(rcon), apiKey, serverId, seperateConnect);
+        await execute(async (rcon) => await new RotateMapCommand().ExecuteCommand(rcon), apiKey, serverId, separateConnection);
     }
 
-    public async Task<bool> KickPlayer(string apiKey, string serverId, ulong uniqueId, bool seperateConnect = false)
+    public async Task<bool> KickPlayer(string apiKey, string serverId, ulong uniqueId, bool separateConnection = false)
     {
         try
         {
-            return await execute(async (rcon) => (await new KickCommand(uniqueId).ExecuteCommand(rcon)).Kick, apiKey, serverId, seperateConnect);
+            return await execute(async (rcon) => (await new KickCommand(uniqueId).ExecuteCommand(rcon)).Kick, apiKey, serverId, separateConnection);
         }
         catch (CommandFailedException ex)
         {
@@ -136,11 +136,11 @@ public class PavlovRconService
         }
     }
 
-    public async Task<bool> BanPlayer(string apiKey, string serverId, ulong uniqueId, bool seperateConnect = false)
+    public async Task<bool> BanPlayer(string apiKey, string serverId, ulong uniqueId, bool separateConnection = false)
     {
         try
         {
-            return await execute(async (rcon) => (await new BanCommand(uniqueId).ExecuteCommand(rcon)).Ban, apiKey, serverId, seperateConnect);
+            return await execute(async (rcon) => (await new BanCommand(uniqueId).ExecuteCommand(rcon)).Ban, apiKey, serverId, separateConnection);
         }
         catch (CommandFailedException ex)
         {
@@ -153,11 +153,11 @@ public class PavlovRconService
         }
     }
 
-    public async Task<bool> UnbanPlayer(string apiKey, string serverId, ulong uniqueId, bool seperateConnect = false)
+    public async Task<bool> UnbanPlayer(string apiKey, string serverId, ulong uniqueId, bool separateConnection = false)
     {
         try
         {
-            return await execute(async (rcon) => (await new UnbanCommand(uniqueId).ExecuteCommand(rcon)).Unban, apiKey, serverId, seperateConnect);
+            return await execute(async (rcon) => (await new UnbanCommand(uniqueId).ExecuteCommand(rcon)).Unban, apiKey, serverId, separateConnection);
         }
         catch (CommandFailedException ex)
         {
@@ -170,14 +170,14 @@ public class PavlovRconService
         }
     }
 
-    public async Task<ulong[]> Banlist(string apiKey, string serverId, bool seperateConnect = false)
+    public async Task<ulong[]> Banlist(string apiKey, string serverId, bool separateConnection = false)
     {
-        return await execute(async (rcon) => (await new BanListCommand().ExecuteCommand(rcon)).BanList, apiKey, serverId, seperateConnect);
+        return await execute(async (rcon) => (await new BanListCommand().ExecuteCommand(rcon)).BanList, apiKey, serverId, separateConnection);
     }
 
-    private async Task<PavlovRcon> openConnection(string apiKey, string serverId, bool seperateConnection)
+    private async Task<PavlovRcon> openConnection(string apiKey, string serverId, bool separateConnectionion)
     {
-        if (seperateConnection)
+        if (separateConnectionion)
         {
             PavlovRcon rcon = new PavlovRcon(this.pterodactylService.GetHost(apiKey, serverId), int.Parse(this.pterodactylService.GetStartupVariable(apiKey, serverId, "RCON_PORT")), this.pterodactylService.GetStartupVariable(apiKey, serverId, "RCON_PASSWORD"), true);
             await rcon.Connect(new CancellationTokenSource(2000).Token);
@@ -197,11 +197,11 @@ public class PavlovRconService
         return PavlovRconService.pavlovRconConnections[serverId];
     }
 
-    public async Task<bool> GiveItem(string apiKey, string serverId, ulong uniqueId, string item, bool seperateConnect = false)
+    public async Task<bool> GiveItem(string apiKey, string serverId, ulong uniqueId, string item, bool separateConnection = false)
     {
         try
         {
-            return await execute(async (rcon) => (await new GiveItemCommand(uniqueId, item).ExecuteCommand(rcon)).GiveItem, apiKey, serverId, seperateConnect);
+            return await execute(async (rcon) => (await new GiveItemCommand(uniqueId, item).ExecuteCommand(rcon)).GiveItem, apiKey, serverId, separateConnection);
         }
         catch (CommandFailedException ex)
         {
@@ -214,11 +214,11 @@ public class PavlovRconService
         }
     }
 
-    public async Task<bool> GiveCash(string apiKey, string serverId, ulong uniqueId, int amount, bool seperateConnect = false)
+    public async Task<bool> GiveCash(string apiKey, string serverId, ulong uniqueId, int amount, bool separateConnection = false)
     {
         try
         {
-            return await execute(async (rcon) => (await new GiveCashCommand(uniqueId, amount).ExecuteCommand(rcon)).GiveCash, apiKey, serverId, seperateConnect);
+            return await execute(async (rcon) => (await new GiveCashCommand(uniqueId, amount).ExecuteCommand(rcon)).GiveCash, apiKey, serverId, separateConnection);
         }
         catch (CommandFailedException ex)
         {
@@ -231,11 +231,11 @@ public class PavlovRconService
         }
     }
 
-    public async Task<bool> GiveVehicle(string apiKey, string serverId, ulong uniqueId, string vehicle, bool seperateConnect = false)
+    public async Task<bool> GiveVehicle(string apiKey, string serverId, ulong uniqueId, string vehicle, bool separateConnection = false)
     {
         try
         {
-            return await execute(async (rcon) => (await new GiveVehicleCommand(uniqueId, vehicle).ExecuteCommand(rcon)).GiveVehicle, apiKey, serverId, seperateConnect);
+            return await execute(async (rcon) => (await new GiveVehicleCommand(uniqueId, vehicle).ExecuteCommand(rcon)).GiveVehicle, apiKey, serverId, separateConnection);
         }
         catch (CommandFailedException ex)
         {
@@ -248,11 +248,11 @@ public class PavlovRconService
         }
     }
 
-    public async Task<bool> SetSkin(string apiKey, string serverId, ulong uniqueId, string skin, bool seperateConnect = false)
+    public async Task<bool> SetSkin(string apiKey, string serverId, ulong uniqueId, string skin, bool separateConnection = false)
     {
         try
         {
-            return await execute(async (rcon) => (await new SetPlayerSkinCommand(uniqueId, skin).ExecuteCommand(rcon)).SetPlayerSkin, apiKey, serverId, seperateConnect);
+            return await execute(async (rcon) => (await new SetPlayerSkinCommand(uniqueId, skin).ExecuteCommand(rcon)).SetPlayerSkin, apiKey, serverId, separateConnection);
         }
         catch (CommandFailedException ex)
         {
@@ -265,21 +265,21 @@ public class PavlovRconService
         }
     }
 
-    public async Task Slap(string apiKey, string serverId, ulong uniqueId, int amount, bool seperateConnect = false)
+    public async Task Slap(string apiKey, string serverId, ulong uniqueId, int amount, bool separateConnection = false)
     {
-        await execute(async (rcon) => await new SlapCommand(uniqueId, amount).ExecuteCommand(rcon), apiKey, serverId, seperateConnect);
+        await execute(async (rcon) => await new SlapCommand(uniqueId, amount).ExecuteCommand(rcon), apiKey, serverId, separateConnection);
     }
 
-    public async Task SwitchTeam(string apiKey, string serverId, ulong uniqueId, int team, bool seperateConnect = false)
+    public async Task SwitchTeam(string apiKey, string serverId, ulong uniqueId, int team, bool separateConnection = false)
     {
-        await execute(async (rcon) => await new SwitchTeamCommand(uniqueId, team).ExecuteCommand(rcon), apiKey, serverId, seperateConnect);
+        await execute(async (rcon) => await new SwitchTeamCommand(uniqueId, team).ExecuteCommand(rcon), apiKey, serverId, separateConnection);
     }
 
-    public async Task<bool> AddMod(string apiKey, string serverId, ulong uniqueId, bool seperateConnect = false)
+    public async Task<bool> AddMod(string apiKey, string serverId, ulong uniqueId, bool separateConnection = false)
     {
         try
         {
-            return await execute(async (rcon) => (await new AddModCommand(uniqueId).ExecuteCommand(rcon)).AddMod, apiKey, serverId, seperateConnect);
+            return await execute(async (rcon) => (await new AddModCommand(uniqueId).ExecuteCommand(rcon)).AddMod, apiKey, serverId, separateConnection);
 
         }
         catch (CommandFailedException ex)
@@ -293,11 +293,11 @@ public class PavlovRconService
         }
     }
 
-    public async Task<bool> RemoveMod(string apiKey, string serverId, ulong uniqueId, bool seperateConnect = false)
+    public async Task<bool> RemoveMod(string apiKey, string serverId, ulong uniqueId, bool separateConnection = false)
     {
         try
         {
-            return await execute(async (rcon) => (await new RemoveModCommand(uniqueId).ExecuteCommand(rcon)).RemoveMod, apiKey, serverId, seperateConnect);
+            return await execute(async (rcon) => (await new RemoveModCommand(uniqueId).ExecuteCommand(rcon)).RemoveMod, apiKey, serverId, separateConnection);
         }
         catch (CommandFailedException ex)
         {
@@ -310,11 +310,11 @@ public class PavlovRconService
         }
     }
 
-    public async Task<bool> GiveTeamCash(string apiKey, string serverId, int teamId, int amount, bool seperateConnect = false)
+    public async Task<bool> GiveTeamCash(string apiKey, string serverId, int teamId, int amount, bool separateConnection = false)
     {
         try
         {
-            return await execute(async (rcon) => (await new GiveTeamCashCommand(teamId, amount).ExecuteCommand(rcon)).GiveTeamCash, apiKey, serverId, seperateConnect);
+            return await execute(async (rcon) => (await new GiveTeamCashCommand(teamId, amount).ExecuteCommand(rcon)).GiveTeamCash, apiKey, serverId, separateConnection);
         }
         catch (CommandFailedException ex)
         {
@@ -327,11 +327,11 @@ public class PavlovRconService
         }
     }
 
-    public async Task<bool> SetLimitedAmmoType(string apiKey, string serverId, int ammoType, bool seperateConnect = false)
+    public async Task<bool> SetLimitedAmmoType(string apiKey, string serverId, int ammoType, bool separateConnection = false)
     {
         try
         {
-            return await execute(async (rcon) => (await new SetLimitedAmmoTypeCommand((AmmoType)ammoType).ExecuteCommand(rcon)).SetLimitedAmmoType, apiKey, serverId, seperateConnect);
+            return await execute(async (rcon) => (await new SetLimitedAmmoTypeCommand((AmmoType)ammoType).ExecuteCommand(rcon)).SetLimitedAmmoType, apiKey, serverId, separateConnection);
         }
         catch (CommandFailedException ex)
         {
@@ -344,11 +344,11 @@ public class PavlovRconService
         }
     }
 
-    public async Task<bool> ResetSND(string apiKey, string serverId, bool seperateConnect = false)
+    public async Task<bool> ResetSND(string apiKey, string serverId, bool separateConnection = false)
     {
         try
         {
-            return await execute(async (rcon) => (await new ResetSNDCommand().ExecuteCommand(rcon)).ResetSND, apiKey, serverId, seperateConnect);
+            return await execute(async (rcon) => (await new ResetSNDCommand().ExecuteCommand(rcon)).ResetSND, apiKey, serverId, separateConnection);
         }
         catch (CommandFailedException ex)
         {
@@ -361,12 +361,12 @@ public class PavlovRconService
         }
     }
 
-    public async Task SetPin(string apiKey, string serverId, int? pin, bool seperateConnect = false)
+    public async Task SetPin(string apiKey, string serverId, int? pin, bool separateConnection = false)
     {
-        await execute(async (rcon) => await new SetPinCommand(pin).ExecuteCommand(rcon), apiKey, serverId, seperateConnect);
+        await execute(async (rcon) => await new SetPinCommand(pin).ExecuteCommand(rcon), apiKey, serverId, separateConnection);
     }
 
-    public async Task<bool> Shownametags(string apiKey, string serverId, bool show, bool seperateConnect = false)
+    public async Task<bool> Shownametags(string apiKey, string serverId, bool show, bool separateConnection = false)
     {
         try
         {
@@ -374,7 +374,7 @@ public class PavlovRconService
             {
                 ShownametagsReply shownametagsReply = await new ShownametagsCommand(show).ExecuteCommand(rcon);
                 return shownametagsReply.ShowNametags && shownametagsReply.NametagsEnabled == show;
-            }, apiKey, serverId, seperateConnect);
+            }, apiKey, serverId, separateConnection);
         }
         catch (CommandFailedException ex)
         {
@@ -387,11 +387,11 @@ public class PavlovRconService
         }
     }
 
-    public async Task<bool> TTTFlushKarma(string apiKey, string serverId, ulong uniqueId, bool seperateConnect = false)
+    public async Task<bool> TTTFlushKarma(string apiKey, string serverId, ulong uniqueId, bool separateConnection = false)
     {
         try
         {
-            return await execute(async (rcon) => (await new TTTFlushKarmaCommand(uniqueId).ExecuteCommand(rcon)).TTTFlushKarma, apiKey, serverId, seperateConnect);
+            return await execute(async (rcon) => (await new TTTFlushKarmaCommand(uniqueId).ExecuteCommand(rcon)).TTTFlushKarma, apiKey, serverId, separateConnection);
         }
         catch (CommandFailedException ex)
         {
@@ -404,11 +404,11 @@ public class PavlovRconService
         }
     }
 
-    public async Task<bool> TTTSetKarma(string apiKey, string serverId, ulong uniqueId, int amount, bool seperateConnect = false)
+    public async Task<bool> TTTSetKarma(string apiKey, string serverId, ulong uniqueId, int amount, bool separateConnection = false)
     {
         try
         {
-            return await execute(async (rcon) => (await new TTTSetKarmaCommand(uniqueId, amount).ExecuteCommand(rcon)).TTTSetKarma, apiKey, serverId, seperateConnect);
+            return await execute(async (rcon) => (await new TTTSetKarmaCommand(uniqueId, amount).ExecuteCommand(rcon)).TTTSetKarma, apiKey, serverId, separateConnection);
         }
         catch (CommandFailedException ex)
         {
@@ -421,11 +421,11 @@ public class PavlovRconService
         }
     }
 
-    public async Task<bool> TTTEndRound(string apiKey, string serverId, bool seperateConnect = false)
+    public async Task<bool> TTTEndRound(string apiKey, string serverId, bool separateConnection = false)
     {
         try
         {
-            return await execute(async (rcon) => (await new TTTEndRoundCommand().ExecuteCommand(rcon)).TTTEndRound, apiKey, serverId, seperateConnect);
+            return await execute(async (rcon) => (await new TTTEndRoundCommand().ExecuteCommand(rcon)).TTTEndRound, apiKey, serverId, separateConnection);
         }
         catch (CommandFailedException ex)
         {
@@ -438,7 +438,7 @@ public class PavlovRconService
         }
     }
 
-    public async Task<(bool success, bool state)> TTTPauseTimer(string apiKey, string serverId, bool seperateConnect = false)
+    public async Task<(bool success, bool state)> TTTPauseTimer(string apiKey, string serverId, bool separateConnection = false)
     {
         try
         {
@@ -446,7 +446,7 @@ public class PavlovRconService
             {
                 TTTPauseTimerReply pauseTimerReply = await new TTTPauseTimerCommand().ExecuteCommand(rcon);
                 return (pauseTimerReply.TTTPauseTimer, pauseTimerReply.TTTPauseState);
-            }, apiKey, serverId, seperateConnect);
+            }, apiKey, serverId, separateConnection);
         }
         catch (CommandFailedException ex)
         {
@@ -459,7 +459,7 @@ public class PavlovRconService
         }
     }
 
-    public async Task<(bool success, bool state)> TTTAlwaysEnableSkinMenu(string apiKey, string serverId, bool seperateConnect = false)
+    public async Task<(bool success, bool state)> TTTAlwaysEnableSkinMenu(string apiKey, string serverId, bool separateConnection = false)
     {
         try
         {
@@ -467,7 +467,7 @@ public class PavlovRconService
             {
                 TTTAlwaysEnableSkinMenuReply alwaysEnableSkinMenuReply = await new TTTAlwaysEnableSkinMenuCommand().ExecuteCommand(rcon);
                 return (alwaysEnableSkinMenuReply.TTTAlwaysEnableSkinMenu, alwaysEnableSkinMenuReply.TTTSkinMenuState);
-            }, apiKey, serverId, seperateConnect);
+            }, apiKey, serverId, separateConnection);
         }
         catch (CommandFailedException ex)
         {
@@ -478,5 +478,23 @@ public class PavlovRconService
 
             throw;
         }
+    }
+
+    public async Task<string> CustomCommand(string apiKey, string serverId, string customCommand, bool separateConnection = false)
+    {
+        string command;
+        string[]? parameters = null;
+        if (customCommand.Contains(' '))
+        {
+            string[] commandParts = customCommand.Split(' ');
+            command = commandParts[0];
+            parameters = commandParts[1..];
+        }
+        else
+        {
+            command = customCommand;
+        }
+
+        return await execute(async (rcon) => await rcon.SendTextCommand(customCommand, parameters), apiKey, serverId, separateConnection);
     }
 }
