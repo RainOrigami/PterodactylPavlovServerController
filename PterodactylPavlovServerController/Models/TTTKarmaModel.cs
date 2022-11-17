@@ -2,7 +2,7 @@
 
 namespace PterodactylPavlovServerController.Models;
 
-public class TTTKarma
+public class TTTKarmaModel
 {
     [Required]
     public ulong? UniqueId { get; set; }
