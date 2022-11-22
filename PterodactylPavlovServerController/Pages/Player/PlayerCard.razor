@@ -28,13 +28,13 @@
     }
 
     Player? playerListPlayer = null;
-    if (connection is { PlayerListPlayers:  { } playerListPlayers, })
+    if (connection is { PlayerListPlayers: { } playerListPlayers, })
     {
         playerListPlayers.TryGetValue(PlayerId, out playerListPlayer);
     }
 
     PlayerDetail? playerDetail = null;
-    if (connection is { PlayerDetails:  { } playerDetails, })
+    if (connection is { PlayerDetails: { } playerDetails, })
     {
         playerDetails.TryGetValue(PlayerId, out playerDetail);
     }
@@ -237,7 +237,7 @@
 
 @code {
 
-        private const bool seperateConnection = false;
+    private const bool seperateConnection = false;
 
     [Parameter]
     public string? ServerId { get; set; } = null;
