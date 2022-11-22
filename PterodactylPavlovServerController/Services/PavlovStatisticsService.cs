@@ -127,6 +127,36 @@ public class PavlovStatisticsService : IDisposable
         {
             "vanas", "FAMAS F1"
         },
+        {
+            "ar9", "AR9"
+        },
+        {
+            "kross", "Vector"
+        },
+        {
+            "vzz", "VSS"
+        },
+        {
+            "mosin", "Mosin-Nagant"
+        },
+        {
+            "runover", "Vehicular manslaughter"
+        },
+        {
+            "trenchgun", "Winchester M97"
+        },
+        {
+            "galul", "Galil"
+        },
+        {
+            "kar98", "Kar98K"
+        },
+        {
+            "sks", "SKS"
+        },
+        {
+            "snowball", "Snowball"
+        }
     };
 
     private static readonly Regex fileNameDateTimeRegex = new(@"(?<date>\d{4}\.\d{2}\.\d{2}-\d{2}\.\d{2}\.\d{2})", RegexOptions.Compiled);
