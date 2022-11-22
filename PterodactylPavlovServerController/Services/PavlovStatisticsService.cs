@@ -457,10 +457,10 @@ public class PavlovStatisticsService : IDisposable
 
             foreach (CGunStats gunStats in gunsStats.OrderByDescending(g => g.Kills))
             {
-                string gunName = PavlovStatisticsService.gunMap.ContainsKey(gunStats.Name) ? PavlovStatisticsService.gunMap[gunStats.Name] : $"{gunStats.Name}(?)";
+                string gunName = getCorrectGunKey(gunStats.Name) is { } gunKey ? PavlovStatisticsService.gunMap[gunKey] : $"{gunStats.Name}(?)";
                 string? bestPlayerUsername = gunStats.BestPlayer == null ? null : await this.steamService.GetUsername(gunStats.BestPlayer.Value);
 
-                gunCards.Add(this.createStatsCard($"gun-{gunStats.Name}", "http://wiki.pavlov-vr.com/index.php?title=Weapons", true, $"https://pavlov.bloodisgood.net/gunimages/{(PavlovStatisticsService.gunMap.ContainsKey(gunStats.Name) ? gunStats.Name : "unknown")}.png", gunName, new Dictionary<string, string>
+                gunCards.Add(this.createStatsCard($"gun-{gunStats.Name}", "http://wiki.pavlov-vr.com/index.php?title=Weapons", true, $"https://pavlov.bloodisgood.net/gunimages/{(getCorrectGunKey(gunStats.Name) is { } weaponStatsGunKey ? weaponStatsGunKey : "unknown")}.png", gunName, new Dictionary<string, string>
                 {
                     {
                         "Kills", $"{gunStats.Kills} ({Math.Round(this.calculateSafePercent(gunStats.Kills, serverStats.TotalKills), 1)}%)"
@@ -510,7 +510,7 @@ public class PavlovStatisticsService : IDisposable
                         "Best player", $"{(teamStats.BestPlayer == null ? "Nobody" : $@"<a href=""stats/{server.ServerId}#player-{teamStats.BestPlayer}"" onclick=""scrollToId('player-{teamStats.BestPlayer}'); return false;"">{bestPlayerUsername}</a><br />{Math.Round(teamStats.BestPlayerAverageScore, 0)} avg score")}"
                     },
                     {
-                        "Best gun", $"{(teamStats.BestGun == null ? "None" : $@"<a href=""stats/{server.ServerId}#gun-{teamStats.BestGun}"" onclick=""scrollToId('gun-{teamStats.BestGun}'); return false;"">{(PavlovStatisticsService.gunMap.ContainsKey(teamStats.BestGun) ? PavlovStatisticsService.gunMap[teamStats.BestGun] : teamStats.BestGun)}</a> ({teamStats.BestGunKillCount} kills)")}"
+                        "Best gun", $"{(teamStats.BestGun == null ? "None" : $@"<a href=""stats/{server.ServerId}#gun-{teamStats.BestGun}"" onclick=""scrollToId('gun-{teamStats.BestGun}'); return false;"">{(getCorrectGunKey(teamStats.BestGun) is { } gunKey ? PavlovStatisticsService.gunMap[gunKey] : teamStats.BestGun)}</a> ({teamStats.BestGunKillCount} kills)")}"
                     },
                 }));
             }
@@ -607,7 +607,7 @@ public class PavlovStatisticsService : IDisposable
                                     "Rounds played", $"{playerStats.RoundsPlayed}"
                                 },
                                 {
-                                    "Best gun", $"{(playerStats.MostKillsWithGun == null ? "None" : $@"<a href=""stats/{server.ServerId}#gun-{playerStats.MostKillsWithGun}"" onclick=""scrollToId('gun-{playerStats.MostKillsWithGun}'); return false;"">{(PavlovStatisticsService.gunMap.ContainsKey(playerStats.MostKillsWithGun) ? PavlovStatisticsService.gunMap[playerStats.MostKillsWithGun] : playerStats.MostKillsWithGun)}</a><br />{playerStats.MostKillsWithGunAmount} kills ({Math.Round(this.calculateSafePercent(playerStats.MostKillsWithGunAmount, playerStats.Kills), 1)}%<a href=""stats/{server.ServerId}#asterix-own-kills"" onclick=""scrollToId('asterix-own-kills'); return false;"">*</a>)")}"
+                                    "Best gun", $"{(playerStats.MostKillsWithGun == null ? "None" : $@"<a href=""stats/{server.ServerId}#gun-{playerStats.MostKillsWithGun}"" onclick=""scrollToId('gun-{playerStats.MostKillsWithGun}'); return false;"">{(getCorrectGunKey(playerStats.MostKillsWithGun) is {} gunKey ? PavlovStatisticsService.gunMap[gunKey] : playerStats.MostKillsWithGun)}</a><br />{playerStats.MostKillsWithGunAmount} kills ({Math.Round(this.calculateSafePercent(playerStats.MostKillsWithGunAmount, playerStats.Kills), 1)}%<a href=""stats/{server.ServerId}#asterix-own-kills"" onclick=""scrollToId('asterix-own-kills'); return false;"">*</a>)")}"
                                 },
                                 {
                                     "Best map", $"{(playerStats.BestMap == null ? "None" : $@"<a href=""stats/{server.ServerId}#map-{playerStats.BestMap}-{playerStats.BestMapGameMode}"" onclick=""scrollToId('map-{playerStats.BestMap}-{playerStats.BestMapGameMode}'); return false;"">{bestMap!.Name}</a><br />{Math.Round(playerStats.BestMapAverageScore, 0)} avg score")}"
@@ -856,6 +856,11 @@ public class PavlovStatisticsService : IDisposable
                     </p>
                 </div>
             </div></div>";
+    }
+
+    private string? getCorrectGunKey(string gunName)
+    {
+        return PavlovStatisticsService.gunMap.Keys.FirstOrDefault(k => string.Equals(k, gunName, StringComparison.CurrentCultureIgnoreCase));
     }
 
     private async Task statsReader()
