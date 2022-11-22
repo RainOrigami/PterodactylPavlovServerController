@@ -57,13 +57,13 @@
     }
 
     string playerName;
-    if (playerListPlayer != null)
-    {
-        playerName = playerListPlayer.Username;
-    }
-    else if (playerSummary != null)
+    if (playerSummary != null)
     {
         playerName = playerSummary.Nickname;
+    }
+    else if (playerListPlayer != null)
+    {
+        playerName = playerListPlayer.Username;
     }
     else if (dbPlayer != null)
     {
