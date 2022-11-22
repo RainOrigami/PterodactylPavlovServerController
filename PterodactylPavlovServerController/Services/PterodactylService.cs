@@ -20,7 +20,6 @@ public class PterodactylService
         this.configuration = configuration;
         this.httpContextAccessor = httpContextAccessor;
         this.restClient = new RestClient($"{configuration["pterodactyl_baseurl"]}/api/");
-        //restClient.AddDefaultHeader("Authorization", $"Bearer {configuration["pterodactyl_bearertoken"]}");
     }
 
     public async Task<string> ReadFile(string apiKey, string serverId, string path)
@@ -175,4 +174,6 @@ public class PterodactylService
     {
         return JsonConvert.DeserializeObject<PterodactylFile[]>(new JsonArray(JsonDocument.Parse(this.executeRestRequest(apiKey, $"client/servers/{serverId}/files/list?directory={directory}").Content!).RootElement.GetProperty("data").EnumerateArray().Where(o => o.GetProperty("object").GetString() == "file_object" && o.GetProperty("attributes").GetProperty("is_file").GetBoolean()).ToArray().Select(e => JsonNode.Parse(e.GetProperty("attributes").ToString())!).ToArray()).ToString())!;
     }
+
+
 }
