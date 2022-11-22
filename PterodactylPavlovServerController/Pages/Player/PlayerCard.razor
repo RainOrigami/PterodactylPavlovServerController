@@ -201,11 +201,14 @@
                                 {
                                     if (playerDetail != null)
                                     {
-                                        <div class="row pb-1">
-                                            <div class="col">
-                                                <a class="btn btn-outline-success" style="width: 120px;" href="#" @onclick="switchTeam" @onclick:preventDefault>Switch team</a>
+                                        if (connection.ServerInfo is { Teams: true })
+                                        {
+                                            <div class="row pb-1">
+                                                <div class="col">
+                                                    <a class="btn btn-outline-success" style="width: 120px;" href="#" @onclick="switchTeam" @onclick:preventDefault>Switch team</a>
+                                                </div>
                                             </div>
-                                        </div>
+                                        }
                                         <div class="row pb-1">
                                             <div class="col">
                                                 <a class="btn btn-outline-warning" style="width: 120px;" href="#" @onclick="kick" @onclick:preventDefault>Kick</a>
