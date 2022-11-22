@@ -53,7 +53,7 @@ public class PterodactylService
                     throw new Exception($"Could not download large file: {httpResponse.StatusCode}: {httpResponse.Content!}");
                 }
 
-                return readFileResponse.Content!;
+                return await httpResponse.Content.ReadAsStringAsync();
             }
         }
         catch (Exception e)
@@ -88,7 +88,7 @@ public class PterodactylService
                 throw new Exception($"Could not download large file: {httpResponse.StatusCode}: {httpResponse.Content!}");
             }
 
-            content = readFileResponse.Content!;
+            content = await httpResponse.Content.ReadAsStringAsync();
         }
 
         RestRequest deleteFileRequest = new($"client/servers/{serverId}/files/delete", Method.Post);
