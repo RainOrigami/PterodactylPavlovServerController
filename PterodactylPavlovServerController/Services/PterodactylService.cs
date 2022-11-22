@@ -74,7 +74,7 @@ public class PterodactylService
             throw new Exception($"Could not download file: {copyFileResponse.StatusCode}: {copyFileResponse.Content}");
         }
 
-        string newFileName = $"{Path.GetDirectoryName(path)}/{Path.GetFileNameWithoutExtension(path)} copy{Path.GetExtension(path)}";
+        string newFileName = new Uri($"file://{Path.GetDirectoryName(path)}/{Path.GetFileNameWithoutExtension(path)} copy{Path.GetExtension(path)}").LocalPath;
 
         downloadUrl = this.DownloadFileUrl(apiKey, serverId, newFileName);
 
@@ -94,7 +94,7 @@ public class PterodactylService
         RestRequest deleteFileRequest = new($"client/servers/{serverId}/files/delete", Method.Post);
         deleteFileRequest.AddHeader("Content-Type", "application/json");
 
-        RestResponse deleteFileResponse = this.executeRestRequest(apiKey, deleteFileRequest, $"{{ \"root\": \"{Path.GetDirectoryName(newFileName)}\",\"files\": [ \"{Path.GetFileName(newFileName)}\" ] }}");
+        RestResponse deleteFileResponse = this.executeRestRequest(apiKey, deleteFileRequest, $"{{ \"root\": \"{new Uri($"file://{Path.GetDirectoryName(newFileName)}").LocalPath}\",\"files\": [ \"{Path.GetFileName(newFileName)}\" ] }}");
 
         if (!deleteFileResponse.IsSuccessStatusCode)
         {
