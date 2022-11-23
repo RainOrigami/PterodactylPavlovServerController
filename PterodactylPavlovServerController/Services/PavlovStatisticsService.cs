@@ -699,7 +699,7 @@ public class PavlovStatisticsService : IDisposable
                             }
                             else
                             {
-                                playerStatsContent.Add(playerStats, this.createStatsCard($"player-{playerStats.UniqueId}", playerSummary.ProfileUrl, true, playerSummary.AvatarFullUrl, playerSummary.Nickname, new Dictionary<string, string>
+                                playerStatsContent.Add(playerStats, this.createStatsCard($"player-{playerStats.UniqueId}", playerSummary.ProfileUrl, true, playerSummary.AvatarFullUrl, $"{playerSummary.Nickname}{(string.IsNullOrEmpty(playerSummary.CountryCode) ? "" : $"<img src=\"https://countryflagsapi.com/png/{playerSummary.CountryCode}\" alt=\"{playerSummary.CountryCode}\" height=\"16\" class=\"ms-2\"/>")}", new Dictionary<string, string>
                                 {
                                     {
                                         "K/D ratio", $"{Math.Round((double) playerStats.Kills / playerStats.Deaths, 1):0.0}"

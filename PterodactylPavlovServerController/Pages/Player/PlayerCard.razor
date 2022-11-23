@@ -85,7 +85,13 @@
         <div class="col">
             <div class="card-body">
                 <a href="@profileUrl" class="text-decoration-none" target="_blank">
-                    <h5 class="card-title">@playerName</h5>
+                    <h5 class="card-title">
+                        @playerName
+                        @if (playerSummary != null && !string.IsNullOrEmpty(playerSummary.CountryCode))
+                        {
+                            <img src="https://countryflagsapi.com/png/@playerSummary.CountryCode" alt="@playerSummary.CountryCode" height="16" class="ms-2"/>
+                        }
+                    </h5>
                 </a>
                 <p class="card-text">
                     <div class="container px-0">
