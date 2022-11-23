@@ -495,6 +495,6 @@ public class PavlovRconService
             command = customCommand;
         }
 
-        return await execute(async (rcon) => await rcon.SendTextCommand(customCommand, parameters), apiKey, serverId, separateConnection);
+        return await execute(async (rcon) => await rcon.SendTextCommand(command, parameters), apiKey, serverId, separateConnection);
     }
 }
