@@ -665,11 +665,9 @@ public class PavlovStatisticsService : IDisposable
                             bestMap = this.steamWorkshopService.GetMapDetail(long.Parse(playerStats.BestMap[3..]));
                         }
 
-                        lock (playerStatsContent)
+                        if (serverStatMode?.Value == "SND")
                         {
-                            if (serverStatMode?.Value == "SND")
-                            {
-                                playerStatsContent.Add(playerStats, this.createStatsCard($"player-{playerStats.UniqueId}", playerSummary.ProfileUrl, true, playerSummary.AvatarFullUrl, playerSummary.Nickname, new Dictionary<string, string>
+                            playerStatsContent.Add(playerStats, this.createStatsCard($"player-{playerStats.UniqueId}", playerSummary.ProfileUrl, true, playerSummary.AvatarFullUrl, playerSummary.Nickname, new Dictionary<string, string>
                                 {
                                     {
                                         "K/D ratio", $"{Math.Round((double) playerStats.Kills / playerStats.Deaths, 1):0.0}"
@@ -714,10 +712,48 @@ public class PavlovStatisticsService : IDisposable
                                         "VAC", $"{(vacCount > 0 ? $@"<span class=""text-danger"">Yes, {vacCount}" : @"<span class=""text-success"">No")}</span>"
                                     },
                                 }));
-                            }
-                            else
+                        }
+                        else if (serverStatMode?.Value == "EFP")
+                        {
+                            int cash = 0;
+                            try
                             {
-                                playerStatsContent.Add(playerStats, this.createStatsCard($"player-{playerStats.UniqueId}", playerSummary.ProfileUrl, true, playerSummary.AvatarFullUrl, $"{playerSummary.Nickname}{(string.IsNullOrEmpty(playerSummary.CountryCode) ? "" : $"<img src=\"https://countryflagsapi.com/png/{playerSummary.CountryCode}\" alt=\"{playerSummary.CountryCode}\" height=\"16\" class=\"ms-2\"/>")}", new Dictionary<string, string>
+                                int.TryParse(await pterodactylService.ReadFile(this.configuration["pterodactyl_stats_apikey"], server.ServerId, $"/Pavlov/Saved/Config/ModSave/{playerStats.UniqueId}.txt"), out cash);
+                            }
+                            catch { }
+                            playerStats.TotalScore = cash;
+
+                            playerStatsContent.Add(playerStats, this.createStatsCard($"player-{playerStats.UniqueId}", playerSummary.ProfileUrl, true, playerSummary.AvatarFullUrl, $"{playerSummary.Nickname}{(string.IsNullOrEmpty(playerSummary.CountryCode) ? "" : $"<img src=\"https://countryflagsapi.com/png/{playerSummary.CountryCode}\" alt=\"{playerSummary.CountryCode}\" height=\"16\" class=\"ms-2\"/>")}", new Dictionary<string, string>
+                                {
+                                    {
+                                        "Cash", $"${cash}"
+                                    },
+                                    {
+                                        "K/D ratio", $"{Math.Round((double) playerStats.Kills / playerStats.Deaths, 1):0.0}"
+                                    },
+                                    {
+                                        "Kills", $"{playerStats.Kills} ({Math.Round(this.calculateSafePercent(playerStats.Kills, totalKills), 1)}%)"
+                                    },
+                                    {
+                                        "Deaths", $"{playerStats.Deaths} ({Math.Round(this.calculateSafePercent(playerStats.Deaths, totalDeaths), 1)}%)"
+                                    },
+                                    {
+                                        "HS kills", $"{playerStats.Headshots} ({Math.Round(this.calculateSafePercent(playerStats.Headshots, playerStats.Kills), 1)}%<a href=\"stats/{server.ServerId}#asterix-own-kills\" onclick=\"scrollToId('asterix-own-kills'); return false;\">*</a>)"
+                                    },
+                                    {
+                                        "Suicides", playerStats.Suicides.ToString()
+                                    },
+                                    {
+                                        "Best gun", $"{(playerStats.MostKillsWithGun == null ? "None" : $@"<a href=""stats/{server.ServerId}#gun-{playerStats.MostKillsWithGun}"" onclick=""scrollToId('gun-{playerStats.MostKillsWithGun}'); return false;"">{(getCorrectGunKey(playerStats.MostKillsWithGun) is {} gunKey ? PavlovStatisticsService.gunMap[gunKey] : playerStats.MostKillsWithGun)}</a><br />{playerStats.MostKillsWithGunAmount} kills ({Math.Round(this.calculateSafePercent(playerStats.MostKillsWithGunAmount, playerStats.Kills), 1)}%<a href=""stats/{server.ServerId}#asterix-own-kills"" onclick=""scrollToId('asterix-own-kills'); return false;"">*</a>)")}"
+                                    },
+                                    {
+                                        "VAC", $"{(vacCount > 0 ? $@"<span class=""text-danger"">Yes, {vacCount}" : @"<span class=""text-success"">No")}</span>"
+                                    },
+                                }));
+                        }
+                        else
+                        {
+                            playerStatsContent.Add(playerStats, this.createStatsCard($"player-{playerStats.UniqueId}", playerSummary.ProfileUrl, true, playerSummary.AvatarFullUrl, $"{playerSummary.Nickname}{(string.IsNullOrEmpty(playerSummary.CountryCode) ? "" : $"<img src=\"https://countryflagsapi.com/png/{playerSummary.CountryCode}\" alt=\"{playerSummary.CountryCode}\" height=\"16\" class=\"ms-2\"/>")}", new Dictionary<string, string>
                                 {
                                     {
                                         "K/D ratio", $"{Math.Round((double) playerStats.Kills / playerStats.Deaths, 1):0.0}"
@@ -741,9 +777,9 @@ public class PavlovStatisticsService : IDisposable
                                         "VAC", $"{(vacCount > 0 ? $@"<span class=""text-danger"">Yes, {vacCount}" : @"<span class=""text-success"">No")}</span>"
                                     },
                                 }));
-                            }
                         }
                     }
+
                 }
 
                 serverStatsBuilder.AppendLine(@"<h4>Honorable mentions</h3>
