@@ -156,6 +156,24 @@ public class PavlovStatisticsService : IDisposable
         },
         {
             "snowball", "Snowball"
+        },
+        {
+            "stg44", "Sturmgewehr 44"
+        },
+        {
+            "m1garand", "M1 Garand"
+        },
+        {
+            "ppsh", "PPSh-41"
+        },
+        {
+            "webley", "Webley Mk. VI"
+        },
+        {
+            "mp40", "GSG-MP40"
+        },
+        {
+            "minedeath", "Mine"
         }
     };
 
