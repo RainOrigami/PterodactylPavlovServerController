@@ -68,7 +68,7 @@ public class SteamService
             SteamUser user = this.factory.CreateSteamWebInterface<SteamUser>();
             ISteamWebResponse<PlayerSummaryModel> response = await user.GetPlayerSummaryAsync(steamId);
 
-            if (response.Data is null)
+            if (response is null || response.Data is null)
             {
                 throw new SteamException();
             }

@@ -66,7 +66,7 @@ public class PlayersEffects
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex.Message);
+            Console.WriteLine($"Could not load player summary of {playersLoadSummaryAction.PlayerId}: {ex.Message}");
         }
 
         await Task.CompletedTask;

@@ -164,74 +164,107 @@ public class StatsCalculator
 
     public CPlayerStats[] CalculatePlayerStats(string serverId)
     {
-        PlayerStats[] pstats = this.statsContext.EndOfMapStats.Where(m => m.ServerId == serverId && m.PlayerCount >= 2 && m.Team0Score + m.Team1Score >= 10).SelectMany(m => m.PlayerStats).ToArray();
-
+        Setting? serverStatMode = this.statsContext.Settings.FirstOrDefault(s => s.Name == "Stat Type" && s.ServerId == serverId);
         List<CPlayerStats> playerStats = new();
 
-        pstats.GroupBy(p => p.UniqueId).AsParallel().ForAll(pgrp =>
+        if (serverStatMode?.Value == "SND")
         {
-            using StatsContext statsContext = new(this.configuration);
-            IGrouping<ulong, PlayerStats> playerGrouping = statsContext.EndOfMapStats.Where(m => m.ServerId == serverId && m.PlayerCount >= 2 && m.Team0Score + m.Team1Score >= 10).SelectMany(m => m.PlayerStats).Where(p => p.UniqueId == pgrp.Key).AsEnumerable().GroupBy(p => p.UniqueId).First();
-            int kills = playerGrouping.Sum(p => p.Stats.FirstOrDefault(s => s.StatType == "Kill")?.Amount ?? 0);
-            int deaths = playerGrouping.Sum(p => p.Stats.FirstOrDefault(s => s.StatType == "Death")?.Amount ?? 0);
-            int assists = playerGrouping.Sum(p => p.Stats.FirstOrDefault(s => s.StatType == "Assist")?.Amount ?? 0);
-            int teamKills = playerGrouping.Sum(p => p.Stats.FirstOrDefault(s => s.StatType == "TeamKill")?.Amount ?? 0);
-            int headshots = playerGrouping.Sum(p => p.Stats.FirstOrDefault(s => s.StatType == "Headshot")?.Amount ?? 0);
-            int bombsPlanted = playerGrouping.Sum(p => p.Stats.FirstOrDefault(s => s.StatType == "BombPlanted")?.Amount ?? 0);
-            int bombsDefused = playerGrouping.Sum(p => p.Stats.FirstOrDefault(s => s.StatType == "BombDefused")?.Amount ?? 0);
-            int totalScore = playerGrouping.Sum(this.calculatePlayerScore);
-            double averageScore = playerGrouping.Average(this.calculatePlayerScore);
-            int roundsPlayed = playerGrouping.Count();
+            PlayerStats[] pstats = this.statsContext.EndOfMapStats.Where(m => m.ServerId == serverId && m.PlayerCount >= 2 && m.Team0Score + m.Team1Score >= 10).SelectMany(m => m.PlayerStats).ToArray();
 
-            int suicides = statsContext.KillData.Count(k => k.Killer == playerGrouping.Key && (k.KilledBy == "None" || k.KilledBy == "killvolume"));
+            pstats.GroupBy(p => p.UniqueId).AsParallel().ForAll(pgrp =>
+            {
+                using StatsContext statsContext = new(this.configuration);
+                IGrouping<ulong, PlayerStats> playerGrouping = statsContext.EndOfMapStats.Where(m => m.ServerId == serverId && m.PlayerCount >= 2 && m.Team0Score + m.Team1Score >= 10).SelectMany(m => m.PlayerStats).Where(p => p.UniqueId == pgrp.Key).AsEnumerable().GroupBy(p => p.UniqueId).First();
+                int kills = playerGrouping.Sum(p => p.Stats.FirstOrDefault(s => s.StatType == "Kill")?.Amount ?? 0);
+                int deaths = playerGrouping.Sum(p => p.Stats.FirstOrDefault(s => s.StatType == "Death")?.Amount ?? 0);
+                int assists = playerGrouping.Sum(p => p.Stats.FirstOrDefault(s => s.StatType == "Assist")?.Amount ?? 0);
+                int teamKills = playerGrouping.Sum(p => p.Stats.FirstOrDefault(s => s.StatType == "TeamKill")?.Amount ?? 0);
+                int headshots = playerGrouping.Sum(p => p.Stats.FirstOrDefault(s => s.StatType == "Headshot")?.Amount ?? 0);
+                int bombsPlanted = playerGrouping.Sum(p => p.Stats.FirstOrDefault(s => s.StatType == "BombPlanted")?.Amount ?? 0);
+                int bombsDefused = playerGrouping.Sum(p => p.Stats.FirstOrDefault(s => s.StatType == "BombDefused")?.Amount ?? 0);
+                int totalScore = playerGrouping.Sum(this.calculatePlayerScore);
+                double averageScore = playerGrouping.Average(this.calculatePlayerScore);
+                int roundsPlayed = playerGrouping.Count();
 
-            var playerKillsGroup = statsContext.KillData.Where(d => d.Killer == playerGrouping.Key).GroupBy(k => k.KilledBy).Select(g => new
-            {
-                Gun = g.Key,
-                Count = g.Count(),
-            }).OrderByDescending(g => g.Count).FirstOrDefault();
-            string? mostKillsWith = playerKillsGroup?.Gun;
-            int mostKillsWithAmount = playerKillsGroup?.Count ?? 0;
+                int suicides = statsContext.KillData.Count(k => k.Killer == playerGrouping.Key && (k.KilledBy == "None" || k.KilledBy == "killvolume"));
 
-            var playerMapAverageScoreGroup = playerGrouping.Select(g => g.EndOfMapStats).GroupBy(m => new
-            {
-                Map = m.MapLabel,
-                m.GameMode,
-            }).Select(g => new
-            {
-                g.Key.Map,
-                g.Key.GameMode,
-                AverageScore = g.Average(m => this.calculatePlayerScore(m.PlayerStats.First(p => p.UniqueId == playerGrouping.Key))),
-            }).MaxBy(g => g.AverageScore);
-            string? bestMap = playerMapAverageScoreGroup?.Map;
-            string? bestMapGameMode = playerMapAverageScoreGroup?.GameMode;
-            double bestMapAverageScore = playerMapAverageScoreGroup?.AverageScore ?? 0;
+                var playerKillsGroup = statsContext.KillData.Where(d => d.Killer == playerGrouping.Key).GroupBy(k => k.KilledBy).Select(g => new
+                {
+                    Gun = g.Key,
+                    Count = g.Count(),
+                }).OrderByDescending(g => g.Count).FirstOrDefault();
+                string? mostKillsWith = playerKillsGroup?.Gun;
+                int mostKillsWithAmount = playerKillsGroup?.Count ?? 0;
 
-            lock (playerStats)
+                var playerMapAverageScoreGroup = playerGrouping.Select(g => g.EndOfMapStats).GroupBy(m => new
+                {
+                    Map = m.MapLabel,
+                    m.GameMode,
+                }).Select(g => new
+                {
+                    g.Key.Map,
+                    g.Key.GameMode,
+                    AverageScore = g.Average(m => this.calculatePlayerScore(m.PlayerStats.First(p => p.UniqueId == playerGrouping.Key))),
+                }).MaxBy(g => g.AverageScore);
+                string? bestMap = playerMapAverageScoreGroup?.Map;
+                string? bestMapGameMode = playerMapAverageScoreGroup?.GameMode;
+                double bestMapAverageScore = playerMapAverageScoreGroup?.AverageScore ?? 0;
+
+                lock (playerStats)
+                {
+                    playerStats.Add(new CPlayerStats
+                    {
+                        UniqueId = playerGrouping.Key,
+                        PlayerName = playerGrouping.First().PlayerName,
+                        Kills = kills,
+                        Deaths = deaths,
+                        Assists = assists,
+                        TeamKills = teamKills,
+                        Headshots = headshots,
+                        Suicides = suicides,
+                        BombsPlanted = bombsPlanted,
+                        BombsDefused = bombsDefused,
+                        TotalScore = totalScore,
+                        AverageScore = averageScore,
+                        MostKillsWithGun = mostKillsWith,
+                        MostKillsWithGunAmount = mostKillsWithAmount,
+                        BestMap = bestMap,
+                        BestMapGameMode = bestMapGameMode,
+                        BestMapAverageScore = bestMapAverageScore,
+                        RoundsPlayed = roundsPlayed
+                    });
+                }
+            });
+        }
+        else
+        {
+            ulong[] players = this.statsContext.KillData.Where(k => k.ServerId == serverId).Select(k => k.Killer).Distinct().ToArray().Union(this.statsContext.KillData.Where(k => k.ServerId == serverId).Select(k => k.Killed).Distinct().ToArray()).Distinct().ToArray();
+
+            int current = 0;
+            foreach (ulong player in players)
             {
+                Console.WriteLine($"Generating stats for player {player} ({++current} / {players.Length})");
+
+                int kills = this.statsContext.KillData.Count(k => k.ServerId == serverId && k.Killer == player && k.Killed != player);
+                int deaths = this.statsContext.KillData.Count(k => k.ServerId == serverId && k.Killed == player);
+                int headshots = this.statsContext.KillData.Count(k => k.ServerId == serverId && k.Killer == player && k.Headshot && k.Killed != player);
+                int suicides = this.statsContext.KillData.Count(k => k.ServerId == serverId && k.Killer == player && k.Killed == player);
+                var playerKillsGroup = this.statsContext.KillData.Where(k => k.ServerId == serverId && k.Killer == player).GroupBy(k => k.KilledBy).Select(g => new { Gun = g.Key, Count = g.Count() }).OrderByDescending(g => g.Count).FirstOrDefault();
+                string? mostKillsWith = playerKillsGroup?.Gun;
+                int mostKillsWithAmount = playerKillsGroup?.Count ?? 0;
+
                 playerStats.Add(new CPlayerStats
                 {
-                    UniqueId = playerGrouping.Key,
-                    PlayerName = playerGrouping.First().PlayerName,
+                    UniqueId = player,
                     Kills = kills,
                     Deaths = deaths,
-                    Assists = assists,
-                    TeamKills = teamKills,
                     Headshots = headshots,
                     Suicides = suicides,
-                    BombsPlanted = bombsPlanted,
-                    BombsDefused = bombsDefused,
-                    TotalScore = totalScore,
-                    AverageScore = averageScore,
                     MostKillsWithGun = mostKillsWith,
                     MostKillsWithGunAmount = mostKillsWithAmount,
-                    BestMap = bestMap,
-                    BestMapGameMode = bestMapGameMode,
-                    BestMapAverageScore = bestMapAverageScore,
-                    RoundsPlayed = roundsPlayed
                 });
             }
-        });
+        }
 
         return playerStats.ToArray();
     }

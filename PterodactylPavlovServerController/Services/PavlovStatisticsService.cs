@@ -195,12 +195,16 @@ public class PavlovStatisticsService : IDisposable
 
     private async Task<PterodactylServerModel[]> readStatsToDb()
     {
+        Console.WriteLine("Reading stats to DB");
         PterodactylServerModel[] pterodactylServerModels = this.pterodactylService.GetServers(this.configuration["pterodactyl_stats_apikey"]);
         foreach (PterodactylServerModel server in pterodactylServerModels)
         {
+            Console.WriteLine($"Reading stats for server {server.Name}");
             Setting? lastStat = this.statsContext.Settings.FirstOrDefault(s => s.Name == "Last Read Statistic" && s.ServerId == server.ServerId);
 
             DateTime lastReadStatistic = lastStat == null ? DateTimeOffset.FromUnixTimeSeconds(0).LocalDateTime : DateTimeOffset.FromUnixTimeSeconds(long.Parse(lastStat.Value)).LocalDateTime;
+
+            Console.WriteLine($"Last statistic: {lastReadStatistic}");
 
             PterodactylFile[] files = this.pterodactylService.GetFileList(this.configuration["pterodactyl_stats_apikey"], server.ServerId, "/Pavlov/Saved/Logs");
             List<string> filesToParse = new();
@@ -230,6 +234,7 @@ public class PavlovStatisticsService : IDisposable
 
             foreach (string fileName in filesToParse)
             {
+                Console.Write($"Reading file {fileName}...");
                 StatsReader statsReader = new(await this.pterodactylService.ReadFile(this.configuration["pterodactyl_stats_apikey"], server.ServerId, $"/Pavlov/Saved/Logs/{fileName}"));
                 bool startReading = false;
 
@@ -286,6 +291,8 @@ public class PavlovStatisticsService : IDisposable
                             break;
                     }
                 }
+
+                Console.WriteLine(" Done.");
             }
 
             if (lastStat == null)
@@ -301,9 +308,13 @@ public class PavlovStatisticsService : IDisposable
             {
                 lastStat.Value = latestStatistic.ToUnixTimeStamp().ToString();
             }
+
+            Console.WriteLine("Done with server.");
         }
 
+        Console.Write("Saving...");
         await this.statsContext.SaveChangesAsync();
+        Console.WriteLine(" Done!");
         return pterodactylServerModels;
     }
 
@@ -314,8 +325,12 @@ public class PavlovStatisticsService : IDisposable
             Directory.CreateDirectory("stats");
         }
 
+        Console.WriteLine("Generating stats files");
+
         foreach (PterodactylServerModel server in pterodactylServerModels)
         {
+            Console.WriteLine($"Generating stats for server {server.Name}");
+
             StringBuilder serverStatsBuilder = new();
 
             string serverName = await this.pavlovServerService.GetServerName(this.configuration["pterodactyl_stats_apikey"], server.ServerId);
@@ -339,12 +354,19 @@ public class PavlovStatisticsService : IDisposable
 
         <h2>Table of contents</h2>
         <ol>
-            <li><a href=""stats/{server.ServerId}#serverstats"" onclick=""scrollToId('serverstats'); return false;"" class=""link-light"">Server statistics</a></li>
-            <li><a href=""stats/{server.ServerId}#mapstats"" onclick=""scrollToId('mapstats'); return false;"" class=""link-light"">Map statistics</a></li>
-            <li><a href=""stats/{server.ServerId}#gunstats"" onclick=""scrollToId('gunstats'); return false;"" class=""link-light"">Gun statistics</a></li>
-            <li><a href=""stats/{server.ServerId}#teamstats"" onclick=""scrollToId('teamstats'); return false;"" class=""link-light"">Team statistics</a></li>
-            <li><a href=""stats/{server.ServerId}#playerstats"" onclick=""scrollToId('playerstats'); return false;"" class=""link-light"">Player statistics</a></li>
-        </ol>");
+            <li><a href=""stats/{server.ServerId}#serverstats"" onclick=""scrollToId('serverstats'); return false;"" class=""link-light"">Server statistics</a></li>");
+
+            Setting? serverStatMode = this.statsContext.Settings.FirstOrDefault(s => s.Name == "Stat Type" && s.ServerId == server.ServerId);
+            if (serverStatMode?.Value == "SND")
+            {
+                serverStatsBuilder.AppendLine($@"<li><a href=""stats/{server.ServerId}#mapstats"" onclick=""scrollToId('mapstats'); return false;"" class=""link-light"">Map statistics</a></li>");
+            }
+            serverStatsBuilder.AppendLine($@"<li><a href=""stats/{server.ServerId}#gunstats"" onclick=""scrollToId('gunstats'); return false;"" class=""link-light"">Gun statistics</a></li>");
+            if (serverStatMode?.Value == "SND")
+            {
+                serverStatsBuilder.AppendLine($@"<li><a href=""stats/{server.ServerId}#teamstats"" onclick=""scrollToId('teamstats'); return false;"" class=""link-light"">Team statistics</a></li>");
+            }
+            serverStatsBuilder.AppendLine($@"<li><a href=""stats/{server.ServerId}#playerstats"" onclick=""scrollToId('playerstats'); return false;"" class=""link-light"">Player statistics</a></li></ol>");
 
             CBaseStats[] calculatedStats = this.statsCalculator.CalculateStats(server.ServerId);
 
@@ -354,78 +376,113 @@ public class PavlovStatisticsService : IDisposable
 
             CServerStats serverStats = calculatedStats.OfType<CServerStats>().First();
 
-            string[] serverCards =
+            string[] serverCards;
+            if (serverStatMode?.Value == "SND")
             {
-                this.createStatsCard(null, null, false, "https://bloodisgood.net/wp-content/uploads/2022/10/image_2022-10-31_113333781.png", "Counts", new Dictionary<string, string>
+                serverCards = new[]
                 {
+                        this.createStatsCard(null, null, false, "https://bloodisgood.net/wp-content/uploads/2022/10/image_2022-10-31_113333781.png", "Counts", new Dictionary<string, string>
                     {
-                        "Unique maps/modes", serverStats.TotalUniqueMaps.ToString()
-                    },
+                        {
+                            "Unique maps/modes", serverStats.TotalUniqueMaps.ToString()
+                        },
+                        {
+                            "Unique players", serverStats.TotalUniquePlayers.ToString()
+                        },
+                        {
+                            "Total matches", serverStats.TotalMatchesPlayed.ToString()
+                        },
+                    }),
+                    this.createStatsCard(null, null, false, "https://bloodisgood.net/wp-content/uploads/2022/10/image_2022-10-31_113751041.png", "Kill stats", new Dictionary<string, string>
                     {
-                        "Unique players", serverStats.TotalUniquePlayers.ToString()
-                    },
-                    {
-                        "Total matches", serverStats.TotalMatchesPlayed.ToString()
-                    },
-                }),
-                this.createStatsCard(null, null, false, "https://bloodisgood.net/wp-content/uploads/2022/10/image_2022-10-31_113751041.png", "Kill stats", new Dictionary<string, string>
-                {
-                    {
-                        "Total kills", serverStats.TotalKills.ToString()
-                    },
-                    {
-                        "Total headshots", $"{serverStats.TotalHeadshots} ({Math.Round(this.calculateSafePercent(serverStats.TotalHeadshots, serverStats.TotalKills), 1)}%)"
-                    },
-                    {
-                        "Total assists", serverStats.TotalAssists.ToString()
-                    },
-                    {
-                        "Total teamkills", serverStats.TotalTeamkills.ToString()
-                    },
-                }),
+                        {
+                            "Total kills", serverStats.TotalKills.ToString()
+                        },
+                        {
+                            "Total headshots", $"{serverStats.TotalHeadshots} ({Math.Round(this.calculateSafePercent(serverStats.TotalHeadshots, serverStats.TotalKills), 1)}%)"
+                        },
+                        {
+                            "Total assists", serverStats.TotalAssists.ToString()
+                        },
+                        {
+                            "Total teamkills", serverStats.TotalTeamkills.ToString()
+                        },
+                    }),
 
-                this.createStatsCard(null, null, false, "https://bloodisgood.net/wp-content/uploads/2022/10/image_2022-10-31_114051512.png", "Bomb stats", new Dictionary<string, string>
+                    this.createStatsCard(null, null, false, "https://bloodisgood.net/wp-content/uploads/2022/10/image_2022-10-31_114051512.png", "Bomb stats", new Dictionary<string, string>
+                    {
+                        {
+                            "Total plants", serverStats.TotalBombPlants.ToString()
+                        },
+                        {
+                            "Total defuses", $"{serverStats.TotalBombDefuses} ({Math.Round(this.calculateSafePercent(serverStats.TotalBombDefuses, serverStats.TotalBombPlants), 1)}%)"
+                        },
+                        {
+                            "Total explosions", $"{serverStats.TotalBombExplosions} ({Math.Round(this.calculateSafePercent(serverStats.TotalBombExplosions, serverStats.TotalBombPlants), 1)}%)"
+                        },
+                    }),
+                };
+            }
+            else
+            {
+                serverCards = new[]
                 {
+                    this.createStatsCard(null, null, false, "https://bloodisgood.net/wp-content/uploads/2022/10/image_2022-10-31_113333781.png", "Counts", new Dictionary<string, string>
                     {
-                        "Total plants", serverStats.TotalBombPlants.ToString()
-                    },
+                        {
+                            "Unique players", serverStats.TotalUniquePlayers.ToString()
+                        }
+                    }),
+                    this.createStatsCard(null, null, false, "https://bloodisgood.net/wp-content/uploads/2022/10/image_2022-10-31_113751041.png", "Kill stats", new Dictionary<string, string>
                     {
-                        "Total defuses", $"{serverStats.TotalBombDefuses} ({Math.Round(this.calculateSafePercent(serverStats.TotalBombDefuses, serverStats.TotalBombPlants), 1)}%)"
-                    },
-                    {
-                        "Total explosions", $"{serverStats.TotalBombExplosions} ({Math.Round(this.calculateSafePercent(serverStats.TotalBombExplosions, serverStats.TotalBombPlants), 1)}%)"
-                    },
-                }),
-            };
+                        {
+                            "Total kills", serverStats.TotalKills.ToString()
+                        },
+                        {
+                            "Total headshots", $"{serverStats.TotalHeadshots} ({Math.Round(this.calculateSafePercent(serverStats.TotalHeadshots, serverStats.TotalKills), 1)}%)"
+                        },
+                    }),
+                };
+            }
 
             serverStatsBuilder.AppendLine(this.splitInRows(serverCards));
 
             serverStatsBuilder.AppendLine("</div>");
 
-            // Maps stats
-            serverStatsBuilder.AppendLine(@"<h2 id=""mapstats"" class=""mt-3"">Map statistics</h2>
+            if (serverStatMode?.Value == "SND")
+            {
+                // Maps stats
+                serverStatsBuilder.AppendLine(@"<h2 id=""mapstats"" class=""mt-3"">Map statistics</h2>
         <div class=""card-group d-flex flex-wrap"">");
 
-            Dictionary<CMapStats, string> mapsStatsContent = new();
-            CMapStats[] mapsStats = calculatedStats.OfType<CMapStats>().ToArray();
-            foreach (CMapStats mapStats in mapsStats)
-            {
-                MapWorkshopModel mapWorkshop;
-                try
+                Dictionary<CMapStats, string> mapsStatsContent = new();
+                CMapStats[] mapsStats = calculatedStats.OfType<CMapStats>().ToArray();
+                foreach (CMapStats mapStats in mapsStats)
                 {
-                    mapWorkshop = this.steamWorkshopService.GetMapDetail(long.Parse(mapStats.MapId.Substring(3)));
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine($"Failed to retrieve map detail for map {mapStats.MapId}: {e.Message} {e}");
-                    return;
-                }
+                    MapWorkshopModel mapWorkshop;
+                    try
+                    {
+                        mapWorkshop = this.steamWorkshopService.GetMapDetail(long.Parse(mapStats.MapId.Substring(3)));
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine($"Failed to retrieve map detail for map {mapStats.MapId}: {e.Message}");
+                        return;
+                    }
 
-                string? bestPlayerUsername = mapStats.BestPlayer == null ? null : await this.steamService.GetUsername(mapStats.BestPlayer.Value);
+                    string? bestPlayerUsername = null;
+                    try
+                    {
+                        bestPlayerUsername = mapStats.BestPlayer == null ? null : await this.steamService.GetUsername(mapStats.BestPlayer.Value);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Could not get username of player id {(mapStats.BestPlayer.HasValue ? mapStats.BestPlayer.Value.ToString() : "N/A")}: {ex.Message}");
+                    }
 
-                lock (mapsStatsContent)
-                {
-                    mapsStatsContent.Add(mapStats, this.createStatsCard($"map-{mapStats.MapId}-{mapStats.GameMode}", mapWorkshop.URL, true, $"{mapWorkshop.ImageURL}/?imw={PavlovStatisticsService.cardWidth}&imh={PavlovStatisticsService.cardWidth}&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true", $"{mapWorkshop.Name} ({mapStats.GameMode})", new Dictionary<string, string>
+                    lock (mapsStatsContent)
+                    {
+                        mapsStatsContent.Add(mapStats, this.createStatsCard($"map-{mapStats.MapId}-{mapStats.GameMode}", mapWorkshop.URL, true, $"{mapWorkshop.ImageURL}/?imw={PavlovStatisticsService.cardWidth}&imh={PavlovStatisticsService.cardWidth}&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true", $"{mapWorkshop.Name} ({mapStats.GameMode})", new Dictionary<string, string>
                     {
                         {
                             "Played", $"{mapStats.PlayCount} time{(mapStats.PlayCount != 1 ? "s" : "")}"
@@ -440,13 +497,14 @@ public class PavlovStatisticsService : IDisposable
                             "Best player", $"{(mapStats.BestPlayer == null ? "Nobody" : $@"<a href=""stats/{server.ServerId}#player-{mapStats.BestPlayer}"" onclick=""scrollToId('player-{mapStats.BestPlayer}'); return false;"">{bestPlayerUsername}</a><br/>{Math.Round(mapStats.MaxAveragePlayerScore, 0)} avg score")}"
                         },
                     }));
+                    }
                 }
+
+                serverStatsBuilder.AppendLine(this.splitInRows(mapsStatsContent.OrderByDescending(kvp => kvp.Key.PlayCount).Select(kvp => kvp.Value).ToArray()));
+
+                //serverStatsBuilder.AppendLine(String.Join(Environment.NewLine, mapsStatsContent.OrderByDescending(kvp => kvp.Key.PlayCount).Select(kvp => kvp.Value)));
+                serverStatsBuilder.AppendLine("</div>");
             }
-
-            serverStatsBuilder.AppendLine(this.splitInRows(mapsStatsContent.OrderByDescending(kvp => kvp.Key.PlayCount).Select(kvp => kvp.Value).ToArray()));
-
-            //serverStatsBuilder.AppendLine(String.Join(Environment.NewLine, mapsStatsContent.OrderByDescending(kvp => kvp.Key.PlayCount).Select(kvp => kvp.Value)));
-            serverStatsBuilder.AppendLine("</div>");
 
             // Gun stats
             serverStatsBuilder.AppendLine(@"<h2 id=""gunstats"" class=""mt-3"">Gun statistics</h2>
@@ -458,7 +516,15 @@ public class PavlovStatisticsService : IDisposable
             foreach (CGunStats gunStats in gunsStats.OrderByDescending(g => g.Kills))
             {
                 string gunName = getCorrectGunKey(gunStats.Name) is { } gunKey ? PavlovStatisticsService.gunMap[gunKey] : $"{gunStats.Name}(?)";
-                string? bestPlayerUsername = gunStats.BestPlayer == null ? null : await this.steamService.GetUsername(gunStats.BestPlayer.Value);
+                string? bestPlayerUsername = null;
+                try
+                {
+                    bestPlayerUsername = gunStats.BestPlayer == null ? null : await this.steamService.GetUsername(gunStats.BestPlayer.Value);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Could not get username of player id {(gunStats.BestPlayer.HasValue ? gunStats.BestPlayer.Value.ToString() : "N/A")}: {ex.Message}");
+                }
 
                 gunCards.Add(this.createStatsCard($"gun-{gunStats.Name}", "http://wiki.pavlov-vr.com/index.php?title=Weapons", true, $"https://pavlov.bloodisgood.net/gunimages/{(getCorrectGunKey(gunStats.Name) is { } weaponStatsGunKey ? weaponStatsGunKey : "unknown")}.png", gunName, new Dictionary<string, string>
                 {
@@ -478,18 +544,27 @@ public class PavlovStatisticsService : IDisposable
 
             serverStatsBuilder.AppendLine("</div>");
 
-
-            // Team stats
-            serverStatsBuilder.AppendLine(@"<h2 id=""teamstats"" class=""mt-3"">Team statistics</h2>
+            if (serverStatMode?.Value == "SND")
+            {
+                // Team stats
+                serverStatsBuilder.AppendLine(@"<h2 id=""teamstats"" class=""mt-3"">Team statistics</h2>
         <div class=""card-group d-flex flex-wrap"">");
 
-            CTeamStats[] teamsStats = calculatedStats.OfType<CTeamStats>().ToArray();
-            List<string> teamCards = new();
-            foreach (CTeamStats teamStats in teamsStats)
-            {
-                string? bestPlayerUsername = teamStats.BestPlayer == null ? null : await this.steamService.GetUsername(teamStats.BestPlayer.Value);
+                CTeamStats[] teamsStats = calculatedStats.OfType<CTeamStats>().ToArray();
+                List<string> teamCards = new();
+                foreach (CTeamStats teamStats in teamsStats)
+                {
+                    string? bestPlayerUsername = null;
+                    try
+                    {
+                        bestPlayerUsername = teamStats.BestPlayer == null ? null : await this.steamService.GetUsername(teamStats.BestPlayer.Value);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Could not get username of player id {(teamStats.BestPlayer.HasValue ? teamStats.BestPlayer.Value.ToString() : "N/A")}: {ex.Message}");
+                    }
 
-                teamCards.Add(this.createStatsCard(null, null, false, teamStats.TeamId == 0 ? "https://bloodisgood.net/wp-content/uploads/2022/10/blueteam.png" : "https://bloodisgood.net/wp-content/uploads/2022/10/redteam.png", teamStats.Name, new Dictionary<string, string>
+                    teamCards.Add(this.createStatsCard(null, null, false, teamStats.TeamId == 0 ? "https://bloodisgood.net/wp-content/uploads/2022/10/blueteam.png" : "https://bloodisgood.net/wp-content/uploads/2022/10/redteam.png", teamStats.Name, new Dictionary<string, string>
                 {
                     {
                         "Kills", $"{teamStats.TotalKills} ({Math.Round(this.calculateSafePercent(teamStats.TotalKills, serverStats.TotalKills), 1)}%)"
@@ -513,11 +588,12 @@ public class PavlovStatisticsService : IDisposable
                         "Best gun", $"{(teamStats.BestGun == null ? "None" : $@"<a href=""stats/{server.ServerId}#gun-{teamStats.BestGun}"" onclick=""scrollToId('gun-{teamStats.BestGun}'); return false;"">{(getCorrectGunKey(teamStats.BestGun) is { } gunKey ? PavlovStatisticsService.gunMap[gunKey] : teamStats.BestGun)}</a> ({teamStats.BestGunKillCount} kills)")}"
                     },
                 }));
+                }
+
+                serverStatsBuilder.AppendLine(this.splitInRows(teamCards.ToArray()));
+
+                serverStatsBuilder.AppendLine("</div>");
             }
-
-            serverStatsBuilder.AppendLine(this.splitInRows(teamCards.ToArray()));
-
-            serverStatsBuilder.AppendLine("</div>");
 
             // Player stats
             CPlayerStats[] playersStats = calculatedStats.OfType<CPlayerStats>().ToArray();
@@ -531,8 +607,10 @@ public class PavlovStatisticsService : IDisposable
 
                 Dictionary<CPlayerStats, string> playerStatsContent = new();
 
+                int current = 0;
                 foreach (CPlayerStats playerStats in playersStats)
                 {
+                    Console.WriteLine($"Generating stats card for player {playerStats.UniqueId} ({++current} / {playersStats.Length})");
                     using (StatsContext statsContext = new(this.configuration))
                     {
                         PlayerSummaryModel playerSummary;
@@ -542,8 +620,8 @@ public class PavlovStatisticsService : IDisposable
                         }
                         catch (Exception e)
                         {
-                            Console.WriteLine($"Could not get summary of player {playerStats.UniqueId}: {e.Message} {e}");
-                            return;
+                            Console.WriteLine($"Could not get summary of player {playerStats.UniqueId}: {e.Message}");
+                            continue;
                         }
 
                         IReadOnlyCollection<PlayerBansModel> playerBans;
@@ -553,8 +631,8 @@ public class PavlovStatisticsService : IDisposable
                         }
                         catch (Exception e)
                         {
-                            Console.WriteLine($"Could not get bans of player {playerStats.UniqueId}: {e.Message} {e}");
-                            return;
+                            Console.WriteLine($"Could not get bans of player {playerStats.UniqueId}: {e.Message}");
+                            continue;
                         }
 
                         int vacCount = 0;
@@ -571,51 +649,81 @@ public class PavlovStatisticsService : IDisposable
 
                         lock (playerStatsContent)
                         {
-                            playerStatsContent.Add(playerStats, this.createStatsCard($"player-{playerStats.UniqueId}", playerSummary.ProfileUrl, true, playerSummary.AvatarFullUrl, playerSummary.Nickname, new Dictionary<string, string>
+                            if (serverStatMode?.Value == "SND")
                             {
+                                playerStatsContent.Add(playerStats, this.createStatsCard($"player-{playerStats.UniqueId}", playerSummary.ProfileUrl, true, playerSummary.AvatarFullUrl, playerSummary.Nickname, new Dictionary<string, string>
                                 {
-                                    "K/D ratio", $"{Math.Round((double) playerStats.Kills / playerStats.Deaths, 1):0.0}"
-                                },
+                                    {
+                                        "K/D ratio", $"{Math.Round((double) playerStats.Kills / playerStats.Deaths, 1):0.0}"
+                                    },
+                                    {
+                                        "Kills", $"{playerStats.Kills} ({Math.Round(this.calculateSafePercent(playerStats.Kills, totalKills), 1)}%)"
+                                    },
+                                    {
+                                        "Deaths", $"{playerStats.Deaths} ({Math.Round(this.calculateSafePercent(playerStats.Deaths, totalDeaths), 1)}%)"
+                                    },
+                                    {
+                                        "Assists", $"{playerStats.Assists} ({Math.Round(this.calculateSafePercent(playerStats.Assists, totalAssists), 1)}%)"
+                                    },
+                                    {
+                                        "Team kills", $"{playerStats.TeamKills} ({Math.Round(this.calculateSafePercent(playerStats.TeamKills, playerStats.Kills), 1)}%<a href=\"stats/{server.ServerId}#asterix-own-kills\" onclick=\"scrollToId('asterix-own-kills'); return false;\">*</a>)"
+                                    },
+                                    {
+                                        "HS kills", $"{playerStats.Headshots} ({Math.Round(this.calculateSafePercent(playerStats.Headshots, playerStats.Kills), 1)}%<a href=\"stats/{server.ServerId}#asterix-own-kills\" onclick=\"scrollToId('asterix-own-kills'); return false;\">*</a>)"
+                                    },
+                                    {
+                                        "Suicides", playerStats.Suicides.ToString()
+                                    },
+                                    {
+                                        "Avg. points", $"{Math.Round(playerStats.AverageScore, 0)}"
+                                    },
+                                    {
+                                        "Total points", $"{playerStats.TotalScore} ({Math.Round(this.calculateSafePercent(playerStats.TotalScore, totalScore), 1)}%)"
+                                    },
+                                    {
+                                        "Bombs", $"{playerStats.BombsPlanted} planted, {playerStats.BombsDefused} defused"
+                                    },
+                                    {
+                                        "Rounds played", $"{playerStats.RoundsPlayed}"
+                                    },
+                                    {
+                                        "Best gun", $"{(playerStats.MostKillsWithGun == null ? "None" : $@"<a href=""stats/{server.ServerId}#gun-{playerStats.MostKillsWithGun}"" onclick=""scrollToId('gun-{playerStats.MostKillsWithGun}'); return false;"">{(getCorrectGunKey(playerStats.MostKillsWithGun) is {} gunKey ? PavlovStatisticsService.gunMap[gunKey] : playerStats.MostKillsWithGun)}</a><br />{playerStats.MostKillsWithGunAmount} kills ({Math.Round(this.calculateSafePercent(playerStats.MostKillsWithGunAmount, playerStats.Kills), 1)}%<a href=""stats/{server.ServerId}#asterix-own-kills"" onclick=""scrollToId('asterix-own-kills'); return false;"">*</a>)")}"
+                                    },
+                                    {
+                                        "Best map", $"{(playerStats.BestMap == null ? "None" : $@"<a href=""stats/{server.ServerId}#map-{playerStats.BestMap}-{playerStats.BestMapGameMode}"" onclick=""scrollToId('map-{playerStats.BestMap}-{playerStats.BestMapGameMode}'); return false;"">{bestMap!.Name}</a><br />{Math.Round(playerStats.BestMapAverageScore, 0)} avg score")}"
+                                    },
+                                    {
+                                        "VAC", $"{(vacCount > 0 ? $@"<span class=""text-danger"">Yes, {vacCount}" : @"<span class=""text-success"">No")}</span>"
+                                    },
+                                }));
+                            }
+                            else
+                            {
+                                playerStatsContent.Add(playerStats, this.createStatsCard($"player-{playerStats.UniqueId}", playerSummary.ProfileUrl, true, playerSummary.AvatarFullUrl, playerSummary.Nickname, new Dictionary<string, string>
                                 {
-                                    "Kills", $"{playerStats.Kills} ({Math.Round(this.calculateSafePercent(playerStats.Kills, totalKills), 1)}%)"
-                                },
-                                {
-                                    "Deaths", $"{playerStats.Deaths} ({Math.Round(this.calculateSafePercent(playerStats.Deaths, totalDeaths), 1)}%)"
-                                },
-                                {
-                                    "Assists", $"{playerStats.Assists} ({Math.Round(this.calculateSafePercent(playerStats.Assists, totalAssists), 1)}%)"
-                                },
-                                {
-                                    "Team kills", $"{playerStats.TeamKills} ({Math.Round(this.calculateSafePercent(playerStats.TeamKills, playerStats.Kills), 1)}%<a href=\"stats/{server.ServerId}#asterix-own-kills\" onclick=\"scrollToId('asterix-own-kills'); return false;\">*</a>)"
-                                },
-                                {
-                                    "HS kills", $"{playerStats.Headshots} ({Math.Round(this.calculateSafePercent(playerStats.Headshots, playerStats.Kills), 1)}%<a href=\"stats/{server.ServerId}#asterix-own-kills\" onclick=\"scrollToId('asterix-own-kills'); return false;\">*</a>)"
-                                },
-                                {
-                                    "Suicides", playerStats.Suicides.ToString()
-                                },
-                                {
-                                    "Avg. points", $"{Math.Round(playerStats.AverageScore, 0)}"
-                                },
-                                {
-                                    "Total points", $"{playerStats.TotalScore} ({Math.Round(this.calculateSafePercent(playerStats.TotalScore, totalScore), 1)}%)"
-                                },
-                                {
-                                    "Bombs", $"{playerStats.BombsPlanted} planted, {playerStats.BombsDefused} defused"
-                                },
-                                {
-                                    "Rounds played", $"{playerStats.RoundsPlayed}"
-                                },
-                                {
-                                    "Best gun", $"{(playerStats.MostKillsWithGun == null ? "None" : $@"<a href=""stats/{server.ServerId}#gun-{playerStats.MostKillsWithGun}"" onclick=""scrollToId('gun-{playerStats.MostKillsWithGun}'); return false;"">{(getCorrectGunKey(playerStats.MostKillsWithGun) is {} gunKey ? PavlovStatisticsService.gunMap[gunKey] : playerStats.MostKillsWithGun)}</a><br />{playerStats.MostKillsWithGunAmount} kills ({Math.Round(this.calculateSafePercent(playerStats.MostKillsWithGunAmount, playerStats.Kills), 1)}%<a href=""stats/{server.ServerId}#asterix-own-kills"" onclick=""scrollToId('asterix-own-kills'); return false;"">*</a>)")}"
-                                },
-                                {
-                                    "Best map", $"{(playerStats.BestMap == null ? "None" : $@"<a href=""stats/{server.ServerId}#map-{playerStats.BestMap}-{playerStats.BestMapGameMode}"" onclick=""scrollToId('map-{playerStats.BestMap}-{playerStats.BestMapGameMode}'); return false;"">{bestMap!.Name}</a><br />{Math.Round(playerStats.BestMapAverageScore, 0)} avg score")}"
-                                },
-                                {
-                                    "VAC", $"{(vacCount > 0 ? $@"<span class=""text-danger"">Yes, {vacCount}" : @"<span class=""text-success"">No")}</span>"
-                                },
-                            }));
+                                    {
+                                        "K/D ratio", $"{Math.Round((double) playerStats.Kills / playerStats.Deaths, 1):0.0}"
+                                    },
+                                    {
+                                        "Kills", $"{playerStats.Kills} ({Math.Round(this.calculateSafePercent(playerStats.Kills, totalKills), 1)}%)"
+                                    },
+                                    {
+                                        "Deaths", $"{playerStats.Deaths} ({Math.Round(this.calculateSafePercent(playerStats.Deaths, totalDeaths), 1)}%)"
+                                    },
+                                    {
+                                        "HS kills", $"{playerStats.Headshots} ({Math.Round(this.calculateSafePercent(playerStats.Headshots, playerStats.Kills), 1)}%<a href=\"stats/{server.ServerId}#asterix-own-kills\" onclick=\"scrollToId('asterix-own-kills'); return false;\">*</a>)"
+                                    },
+                                    {
+                                        "Suicides", playerStats.Suicides.ToString()
+                                    },
+                                    {
+                                        "Best gun", $"{(playerStats.MostKillsWithGun == null ? "None" : $@"<a href=""stats/{server.ServerId}#gun-{playerStats.MostKillsWithGun}"" onclick=""scrollToId('gun-{playerStats.MostKillsWithGun}'); return false;"">{(getCorrectGunKey(playerStats.MostKillsWithGun) is {} gunKey ? PavlovStatisticsService.gunMap[gunKey] : playerStats.MostKillsWithGun)}</a><br />{playerStats.MostKillsWithGunAmount} kills ({Math.Round(this.calculateSafePercent(playerStats.MostKillsWithGunAmount, playerStats.Kills), 1)}%<a href=""stats/{server.ServerId}#asterix-own-kills"" onclick=""scrollToId('asterix-own-kills'); return false;"">*</a>)")}"
+                                    },
+                                    {
+                                        "VAC", $"{(vacCount > 0 ? $@"<span class=""text-danger"">Yes, {vacCount}" : @"<span class=""text-success"">No")}</span>"
+                                    },
+                                }));
+                            }
                         }
                     }
                 }
@@ -637,34 +745,38 @@ public class PavlovStatisticsService : IDisposable
                     honorableMentionsCards.Add(mostKills);
                 }
 
-                string? mostAssists = await this.getPlayerCardWith(server, playerStatsContent.Keys.ToList(), p => p.Assists, p => p.TotalScore, 0, false, "Most assists", "Assists");
-                if (mostAssists != null)
+                if (serverStatMode?.Value == "SND")
                 {
-                    honorableMentionsCards.Add(mostAssists);
-                }
+                    string? mostAssists = await this.getPlayerCardWith(server, playerStatsContent.Keys.ToList(), p => p.Assists, p => p.TotalScore, 0, false, "Most assists", "Assists");
+                    if (mostAssists != null)
+                    {
+                        honorableMentionsCards.Add(mostAssists);
+                    }
 
-                string? highestTotalScore = await this.getPlayerCardWith(server, playerStatsContent.Keys.ToList(), p => p.TotalScore, p => p.Kills, 0, false, "Highest total score", "Score");
-                if (highestTotalScore != null)
-                {
-                    honorableMentionsCards.Add(highestTotalScore);
-                }
 
-                string? highestAverageScore = await this.getPlayerCardWith(server, playerStatsContent.Keys.ToList(), p => p.AverageScore, p => p.TotalScore, 0, false, "Highest average score", "Score");
-                if (highestAverageScore != null)
-                {
-                    honorableMentionsCards.Add(highestAverageScore);
-                }
+                    string? highestTotalScore = await this.getPlayerCardWith(server, playerStatsContent.Keys.ToList(), p => p.TotalScore, p => p.Kills, 0, false, "Highest total score", "Score");
+                    if (highestTotalScore != null)
+                    {
+                        honorableMentionsCards.Add(highestTotalScore);
+                    }
 
-                string? mostPlants = await this.getPlayerCardWith(server, playerStatsContent.Keys.ToList(), p => p.BombsPlanted, p => p.TotalScore, 0, false, "Most bomb plants", "Plants");
-                if (mostPlants != null)
-                {
-                    honorableMentionsCards.Add(mostPlants);
-                }
+                    string? highestAverageScore = await this.getPlayerCardWith(server, playerStatsContent.Keys.ToList(), p => p.AverageScore, p => p.TotalScore, 0, false, "Highest average score", "Score");
+                    if (highestAverageScore != null)
+                    {
+                        honorableMentionsCards.Add(highestAverageScore);
+                    }
 
-                string? mostDefuses = await this.getPlayerCardWith(server, playerStatsContent.Keys.ToList(), p => p.BombsDefused, p => p.TotalScore, 0, false, "Most bomb defuses", "Defuses");
-                if (mostDefuses != null)
-                {
-                    honorableMentionsCards.Add(mostDefuses);
+                    string? mostPlants = await this.getPlayerCardWith(server, playerStatsContent.Keys.ToList(), p => p.BombsPlanted, p => p.TotalScore, 0, false, "Most bomb plants", "Plants");
+                    if (mostPlants != null)
+                    {
+                        honorableMentionsCards.Add(mostPlants);
+                    }
+
+                    string? mostDefuses = await this.getPlayerCardWith(server, playerStatsContent.Keys.ToList(), p => p.BombsDefused, p => p.TotalScore, 0, false, "Most bomb defuses", "Defuses");
+                    if (mostDefuses != null)
+                    {
+                        honorableMentionsCards.Add(mostDefuses);
+                    }
                 }
 
                 string? mostHeadshots = await this.getPlayerCardWith(server, playerStatsContent.Keys.ToList(), p => p.Headshots, p => p.Kills, 0, false, "Most headshot kills", "HS kills");
@@ -693,10 +805,13 @@ public class PavlovStatisticsService : IDisposable
                     dishonorableMentionsCards.Add(mostDeaths);
                 }
 
-                string? mostTeamKills = await this.getPlayerCardWith(server, playerStatsContent.Keys.ToList(), p => p.TeamKills, p => p.Kills, 0, false, "Most teamkills", "Teamkills");
-                if (mostTeamKills != null)
+                if (serverStatMode?.Value == "SND")
                 {
-                    dishonorableMentionsCards.Add(mostTeamKills);
+                    string? mostTeamKills = await this.getPlayerCardWith(server, playerStatsContent.Keys.ToList(), p => p.TeamKills, p => p.Kills, 0, false, "Most teamkills", "Teamkills");
+                    if (mostTeamKills != null)
+                    {
+                        dishonorableMentionsCards.Add(mostTeamKills);
+                    }
                 }
 
                 string? lowestHSKR = await this.getPlayerCardWith(server, playerStatsContent.Keys.ToList(), p => p.Kills > 10 ? (double)p.Headshots / p.Kills : double.MaxValue, p => p.Kills, 1, true, "Lowest HS-kill to kill ratio", "HSKR");
@@ -717,7 +832,7 @@ public class PavlovStatisticsService : IDisposable
         <h4>All players</h3>
         <div class=""card-group d-flex flex-wrap"">");
 
-                serverStatsBuilder.AppendLine(this.splitInRows(playerStatsContent.OrderByDescending(kvp => kvp.Key.TotalScore).Select(kvp => kvp.Value).ToArray()));
+                serverStatsBuilder.AppendLine(this.splitInRows(playerStatsContent.OrderByDescending(kvp => kvp.Key.TotalScore).ThenByDescending(kvp => kvp.Key.Kills).Select(kvp => kvp.Value).ToArray()));
                 serverStatsBuilder.AppendLine("</div>");
             }
 
@@ -813,7 +928,7 @@ public class PavlovStatisticsService : IDisposable
         }
         catch (Exception e)
         {
-            Console.WriteLine($"Could not get summary of player {highestValuePlayer.UniqueId}: {e.Message} {e}");
+            Console.WriteLine($"Could not get summary of player {highestValuePlayer.UniqueId}: {e.Message}");
             return null;
         }
 

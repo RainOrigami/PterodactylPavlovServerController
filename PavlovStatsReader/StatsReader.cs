@@ -28,86 +28,98 @@ public class StatsReader
                     int firstBracket = bracketStack.Pop();
                     if (bracketStack.Count == 0)
                     {
-                        string statBlock = statisticContent.Substring(firstBracket, i - firstBracket + 1);
-                        JsonElement statRoot = JsonDocument.Parse(statBlock).RootElement;
-                        JsonProperty property = statRoot.EnumerateObject().First();
-                        Type? statsType = null;
-                        switch (property.Name)
+                        try
                         {
-                            case "KillData":
-                                statsType = typeof(KillData);
-                                break;
-                            case "RoundState":
-                                statsType = typeof(RoundState);
-                                break;
-                            case "RoundEnd":
-                                statsType = typeof(RoundEnd);
-                                break;
-                            case "allStats":
-                                statsType = typeof(EndOfMapStats);
-                                break;
-                            case "BombData":
-                                statsType = typeof(BombData);
-                                break;
-                            case "SwitchTeam":
-                                statsType = typeof(SwitchTeam);
-                                break;
-                        }
-
-                        if (statsType != null)
-                        {
-                            BaseStatistic statistic;
-                            if (statsType == typeof(EndOfMapStats))
+                            if (i - firstBracket - 16 < 0 || !statisticContent.Substring(firstBracket - 16, 16).StartsWith("StatManagerLog: "))
                             {
-                                statistic = (BaseStatistic) JsonConvert.DeserializeObject(statRoot.ToString(), statsType)!;
-                            }
-                            else
-                            {
-                                statistic = (BaseStatistic) JsonConvert.DeserializeObject(property.Value.ToString(), statsType)!;
-                            }
-
-                            int previousNewline = 0;
-                            while (true)
-                            {
-                                if (firstBracket - previousNewline - 1 < 0)
-                                {
-                                    break;
-                                }
-
-                                if (statisticContent[firstBracket - previousNewline - 1] == '\n')
-                                {
-                                    break;
-                                }
-
-                                previousNewline++;
-                            }
-
-                            Match logEntryTimestampMatch = StatsReader.logEntryTimestampRegex.Match(statisticContent.Substring(firstBracket - previousNewline, previousNewline));
-                            if (!logEntryTimestampMatch.Success)
-                            {
-                                Console.WriteLine($"Failed to parse timestamp of log entry: {statisticContent.Substring(firstBracket - previousNewline, i - firstBracket + 1)}");
                                 continue;
                             }
 
-                            statistic.LogEntryDate = DateTime.ParseExact(logEntryTimestampMatch.Groups["date"].Value, "yyyy.MM.dd-HH.mm.ss:FFF", null);
-
-                            if (statistic is EndOfMapStats endOfMapStats)
+                            string statBlock = statisticContent.Substring(firstBracket, i - firstBracket + 1);
+                            JsonElement statRoot = JsonDocument.Parse(statBlock).RootElement;
+                            JsonProperty property = statRoot.EnumerateObject().First();
+                            Type? statsType = null;
+                            switch (property.Name)
                             {
-                                foreach (PlayerStats playerStats in endOfMapStats.PlayerStats)
-                                {
-                                    playerStats.LogEntryDate = endOfMapStats.LogEntryDate;
-                                    foreach (Stats stats in playerStats.Stats)
-                                    {
-                                        stats.LogEntryDate = endOfMapStats.LogEntryDate;
-                                    }
-                                }
+                                case "KillData":
+                                    statsType = typeof(KillData);
+                                    break;
+                                case "RoundState":
+                                    statsType = typeof(RoundState);
+                                    break;
+                                case "RoundEnd":
+                                    statsType = typeof(RoundEnd);
+                                    break;
+                                case "allStats":
+                                    statsType = typeof(EndOfMapStats);
+                                    break;
+                                case "BombData":
+                                    statsType = typeof(BombData);
+                                    break;
+                                case "SwitchTeam":
+                                    statsType = typeof(SwitchTeam);
+                                    break;
                             }
 
-                            parsedStats.Add(statistic);
+                            if (statsType != null)
+                            {
+                                BaseStatistic statistic;
+                                if (statsType == typeof(EndOfMapStats))
+                                {
+                                    statistic = (BaseStatistic)JsonConvert.DeserializeObject(statRoot.ToString(), statsType)!;
+                                }
+                                else
+                                {
+                                    statistic = (BaseStatistic)JsonConvert.DeserializeObject(property.Value.ToString(), statsType)!;
+                                }
+
+                                int previousNewline = 0;
+                                while (true)
+                                {
+                                    if (firstBracket - previousNewline - 1 < 0)
+                                    {
+                                        break;
+                                    }
+
+                                    if (statisticContent[firstBracket - previousNewline - 1] == '\n')
+                                    {
+                                        break;
+                                    }
+
+                                    previousNewline++;
+                                }
+
+                                Match logEntryTimestampMatch = StatsReader.logEntryTimestampRegex.Match(statisticContent.Substring(firstBracket - previousNewline, previousNewline));
+                                if (!logEntryTimestampMatch.Success)
+                                {
+                                    Console.WriteLine($"Failed to parse timestamp of log entry: {statisticContent.Substring(firstBracket - previousNewline, i - firstBracket + 1)}");
+                                    continue;
+                                }
+
+                                statistic.LogEntryDate = DateTime.ParseExact(logEntryTimestampMatch.Groups["date"].Value, "yyyy.MM.dd-HH.mm.ss:FFF", null);
+
+                                if (statistic is EndOfMapStats endOfMapStats)
+                                {
+                                    foreach (PlayerStats playerStats in endOfMapStats.PlayerStats)
+                                    {
+                                        playerStats.LogEntryDate = endOfMapStats.LogEntryDate;
+                                        foreach (Stats stats in playerStats.Stats)
+                                        {
+                                            stats.LogEntryDate = endOfMapStats.LogEntryDate;
+                                        }
+                                    }
+                                }
+
+                                parsedStats.Add(statistic);
+                            }
+                            else
+                            {
+                                unparsedStats.AppendLine(statBlock);
+                            }
                         }
-                        else
+                        catch (Exception ex)
                         {
-                            unparsedStats.AppendLine(statBlock);
+                            Console.WriteLine(ex.ToString());
                         }
                     }
 
