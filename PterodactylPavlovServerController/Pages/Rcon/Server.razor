@@ -336,7 +336,7 @@
                         @*TODO: PavlovServerContext is sometimes disposed??*@
                         @try
                         {
-                            foreach (PersistentPavlovPlayer player in PavlovServerContext.Players.Where(p => p.ServerId == ServerId).AsEnumerable().Where(p => !(connection?.PlayerListPlayers?.ContainsKey(p.UniqueId) ?? false)).OrderBy(p => (connection?.BanList?.Contains(p.UniqueId) ?? false) ? 1 : 0).ThenByDescending(p => p.LastSeen))
+                            foreach (PersistentPavlovPlayer player in PavlovServerContext.Players.Where(p => p.ServerId == ServerId).AsEnumerable().Where(p => !(connection?.PlayerListPlayers?.ContainsKey(p.UniqueId) ?? false)).Union(connection?.BanList?.Select(b => new PersistentPavlovPlayer() { UniqueId = b, LastSeen = DateTime.MinValue }) ?? Array.Empty<PersistentPavlovPlayer>()).DistinctBy(p => p.UniqueId).OrderBy(p => (connection?.BanList?.Contains(p.UniqueId) ?? false) ? 1 : 0).ThenByDescending(p => p.LastSeen))
                             {
                                 <PlayerCard PlayerId="@player.UniqueId" ServerId="@ServerId" />
                             }
