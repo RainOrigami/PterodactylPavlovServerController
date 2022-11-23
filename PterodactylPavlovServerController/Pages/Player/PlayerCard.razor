@@ -125,7 +125,7 @@
                                     </div>
                                 }
 
-                                @if (ServerId != null && playerListPlayer == null && dbPlayer != null)
+                                @if (ServerId != null && playerListPlayer == null && dbPlayer != null && dbPlayer.LastSeen != DateTime.MinValue)
                                 {
                                     <div class="row gx-0">
                                         <div class="col-auto px-1">
