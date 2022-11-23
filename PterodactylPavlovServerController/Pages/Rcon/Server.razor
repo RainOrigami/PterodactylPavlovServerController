@@ -336,9 +336,9 @@
                         @*TODO: PavlovServerContext is sometimes disposed??*@
                         @try
                         {
-                            foreach (PersistentPavlovPlayer player in PavlovServerContext.Players.Where(p => p.ServerId == ServerId).AsEnumerable().Where(p => !(connection?.PlayerListPlayers?.ContainsKey(p.UniqueId) ?? false)).Union(connection?.BanList?.Select(b => new PersistentPavlovPlayer() { UniqueId = b, LastSeen = DateTime.MinValue }) ?? Array.Empty<PersistentPavlovPlayer>()).DistinctBy(p => p.UniqueId).OrderBy(p => (connection?.BanList?.Contains(p.UniqueId) ?? false) ? 1 : 0).ThenByDescending(p => p.LastSeen))
+                            foreach (ulong uniqueId in PavlovServerContext.Players.Where(p => p.ServerId == ServerId).AsEnumerable().Where(p => !(connection?.PlayerListPlayers?.ContainsKey(p.UniqueId) ?? false)).Select(p => (p.UniqueId, p.LastSeen)).Union(connection?.BanList?.Select(b => ( b, DateTime.MinValue )) ?? Array.Empty<(ulong,DateTime)>()).DistinctBy(p => p.Item1).OrderBy(p => (connection?.BanList?.Contains(p.Item1) ?? false) ? 1 : 0).ThenByDescending(p => p.Item2).Select(p => p.Item1))
                             {
-                                <PlayerCard PlayerId="@player.UniqueId" ServerId="@ServerId" />
+                                <PlayerCard PlayerId="@uniqueId" ServerId="@ServerId" />
                             }
                         }
                         catch (Exception ex)
@@ -360,7 +360,7 @@
                                     <InputSelect @bind-Value="giveCash.UniqueId" class="form-select">
                                         <option selected disabled>Select a player</option>
 
-                                        @if (connection.PlayerDetails != null)
+                                        @if (connection?.PlayerDetails != null)
                                         {
                                             foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in connection.PlayerDetails)
                                             {
@@ -392,7 +392,7 @@
                                     <InputSelect @bind-Value="giveItem.UniqueId" class="form-select">
                                         <option selected disabled>Select a player</option>
 
-                                        @if (connection.PlayerDetails != null)
+                                        @if (connection?.PlayerDetails != null)
                                         {
                                             foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in connection.PlayerDetails)
                                             {
@@ -458,7 +458,7 @@
                                     <InputSelect @bind-Value="giveVehicle.UniqueId" class="form-select">
                                         <option selected disabled>Select a player</option>
 
-                                        @if (connection.PlayerDetails != null)
+                                        @if (connection?.PlayerDetails != null)
                                         {
                                             foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in connection.PlayerDetails)
                                             {
@@ -495,7 +495,7 @@
                                     <InputSelect @bind-Value="playerSkin.UniqueId" class="form-select">
                                         <option selected disabled>Select a player</option>
 
-                                        @if (connection.PlayerDetails != null)
+                                        @if (connection?.PlayerDetails != null)
                                         {
                                             foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in connection.PlayerDetails)
                                             {
@@ -532,7 +532,7 @@
                                     <InputSelect @bind-Value="slap.UniqueId" class="form-select">
                                         <option selected disabled>Select a player</option>
 
-                                        @if (connection.PlayerDetails != null)
+                                        @if (connection?.PlayerDetails != null)
                                         {
                                             foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in connection.PlayerDetails)
                                             {
@@ -566,7 +566,7 @@
                                     <InputSelect @bind-Value="addOrRemoveMod.UniqueId" class="form-select">
                                         <option selected disabled>Select a player</option>
 
-                                        @if (connection.PlayerDetails != null)
+                                        @if (connection?.PlayerDetails != null)
                                         {
                                             foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in connection.PlayerDetails)
                                             {
@@ -726,7 +726,7 @@
                                     <InputSelect @bind-Value="karma.UniqueId" class="form-select">
                                         <option selected disabled>Select a player</option>
 
-                                        @if (connection.PlayerDetails != null)
+                                        @if (connection?.PlayerDetails != null)
                                         {
                                             foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in connection.PlayerDetails)
                                             {
@@ -1245,7 +1245,7 @@
     {
         try
         {
-            Toast.ShowSuccess(await RconService.CustomCommand(ApiKey.ApiKey, ServerId, customCommand.Command, Server.separateConnection));
+            Toast.ShowSuccess(await RconService.CustomCommand(ApiKey.ApiKey, ServerId, customCommand.Command!, Server.separateConnection));
         }
         catch (Exception e)
         {
