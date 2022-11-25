@@ -53,13 +53,13 @@ public class SteamService
             }
         }
 
-        if (!lastUpdated.HasValue || lastUpdated.Value < DateTime.Now.AddDays(-7))
+        if (!lastUpdated.HasValue || lastUpdated.Value < DateTime.Now.AddDays(-3))
         {
             lock (SteamService.lastRequestLock)
             {
-                if (SteamService.lastRequest < DateTime.Now.AddSeconds(-2))
+                if (SteamService.lastRequest < DateTime.Now.AddSeconds(-10))
                 {
-                    Thread.Sleep(2000);
+                    Thread.Sleep(10000);
                 }
 
                 SteamService.lastRequest = DateTime.Now;
@@ -111,9 +111,9 @@ public class SteamService
         {
             lock (SteamService.lastRequestLock)
             {
-                if (SteamService.lastRequest < DateTime.Now.AddSeconds(-2))
+                if (SteamService.lastRequest < DateTime.Now.AddSeconds(-10))
                 {
-                    Thread.Sleep(2000);
+                    Thread.Sleep(10000);
                 }
 
                 SteamService.lastRequest = DateTime.Now;
