@@ -57,9 +57,9 @@ public class SteamService
         {
             lock (SteamService.lastRequestLock)
             {
-                while (SteamService.lastRequest > DateTime.Now.AddSeconds(-2))
+                while (SteamService.lastRequest > DateTime.Now.AddMilliseconds(-500))
                 {
-                    Thread.Sleep(1000);
+                    Thread.Sleep(100);
                 }
 
                 SteamService.lastRequest = DateTime.Now;
@@ -111,9 +111,9 @@ public class SteamService
         {
             lock (SteamService.lastRequestLock)
             {
-                while (SteamService.lastRequest > DateTime.Now.AddSeconds(-2))
+                while (SteamService.lastRequest > DateTime.Now.AddMilliseconds(-500))
                 {
-                    Thread.Sleep(1000);
+                    Thread.Sleep(100);
                 }
 
                 SteamService.lastRequest = DateTime.Now;

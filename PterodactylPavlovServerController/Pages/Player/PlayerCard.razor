@@ -261,12 +261,12 @@
     {
         if (!PlayersState.Value.PlayerSummaries.ContainsKey(PlayerId))
         {
-            Dispatcher.Dispatch(new PlayersLoadSummaryAction(PlayerId));
+            await Task.Run(() => Dispatcher.Dispatch(new PlayersLoadSummaryAction(PlayerId)));
         }
 
         if (!PlayersState.Value.PlayerBans.ContainsKey(PlayerId))
         {
-            Dispatcher.Dispatch(new PlayersLoadBansAction(PlayerId));
+            await Task.Run(() => Dispatcher.Dispatch(new PlayersLoadBansAction(PlayerId)));
         }
 
         if (ServerId != null)
