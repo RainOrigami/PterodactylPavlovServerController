@@ -2,7 +2,7 @@
 
 public class StatsLinkModel
 {
-    public StatsLinkModel(string targetId, string linkText, object additionalText)
+    public StatsLinkModel(string targetId, string linkText, object? additionalText)
     {
         this.TargetId = targetId;
         this.LinkText = linkText;
@@ -11,5 +11,5 @@ public class StatsLinkModel
 
     public string TargetId { get; }
     public string LinkText { get; }
-    public object AdditionalText { get; }
+    public object? AdditionalText { get; }
 }
