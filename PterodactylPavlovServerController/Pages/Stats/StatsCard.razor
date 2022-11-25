@@ -1,0 +1,108 @@
+﻿@using PterodactylPavlovServerController.Models;
+@using System.Web;
+<div class="col-auto mt-3 me-3" id="@Id">
+    <div class="card bg-dark h-100" style="width: @(cardWidth)px">
+        @if (LinkURL != null)
+        {
+            <a href="@LinkURL" target="@(OpenInBlank ? "_blank" : "_self")" onclick="@(LinkURL.StartsWith("#") ? $"scrollToId('{LinkURL[1..]}'); return false;" : "")">
+                <img class="card-img-top" src="@ImageURL" width="@cardWidth" height="@cardWidth" />
+            </a>
+        }
+        else
+        {
+            <img class="card-img-top" src="@ImageURL" width="@cardWidth" height="@cardWidth" />
+        }
+
+        <div class="card-body px-0">
+            <h5 class="card-title px-3">
+                @if (LinkURL != null)
+                {
+                    <a href="@LinkURL" target="@(OpenInBlank ? "_blank" : "_self")" onclick="@(LinkURL.StartsWith("#") ? $"scrollToId('{LinkURL[1..]}'); return false;" : "")">
+                        @Title
+                    </a>
+                }
+                else
+                {
+                    @Title
+                }
+            </h5>
+
+            <p class="card-text">
+                <div class="container px-0">
+                    @foreach (KeyValuePair<string, object> item in Items)
+                    {
+                        <div class="row row-alternating gx-0">
+                            <div class="col-auto ps-3 pe-1">
+                                <b>@(item.Key):</b>
+                            </div>
+                            <div class="col text-end ps-1 pe-3">
+                                @if (item.Value is string textValue)
+                                {
+                                    @:@textValue
+                                }
+                                else if (item.Value is StatsOwnPercentageModel ownPercentage)
+                                {
+                                    <span>
+                                        @ownPercentage.Text (@(ownPercentage.Percentage)%<a href="stats/@(ServerId)/#asterix-own-kills" )" onclick="scrollToId('asterix-own-kills'); return false;">*</a>)
+                                    </span>
+                                }
+                                else if (item.Value is StatsImageModel statsImage)
+                                {
+                                    <img src="@statsImage.ImageUrl" alt="@statsImage.ImageAlt" height="16" class="ms-2" />
+                                }
+                                else if (item.Value is StatsLinkModel statsLink)
+                                {
+                                    <a href="stats/@(ServerId)#@(statsLink.TargetId)" onclick="@($"scrollToId('{statsLink.TargetId}'); return false;")">@(statsLink.LinkText)</a>
+                                    <br />
+                                    if (statsLink.AdditionalText is StatsOwnPercentageModel additionalOwnPercentage)
+                                    {
+                                        <span>
+                                            @((MarkupString)HttpUtility.HtmlEncode(@additionalOwnPercentage.Text).Replace(" ", "&nbsp;"))&nbsp;(@(additionalOwnPercentage.Percentage)%<a href="stats/@(ServerId)/#asterix-own-kills" )" onclick="scrollToId('asterix-own-kills'); return false;">*</a>)
+                                        </span>
+                                    }
+                                    else if (statsLink.AdditionalText is string additionalText)
+                                    {
+                                        @((MarkupString)HttpUtility.HtmlEncode(additionalText).Replace(" ", "&nbsp;"))
+                                    }
+                                }
+                                else if (item.Value is StatsColoredTextModel coloredText)
+                                {
+                                    <span class="@coloredText.ColorClass">@coloredText.Text</span>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </p>
+        </div>
+    </div>
+</div>
+
+@code {
+    private const int cardWidth = 300;
+
+    [Parameter]
+    [EditorRequired]
+    public string ServerId { get; set; }
+
+    [Parameter]
+    public string? Id { get; set; }
+
+    [Parameter]
+    public string? LinkURL { get; set; }
+
+    [Parameter]
+    public bool OpenInBlank { get; set; } = false;
+
+    [Parameter]
+    [EditorRequired]
+    public string ImageURL { get; set; } = string.Empty;
+
+    [Parameter]
+    [EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    [EditorRequired]
+    public Dictionary<string, object> Items { get; set; } = new();
+}

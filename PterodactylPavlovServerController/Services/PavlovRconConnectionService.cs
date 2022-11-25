@@ -12,15 +12,17 @@ public class PavlovRconConnectionService : IDisposable
 
     private readonly ConcurrentDictionary<string, PavlovRconConnection> connections = new();
     private readonly PavlovRconService pavlovRconService;
+    private readonly SteamService steamService;
     private readonly PterodactylService pterodactylService;
     private readonly Dictionary<string, List<string>> apiKeysToServerIds = new();
 
     private readonly CancellationTokenSource updaterCancellationTokenSource = new();
 
-    public PavlovRconConnectionService(PterodactylService pterodactylService, PavlovRconService pavlovRconService, IConfiguration configuration)
+    public PavlovRconConnectionService(PterodactylService pterodactylService, PavlovRconService pavlovRconService, SteamService steamService, IConfiguration configuration)
     {
         this.pterodactylService = pterodactylService;
         this.pavlovRconService = pavlovRconService;
+        this.steamService = steamService;
         this.configuration = configuration;
     }
 
@@ -113,7 +115,7 @@ public class PavlovRconConnectionService : IDisposable
 
     private void addServer(PterodactylServerModel server)
     {
-        PavlovRconConnection serverConnection = new(this.configuration["pterodactyl_apikey"], server, this.pavlovRconService, this.configuration);
+        PavlovRconConnection serverConnection = new(this.configuration["pterodactyl_apikey"], server, this.pavlovRconService, this.steamService, this.configuration);
         serverConnection.Run();
         this.connections.AddOrUpdate(server.ServerId, serverConnection, (k, v) => serverConnection);
     }

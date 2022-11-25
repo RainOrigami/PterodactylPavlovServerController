@@ -1,0 +1,652 @@
+﻿@using PavlovStatsReader;
+@using PavlovStatsReader.Models;
+@using PterodactylPavlovServerController.Models;
+@using PterodactylPavlovServerController.Services;
+@using PterodactylPavlovServerDomain.Models;
+@using Steam.Models.SteamCommunity;
+@*@inject StatsContext StatsContext
+@inject PavlovServerService PavlovServerService
+@inject StatsCalculator StatsCalculator
+@inject PterodactylService PterodactylService
+@inject SteamWorkshopService SteamWorkshopService
+@inject SteamService SteamService
+@inject IConfiguration Configuration*@
+
+<style>
+    .row-alternating {
+        background-color: rgba(0, 0, 0, 0.1);
+    }
+
+        .row-alternating:nth-child(2n) {
+            background-color: rgba(0, 0, 0, 0.2);
+        }
+
+    a:link {
+        text-decoration: none;
+    }
+
+    a:visited {
+        text-decoration: none;
+    }
+
+    a:hover {
+        text-decoration: none;
+    }
+
+    a:active {
+        text-decoration: none;
+    }
+</style>
+<div>
+    <h1>@ServerName server statistics</h1>
+
+    <h2>Table of contents</h2>
+    <ol>
+        <li><a href="stats/@(ServerId)#serverstats" onclick="scrollToId('serverstats'); return false;" class="link-light">Server statistics</a></li>
+
+        @if (ServerStatsType == "SND")
+        {
+            <li><a href="stats/@(ServerId)#mapstats" onclick="scrollToId('mapstats'); return false;" class="link-light">Map statistics</a></li>
+        }
+
+        <li><a href="stats/{server.ServerId}#gunstats" onclick="scrollToId('gunstats'); return false;" class="link-light">Gun statistics</a></li>
+
+        @if (ServerStatsType == "SND")
+        {
+            <li><a href="stats/{server.ServerId}#teamstats" onclick="scrollToId('teamstats'); return false;" class="link-light">Team statistics</a></li>
+        }
+
+        <li><a href="stats/{server.ServerId}#playerstats" onclick="scrollToId('playerstats'); return false;" class="link-light">Player statistics</a></li>
+    </ol>
+
+    <h2 id="serverstats" class="mt-3">Server statistics</h2>
+    <div class="card-group d-flex flex-wrap">
+        <div class="row mt-3">
+            <StatsCard ServerId="@ServerId" ImageURL="https://bloodisgood.net/wp-content/uploads/2022/10/image_2022-10-31_113333781.png" Title="Counts" Items="@ServerCountStats" />
+            <StatsCard ServerId="@ServerId" ImageURL="https://bloodisgood.net/wp-content/uploads/2022/10/image_2022-10-31_113751041.png" Title="Kill stats" Items="@ServerKillStats" />
+            @if (ServerStatsType == "SND")
+            {
+                <StatsCard ServerId="@ServerId" ImageURL="https://bloodisgood.net/wp-content/uploads/2022/10/image_2022-10-31_114051512.png" Title="Bomb stats" Items="@ServerBombStats" />
+            }
+        </div>
+    </div>
+
+    @if (ServerStatsType == "SND")
+    {
+        <h2 id="mapstats" class="mt-3">Map statistics</h2>
+        <div class="card-group d-flex flex-wrap">
+            @foreach ((MapWorkshopModel? workshopModel, CMapStats mapStats, Dictionary<string, object> items) in this.MapStatistics)
+            {
+                string imageUrl = "";
+                string mapName = mapStats.MapId;
+                string mapUrl = $"http://wiki.pavlov-vr.com/index.php?title=Default_Maps#{mapStats.MapId}";
+
+                if (workshopModel != null)
+                {
+                    if (workshopModel.ImageURL != null)
+                    {
+                        imageUrl = workshopModel.ImageURL;
+                    }
+
+                    mapName = workshopModel.Name;
+                    mapUrl = workshopModel.URL;
+                }
+
+                <StatsCard ServerId="@ServerId" ImageURL="@imageUrl" Title="@mapName" LinkURL="@mapUrl" OpenInBlank="true" Id="@($"map-{mapStats.MapId}-{mapStats.GameMode}")" Items="@items" />
+            }
+        </div>
+    }
+
+    <h2 id="gunstats" class="mt-3">Gun statistics</h2>
+    <div class="card-group d-flex flex-wrap">
+        @foreach ((CGunStats gunStats, Dictionary<string, object> items) in this.GunStatistics)
+        {
+            string imageUrl = "https://pavlov.bloodisgood.net/gunimages/unknown.png";
+            string gunName = $"{gunStats.Name}(?)";
+            string? gunKey = PavlovStatisticsService.GetCorrectGunKey(gunStats.Name);
+            if (gunKey != null)
+            {
+                imageUrl = $"https://pavlov.bloodisgood.net/gunimages/{gunKey}.png";
+                gunName = PavlovStatisticsService.GunMap[gunKey];
+            }
+
+            <StatsCard ServerId="@ServerId" ImageURL="@imageUrl" Id="@($"gun-{gunStats.Name}")" Title="@gunName" Items="@items" />
+        }
+    </div>
+
+    @if (ServerStatsType == "SND")
+    {
+        <h2 id="teamstats" class="mt-3">Team statistics</h2>
+        <div class="card-group d-flex flex-wrap">
+            <StatsCard ServerId="@ServerId" ImageURL="https://bloodisgood.net/wp-content/uploads/2022/10/blueteam.png" Title="Blue team" Items="@Team0Stats" />
+            <StatsCard ServerId="@ServerId" ImageURL="https://bloodisgood.net/wp-content/uploads/2022/10/redteam.png" Title="Red team" Items="@Team1Stats" />
+        </div>
+    }
+
+    <h3 id="playerstats" class="mt-3">Player statistics</h3>
+    <h4>
+        Honorable mentions
+    </h4>
+    <div class="card-group d-flex flex-wrap">
+        ...
+    </div>
+    <br />
+    <h4>
+        Dishonorable mentions
+    </h4>
+    <div class="card-group d-flex flex-wrap">
+        ...
+    </div>
+    <br />
+    <h4>
+        All players
+    </h4>
+    <div class="card-group d-flex flex-wrap">
+        @foreach ((PlayerSummaryModel playerSummary, CPlayerStats playerStats, Dictionary<string, object> items) in this.PlayerStatistics)
+        {
+            <StatsCard ServerId="@ServerId" ImageURL="@playerSummary.AvatarFullUrl" LinkURL="@playerSummary.ProfileUrl" OpenInBlank="true" Title="@playerSummary.Nickname" Id="@($"player-{playerStats.UniqueId}")" Items="@items" />
+        }
+    </div>
+</div>
+<div>
+    <h3 id="asterix-own-kills" class="mt-3">Percentages marked with *</h3>
+    <p>
+        Percentages marked with * are calculated using own amounts (eg. own kills), not total kill count.<br />
+        Unmarked percentages are calculated using total amounts (eg. total kills).
+    </p>
+    @if (ServerStatsType == "SND")
+    {
+        <h3 class="mt-3">Score</h3>
+        <p>
+            Score is calculated using the following formula:<br />
+            Kills * @(StatsCalculator.SCORE_WEIGHT_KILL) +<br />
+            Deaths * @(StatsCalculator.SCORE_WEIGHT_DEATH) +<br />
+            Assists * @(StatsCalculator.SCORE_WEIGHT_ASSIST) +<br />
+            Headshots * @(StatsCalculator.SCORE_WEIGHT_HEADSHOT) +<br />
+            Teamkills * @(StatsCalculator.SCORE_WEIGHT_TEAMKILL) +<br />
+            Bomb Plants * @(StatsCalculator.SCORE_WEIGHT_PLANT) +<br />
+            Bomb Defuses * @(StatsCalculator.SCORE_WEIGHT_DEFUSE)
+        </p>
+        <h3>Some values don't seem to add up</h3>
+        <p>You may notice that some values don't seem to add up, like Team Blue Kills + Team Red Kills is not equal to Total Kills. This is caused because some statistics have filters applied, like only counting matches with at least two players or with a combined Team Blue and Team Red score of at least 10 (draws and skipped maps). Prerounds often are omitted as well. Total kills however counts each single kill.</p>
+    }
+</div>
+
+<footer class="text-center text-lg-start bg-dark text-muted">
+    <section class="d-flex justify-content-center justify-content-lg-between p-4 border-bottom">
+        Stats updated on @DateTime.UtcNow.ToLongDateString() @DateTime.UtcNow.ToLongTimeString() UTC.<br />
+        Stats are updated every eight hours.
+    </section>
+    <div class="text-center p-4">
+        Provided by:
+        <a class="text-reset fw-bold" href="https://codefreak.net/">codefreak.net</a> for <a class="text-reset fw-bold" href="https://bloodisgood.net/">Blood is Good</a>
+    </div>
+</footer>
+
+@code {
+
+
+    [Parameter]
+    [EditorRequired]
+    public string ServerStatsType { get; set; } = string.Empty;
+
+    [Parameter]
+    [EditorRequired]
+    public string ServerId { get; set; } = string.Empty;
+
+    [Parameter]
+    [EditorRequired]
+    public string ServerName { get; set; } = string.Empty;
+
+    //private CBaseStats[] allStats = Array.Empty<CBaseStats>();
+    //private IReadOnlyDictionary<ulong, int> efpPlayerCash = new Dictionary<ulong, int>();
+
+    [Parameter]
+    [EditorRequired]
+    public Dictionary<string, object> ServerCountStats { get; set; } = new();
+
+    [Parameter]
+    [EditorRequired]
+    public Dictionary<string, object> ServerKillStats { get; set; } = new();
+
+    [Parameter]
+    public Dictionary<string, object> ServerBombStats { get; set; } = new();
+
+    [Parameter]
+    public List<(MapWorkshopModel? workshop, CMapStats mapStats, Dictionary<string, object> items)> MapStatistics { get; set; } = new();
+
+    [Parameter]
+    [EditorRequired]
+    public List<(CGunStats gunStats, Dictionary<string, object> items)> GunStatistics { get; set; } = new();
+
+    [Parameter]
+    [EditorRequired]
+    public List<(PlayerSummaryModel summary, CPlayerStats playerStats, Dictionary<string, object> items)> PlayerStatistics { get; set; } = new();
+
+    [Parameter]
+    public Dictionary<string, object> Team0Stats { get; set; } = new();
+
+    [Parameter]
+    public Dictionary<string, object> Team1Stats { get; set; } = new();
+
+    //private IReadOnlyList<(MapWorkshopModel? workshop, CMapStats mapStats, Dictionary<string, object> items)> mapStatistics = new List<(MapWorkshopModel? workshop, CMapStats mapStats, Dictionary<string, object> items)>();
+    //private IReadOnlyList<(CGunStats gunStats, Dictionary<string, object> items)> gunStatistics = new List<(CGunStats gunStats, Dictionary<string, object> items)>();
+    //private IReadOnlyList<(PlayerSummaryModel summary, CPlayerStats playerStats, Dictionary<string, object> items)> playerStatistics = new List<(PlayerSummaryModel summary, CPlayerStats playerStats, Dictionary<string, object> items)>();
+
+    //protected override void OnParametersSet()
+    //{
+        //Setting? serverStatMode = StatsContext.Settings.FirstOrDefault(s => s.Name == "Stat Type" && s.ServerId == this.ServerId);
+        //if (serverStatMode != null)
+        //{
+        //    serverStatsType = serverStatMode.Value;
+        //}
+
+        //serverName = PavlovServerService.GetServerName(Configuration["pterodactyl_stats_apikey"], this.ServerId).GetAwaiter().GetResult();
+
+        //allStats = StatsCalculator.CalculateStats(ServerId);
+
+        //if (serverStatsType == "SND")
+        //{
+        //    List<(MapWorkshopModel? workshop, CMapStats mapStats, Dictionary<string, object> items)> mapStatistics = new();
+        //    foreach (CMapStats mapStats in getMaps())
+        //    {
+        //        MapWorkshopModel? mapWorkshop = null;
+        //        if (mapStats.MapId.StartsWith("UGC"))
+        //        {
+        //            try
+        //            {
+        //                mapWorkshop = SteamWorkshopService.GetMapDetail(long.Parse(mapStats.MapId.Substring(3)));
+        //            }
+        //            catch (Exception e)
+        //            {
+        //                Console.WriteLine($"Failed to retrieve map detail for map {mapStats.MapId}: {e.Message}");
+        //            }
+        //        }
+
+        //        Dictionary<string, object> items = getMapStats(mapStats).GetAwaiter().GetResult();
+        //        mapStatistics.Add((mapWorkshop, mapStats, items));
+        //    }
+        //    this.mapStatistics = mapStatistics;
+        //}
+        //else if (serverStatsType == "EFP")
+        //{
+        //    efpPlayerCash = allStats.OfType<CPlayerStats>().Select(async p =>
+        //    {
+        //        int cash = 0;
+        //        try
+        //        {
+        //            int.TryParse(await PterodactylService.ReadFile(Configuration["pterodactyl_stats_apikey"], ServerId, $"/Pavlov/Saved/Config/ModSave/{p.UniqueId}.txt"), out cash);
+        //        }
+        //        catch { }
+        //        return new { Player = p, Cash = cash };
+        //    }).ToDictionary(k => k.Result.Player.UniqueId, v => v.Result.Cash);
+        //}
+
+        //List<(CGunStats gunStats, Dictionary<string, object> items)> gunStatistics = new List<(CGunStats gunStats, Dictionary<string, object> items)>();
+        //foreach (CGunStats gunStats in getGuns())
+        //{
+        //    gunStatistics.Add((gunStats, getGunStats(gunStats).GetAwaiter().GetResult()));
+        //}
+        //this.gunStatistics = gunStatistics;
+
+        //List<(PlayerSummaryModel summary, CPlayerStats playerStats, Dictionary<string, object> items)> playerStatistics = new List<(PlayerSummaryModel summary, CPlayerStats playerStats, Dictionary<string, object> items)>();
+        //foreach (CPlayerStats playerStats in getPlayers())
+        //{
+        //    PlayerSummaryModel playerSummary;
+        //    try
+        //    {
+        //        playerSummary = SteamService.GetPlayerSummary(playerStats.UniqueId).GetAwaiter().GetResult();
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        Console.WriteLine($"Could not get summary of player {playerStats.UniqueId}: {e.Message}");
+        //        continue;
+        //    }
+
+        //    try
+        //    {
+        //        playerStatistics.Add((playerSummary, playerStats, getPlayerStats(playerStats).GetAwaiter().GetResult()));
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        Console.WriteLine($"Uuuuh {e.Message}");
+        //    }
+        //}
+        //this.playerStatistics = playerStatistics;
+
+    //    base.OnParametersSet();
+    //}
+
+    //private Dictionary<string, object> getServerCountStats()
+    //{
+    //    //Console.WriteLine("Generating server count stats");
+
+    //    Dictionary<string, object> serverCountStats = new();
+
+    //    CServerStats serverStats = allStats.OfType<CServerStats>().First();
+
+    //    if (serverStatsType == "SND")
+    //    {
+    //        serverCountStats.Add("Unique maps/modes", serverStats.TotalUniqueMaps.ToString());
+    //        serverCountStats.Add("Total matches", serverStats.TotalMatchesPlayed.ToString());
+    //    }
+    //    else if (serverStatsType == "EFP")
+    //    {
+    //        serverCountStats.Add("Total cash", efpPlayerCash.Values.Sum().ToString());
+    //    }
+    //    serverCountStats.Add("Unique players", serverStats.TotalUniquePlayers.ToString());
+
+    //    return serverCountStats;
+    //}
+
+    //private Dictionary<string, object> getServerKillStats()
+    //{
+    //    //Console.WriteLine("Generating server kill stats");
+
+    //    Dictionary<string, object> serverKillStats = new();
+
+    //    CServerStats serverStats = allStats.OfType<CServerStats>().First();
+
+    //    serverKillStats.Add("Total kills", serverStats.TotalKills.ToString());
+    //    serverKillStats.Add("Total headshots", serverStats.TotalHeadshots.ToString());
+
+    //    if (serverStatsType == "SND")
+    //    {
+    //        serverKillStats.Add("Total assists", serverStats.TotalAssists.ToString());
+    //        serverKillStats.Add("Total teamkills", serverStats.TotalTeamkills.ToString());
+    //    }
+
+    //    return serverKillStats;
+    //}
+
+    //private Dictionary<string, object> getServerBombStats()
+    //{
+    //    //Console.WriteLine("Generating server bomb stats");
+
+    //    Dictionary<string, object> serverBombStats = new();
+
+    //    CServerStats serverStats = allStats.OfType<CServerStats>().First();
+
+    //    if (serverStatsType == "SND")
+    //    {
+    //        serverBombStats.Add("Total plants", serverStats.TotalBombPlants.ToString());
+    //        serverBombStats.Add("Total defuses", serverStats.TotalBombDefuses.ToString());
+    //        serverBombStats.Add("Total explosions", serverStats.TotalBombExplosions.ToString());
+    //    }
+
+    //    return serverBombStats;
+    //}
+
+    //private IEnumerable<CMapStats> getMaps()
+    //{
+    //    return allStats.OfType<CMapStats>().OrderByDescending(m => m.PlayCount);
+    //}
+
+    //private async Task<Dictionary<string, object>> getMapStats(CMapStats mapStats)
+    //{
+    //    //Console.WriteLine($"Generating server map stats for {mapStats.MapId}");
+
+    //    string? bestPlayerUsername = null;
+    //    if (mapStats.BestPlayer != null)
+    //    {
+    //        try
+    //        {
+    //            bestPlayerUsername = await SteamService.GetUsername(mapStats.BestPlayer.Value);
+    //        }
+    //        catch (Exception ex)
+    //        {
+    //            Console.WriteLine($"Could not get username of player id {mapStats.BestPlayer.Value}: {ex.Message}");
+    //        }
+    //    }
+
+    //    Dictionary<string, object> mapStatValues = new();
+    //    mapStatValues.Add("Played", $"{mapStats.PlayCount} time{(mapStats.PlayCount != 1 ? "s" : "")}");
+    //    mapStatValues.Add("Wins", $"Blue {mapStats.Team0Wins}, Red {mapStats.Team1Wins}");
+    //    mapStatValues.Add("Rounds", $"{Math.Round(mapStats.AverageRounds, 2)} avg, {mapStats.MaxRounds} max, {mapStats.MinRounds} min");
+    //    if (mapStats.BestPlayer != null)
+    //    {
+    //        mapStatValues.Add("Best player", new StatsLinkModel($"player-{mapStats.BestPlayer}", bestPlayerUsername ?? mapStats.BestPlayer.Value.ToString(), $"{Math.Round(mapStats.MaxAveragePlayerScore, 0)} avg score"));
+    //    }
+
+    //    return mapStatValues;
+    //}
+
+    //private IEnumerable<CGunStats> getGuns()
+    //{
+    //    return allStats.OfType<CGunStats>().OrderByDescending(g => g.Kills);
+    //}
+
+    //private async Task<Dictionary<string, object>> getGunStats(CGunStats gunStats)
+    //{
+    //    //Console.WriteLine($"Generating server gun stats for {gunStats.Name}");
+
+    //    CServerStats serverStats = allStats.OfType<CServerStats>().First();
+
+    //    string gunName = $"{gunStats.Name}(?)";
+    //    string? gunKey = getCorrectGunKey(gunStats.Name);
+    //    if (gunKey != null)
+    //    {
+    //        gunName = PavlovStatisticsService.GunMap[gunKey];
+    //    }
+
+    //    string? bestPlayerUsername = null;
+    //    if (gunStats.BestPlayer != null)
+    //    {
+    //        try
+    //        {
+    //            bestPlayerUsername = await SteamService.GetUsername(gunStats.BestPlayer.Value);
+    //        }
+    //        catch (Exception ex)
+    //        {
+    //            Console.WriteLine($"Could not get username of player id {gunStats.BestPlayer.Value}: {ex.Message}");
+    //        }
+    //    }
+
+    //    Dictionary<string, object> gunStatValues = new();
+    //    gunStatValues.Add("Kills", $"{gunStats.Kills} ({Math.Round(this.calculateSafePercent(gunStats.Kills, serverStats.TotalKills), 1)}%)");
+    //    gunStatValues.Add("Headshots", new StatsOwnPercentageModel(gunStats.Headshots.ToString(), Math.Round(this.calculateSafePercent(gunStats.Headshots, gunStats.Kills), 1)));
+    //    if (gunStats.BestPlayer != null)
+    //    {
+    //        gunStatValues.Add("Best player", new StatsLinkModel($"player-{gunStats.BestPlayer}", bestPlayerUsername ?? gunStats.BestPlayer.Value.ToString(), $"{gunStats.BestPlayerKills} kills {Math.Round(this.calculateSafePercent(gunStats.BestPlayerKills, serverStats.TotalKills), 1)}%"));
+    //    }
+
+    //    return gunStatValues;
+    //}
+
+    //private string? getCorrectGunKey(string gunName)
+    //{
+    //    return PavlovStatisticsService.GunMap.Keys.FirstOrDefault(k => string.Equals(k, gunName, StringComparison.CurrentCultureIgnoreCase));
+    //}
+
+    //private double calculateSafePercent(double a, double b)
+    //{
+    //    return a * 100d / (b == 0 ? 1 : b);
+    //}
+
+    //private async Task<Dictionary<string, object>> getTeamStats(int teamId)
+    //{
+    //    //Console.WriteLine($"Generating server team stats for {teamId}");
+
+    //    CServerStats serverStats = allStats.OfType<CServerStats>().First();
+    //    CTeamStats teamStats = allStats.OfType<CTeamStats>().First(t => t.TeamId == teamId);
+
+    //    string? bestPlayerUsername = null;
+    //    if (teamStats.BestPlayer != null)
+    //    {
+    //        try
+    //        {
+    //            bestPlayerUsername = await SteamService.GetUsername(teamStats.BestPlayer.Value);
+    //        }
+    //        catch (Exception ex)
+    //        {
+    //            Console.WriteLine($"Could not get username of player id {(teamStats.BestPlayer.HasValue ? teamStats.BestPlayer.Value.ToString() : "N/A")}: {ex.Message}");
+    //        }
+    //    }
+
+    //    Dictionary<string, object> teamStatValues = new();
+    //    teamStatValues.Add("Kills", $"{teamStats.TotalKills} ({Math.Round(this.calculateSafePercent(teamStats.TotalKills, serverStats.TotalKills), 1)}%)");
+    //    teamStatValues.Add("HS kills", new StatsOwnPercentageModel(teamStats.TotalHeadshots.ToString(), Math.Round(this.calculateSafePercent(teamStats.TotalHeadshots, teamStats.TotalKills), 1)));
+    //    teamStatValues.Add("Assists", $"{teamStats.TotalAssists} ({Math.Round(this.calculateSafePercent(teamStats.TotalAssists, serverStats.TotalAssists), 1)}%)");
+    //    teamStatValues.Add("Teamkills", $"{teamStats.TotalTeamkills} ({Math.Round(this.calculateSafePercent(teamStats.TotalTeamkills, serverStats.TotalTeamkills), 1)}%)");
+    //    teamStatValues.Add("Victories", teamStats.TotalVictories.ToString());
+
+    //    if (teamStats.BestPlayer != null)
+    //    {
+    //        teamStatValues.Add("Best player", new StatsLinkModel($"player-{teamStats.BestPlayer}", bestPlayerUsername ?? teamStats.BestPlayer.Value.ToString(), $"{Math.Round(teamStats.BestPlayerAverageScore, 0)} avg score"));
+    //    }
+
+    //    if (teamStats.BestGun != null)
+    //    {
+    //        string? gunKey = getCorrectGunKey(teamStats.BestGun);
+    //        string gunName = teamStats.BestGun;
+    //        if (gunKey != null)
+    //        {
+    //            gunName = PavlovStatisticsService.GunMap[gunKey];
+    //        }
+
+    //        teamStatValues.Add("Best gun", new StatsLinkModel($"gun-{teamStats.BestGun}", gunName, $"{teamStats.BestGunKillCount} kills {Math.Round(this.calculateSafePercent(teamStats.BestGunKillCount, serverStats.TotalKills), 1)}%)"));
+    //    }
+
+    //    return teamStatValues;
+    //}
+
+    //private IEnumerable<CPlayerStats> getPlayers()
+    //{
+    //    if (serverStatsType == "SND")
+    //    {
+    //        return allStats.OfType<CPlayerStats>().OrderByDescending(p => p.TotalScore).ThenByDescending(p => p.Kills);
+    //    }
+    //    else if (serverStatsType == "EFP")
+    //    {
+    //        return allStats.OfType<CPlayerStats>().OrderByDescending(p => efpPlayerCash.ContainsKey(p.UniqueId) ? efpPlayerCash[p.UniqueId] : 0).ThenByDescending(p => p.Kills);
+    //    }
+    //    else
+    //    {
+    //        return allStats.OfType<CPlayerStats>().OrderByDescending(p => p.Kills);
+    //    }
+    //}
+
+    //private async Task<Dictionary<string, object>> getPlayerStats(CPlayerStats playerStats)
+    //{
+    //    //Console.WriteLine($"Generating server player stats for {playerStats.UniqueId}");
+
+    //    CServerStats serverStats = allStats.OfType<CServerStats>().First();
+    //    CPlayerStats[] allPlayerStats = allStats.OfType<CPlayerStats>().ToArray();
+
+    //    PlayerSummaryModel? playerSummary = null;
+    //    try
+    //    {
+    //        playerSummary = await SteamService.GetPlayerSummary(playerStats.UniqueId);
+    //    }
+    //    catch (Exception e)
+    //    {
+    //        Console.WriteLine($"Could not get summary of player {playerStats.UniqueId}: {e.Message}");
+    //    }
+
+    //    IReadOnlyCollection<PlayerBansModel>? playerBans = null;
+    //    try
+    //    {
+    //        playerBans = await SteamService.GetBans(playerStats.UniqueId);
+    //    }
+    //    catch (Exception e)
+    //    {
+    //        Console.WriteLine($"Could not get bans of player {playerStats.UniqueId}: {e.Message}");
+    //    }
+
+    //    int vacCount = 0;
+    //    if (playerBans != null)
+    //    {
+    //        foreach (PlayerBansModel playerBan in playerBans)
+    //        {
+    //            vacCount += (int)playerBan.NumberOfVACBans;
+    //        }
+    //    }
+
+    //    string? bestGunName = playerStats.MostKillsWithGun;
+    //    string? bestGunKey = null;
+
+    //    if (bestGunName != null)
+    //    {
+    //        bestGunKey = getCorrectGunKey(bestGunName);
+    //    }
+
+    //    if (bestGunKey != null)
+    //    {
+    //        bestGunName = PavlovStatisticsService.GunMap[bestGunKey];
+    //    }
+
+    //    int totalKills = allPlayerStats.Sum(p => p.Kills);
+    //    int totalDeaths = allPlayerStats.Sum(p => p.Deaths);
+    //    int totalAssists = allPlayerStats.Sum(p => p.Assists);
+    //    int totalScore = allPlayerStats.Sum(p => p.TotalScore);
+
+    //    Dictionary<string, object> playerStatValues = new();
+
+    //    if (serverStatsType == "EFP")
+    //    {
+    //        int cash = 0;
+    //        if (efpPlayerCash.ContainsKey(playerStats.UniqueId))
+    //        {
+    //            cash = efpPlayerCash[playerStats.UniqueId];
+    //        }
+    //        playerStatValues.Add("Cash", $"${cash}");
+    //    }
+
+    //    playerStatValues.Add("K/D ratio", $"{Math.Round((double)playerStats.Kills / playerStats.Deaths, 1):0.0}");
+    //    playerStatValues.Add("Kills", $"{playerStats.Kills} ({Math.Round(this.calculateSafePercent(playerStats.Kills, totalKills), 1)}%)");
+    //    playerStatValues.Add("Deaths", $"{playerStats.Deaths} ({Math.Round(this.calculateSafePercent(playerStats.Deaths, totalKills), 1)}%)");
+    //    if (serverStatsType == "SND")
+    //    {
+    //        playerStatValues.Add("Assists", $"{playerStats.Assists} ({Math.Round(this.calculateSafePercent(playerStats.Assists, totalAssists), 1)}%)");
+    //        playerStatValues.Add("Team kills", new StatsOwnPercentageModel(playerStats.TeamKills.ToString(), Math.Round(this.calculateSafePercent(playerStats.TeamKills, playerStats.Kills), 1)));
+    //    }
+    //    playerStatValues.Add("HS kills", new StatsOwnPercentageModel(playerStats.Headshots.ToString(), Math.Round(this.calculateSafePercent(playerStats.Headshots, playerStats.Kills), 1)));
+    //    playerStatValues.Add("Suicides", playerStats.Suicides.ToString());
+
+    //    if (serverStatsType == "SND")
+    //    {
+    //        playerStatValues.Add("Avg. points", $"{Math.Round(playerStats.AverageScore, 0)}");
+    //        playerStatValues.Add("Total points", $"{playerStats.TotalScore} ({Math.Round(this.calculateSafePercent(playerStats.TotalScore, totalScore), 1)}%)");
+    //        playerStatValues.Add("Bombs", $"{playerStats.BombsPlanted} planted, {playerStats.BombsDefused} defused");
+    //        playerStatValues.Add("Rounds played", $"{playerStats.RoundsPlayed}");
+    //    }
+
+    //    if (bestGunName != null)
+    //    {
+    //        playerStatValues.Add("Best gun", new StatsLinkModel($"gun-{playerStats.MostKillsWithGun}", bestGunName, $"{playerStats.MostKillsWithGunAmount} kills ({Math.Round(this.calculateSafePercent(playerStats.MostKillsWithGunAmount, playerStats.Kills), 1)}%<a href=\"#asterix-own-kills\" onclick=\"scrollToId('asterix-own-kills'); return false;\">*</a>"));
+    //    }
+
+    //    if (serverStatsType == "SND")
+    //    {
+    //        MapWorkshopModel? bestMap = null;
+    //        if (playerStats.BestMap != null)
+    //        {
+    //            try
+    //            {
+    //                bestMap = SteamWorkshopService.GetMapDetail(long.Parse(playerStats.BestMap[3..]));
+    //            }
+    //            catch (Exception ex)
+    //            {
+    //                Console.WriteLine($"Could not get map detail for {playerStats.BestMap}: {ex.Message}");
+    //            }
+    //        }
+
+    //        if (bestMap != null)
+    //        {
+    //            playerStatValues.Add("Best map", new StatsLinkModel($"map-{playerStats.BestMap}-{playerStats.BestMapGameMode}", bestMap.Name, $"{Math.Round(playerStats.BestMapAverageScore, 0)} avg score"));
+    //        }
+    //    }
+
+    //    if (playerSummary != null && playerSummary.CountryCode != null)
+    //    {
+    //        playerStatValues.Add("Country", new StatsImageModel($"https://countryflagsapi.com/png/{playerSummary.CountryCode}", playerSummary.CountryCode));
+    //    }
+
+    //    if (playerBans != null)
+    //    {
+    //        playerStatValues.Add("VAC", $"{(vacCount > 0 ? $@"<span class=""text-danger"">Yes, {vacCount}" : @"<span class=""text-success"">No")}</span>");
+    //    }
+
+    //    return playerStatValues;
+    //}
+}

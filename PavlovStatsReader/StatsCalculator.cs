@@ -240,10 +240,10 @@ public class StatsCalculator
         {
             ulong[] players = this.statsContext.KillData.Where(k => k.ServerId == serverId).Select(k => k.Killer).Distinct().ToArray().Union(this.statsContext.KillData.Where(k => k.ServerId == serverId).Select(k => k.Killed).Distinct().ToArray()).Distinct().ToArray();
 
-            int current = 0;
+            //int current = 0;
             foreach (ulong player in players)
             {
-                Console.WriteLine($"Generating stats for player {player} ({++current} / {players.Length})");
+                //Console.WriteLine($"Generating stats for player {player} ({++current} / {players.Length})");
 
                 int kills = this.statsContext.KillData.Count(k => k.ServerId == serverId && k.Killer == player && k.Killed != player);
                 int deaths = this.statsContext.KillData.Count(k => k.ServerId == serverId && k.Killed == player);
