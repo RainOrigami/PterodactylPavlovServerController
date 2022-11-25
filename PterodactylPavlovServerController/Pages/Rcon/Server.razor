@@ -849,8 +849,8 @@
 
     protected override void Dispose(bool disposing)
     {
-        base.Dispose(disposing);
         Rcon.OnServersUpdated -= refresh;
+        base.Dispose(disposing);
     }
 
     private async Task changeMap(ServerMapModel serverMap)
