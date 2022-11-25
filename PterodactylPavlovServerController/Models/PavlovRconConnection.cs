@@ -16,10 +16,10 @@ public class PavlovRconConnection : IDisposable
 
     private readonly IConfiguration configuration;
     private readonly PavlovRconService pavlovRconService;
-
     private readonly CancellationTokenSource updateCancellationTokenSource = new();
     private Dictionary<ulong, PlayerDetail>? playerDetails;
     private Dictionary<ulong, Player>? playerListPlayers;
+
     private ulong[]? banList;
     public string ApiKey { get; }
 
@@ -91,7 +91,7 @@ public class PavlovRconConnection : IDisposable
 
                 this.Online = false;
                 this.OnServerOnlineStateChanged?.Invoke(this.ServerId);
-                this.OnServerErrorRaised?.Invoke(this.ServerId, ex.Message);
+                this.OnServerErrorRaised?.Invoke(this.ServerId, $"Error during server info update: {ex.Message}");
             }
 
             return;
@@ -124,7 +124,7 @@ public class PavlovRconConnection : IDisposable
         }
         catch (Exception ex)
         {
-            this.OnServerErrorRaised?.Invoke(this.ServerId, ex.Message);
+            this.OnServerErrorRaised?.Invoke(this.ServerId, $"Error during player list update: {ex.Message}");
             return;
         }
 
@@ -185,7 +185,7 @@ public class PavlovRconConnection : IDisposable
             }
             catch (Exception ex)
             {
-                this.OnServerErrorRaised?.Invoke(this.ServerId, ex.Message);
+                this.OnServerErrorRaised?.Invoke(this.ServerId, $"Error during player detail update: {ex.Message}");
             }
         }
 
