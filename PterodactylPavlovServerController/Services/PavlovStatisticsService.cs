@@ -355,6 +355,7 @@ public class PavlovStatisticsService : IDisposable
             ComponentRenderer<StatsTemplate> templateRenderer = new ComponentRenderer<StatsTemplate>();
 
             templateRenderer.Set(m => m.ServerId, server.ServerId);
+            templateRenderer.Set(m => m.ServerName, await pavlovServerService.GetServerName(this.configuration["pterodactyl_stats_apikey"], server.ServerId));
 
             string serverStatsType = "UNSET";
             Setting? serverStatMode = this.statsContext.Settings.FirstOrDefault(s => s.Name == "Stat Type" && s.ServerId == server.ServerId);
