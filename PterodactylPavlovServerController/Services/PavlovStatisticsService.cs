@@ -1008,7 +1008,7 @@ public class PavlovStatisticsService : IDisposable
         gunStatValues.Add("Headshots", new StatsOwnPercentageModel(gunStats.Headshots.ToString(), Math.Round(this.calculateSafePercent(gunStats.Headshots, gunStats.Kills), 1)));
         if (gunStats.BestPlayer != null)
         {
-            gunStatValues.Add("Best player", new StatsLinkModel($"player-{gunStats.BestPlayer}", bestPlayerUsername ?? gunStats.BestPlayer.Value.ToString(), $"{gunStats.BestPlayerKills} kills ({Math.Round(this.calculateSafePercent(gunStats.BestPlayerKills, serverStats.TotalKills), 1)}%)"));
+            gunStatValues.Add("Best player", new StatsLinkModel($"player-{gunStats.BestPlayer}", bestPlayerUsername ?? gunStats.BestPlayer.Value.ToString(), new StatsOwnPercentageModel($"{gunStats.BestPlayerKills} kills", Math.Round(this.calculateSafePercent(gunStats.BestPlayerKills, gunStats.Kills), 1))));
         }
 
         return gunStatValues;
