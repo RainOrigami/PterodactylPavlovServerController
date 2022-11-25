@@ -11,12 +11,14 @@
 @using PterodactylPavlovServerController.Pages.Player
 @using PterodactylPavlovServerDomain.Extensions
 @using System.ComponentModel.DataAnnotations
+@using Steam.Models.SteamCommunity;
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 @inject IDispatcher Dispatcher
 @inject PavlovRconConnectionService Rcon
 @inject IState<PavlovServersState> PavlovServersState
 @inject IState<MapsState> MapsState
+@inject IState<PlayersState> PlayersState
 @inject PavlovRconService RconService
 @inject IToastService Toast
 @inject PavlovServerContext PavlovServerContext
@@ -336,7 +338,7 @@
                         @*TODO: PavlovServerContext is sometimes disposed??*@
                         @try
                         {
-                            foreach (ulong uniqueId in PavlovServerContext.Players.Where(p => p.ServerId == ServerId).AsEnumerable().Where(p => !(connection?.PlayerListPlayers?.ContainsKey(p.UniqueId) ?? false)).Select(p => (p.UniqueId, p.LastSeen)).Union(connection?.BanList?.Select(b => ( b, DateTime.MinValue )) ?? Array.Empty<(ulong,DateTime)>()).DistinctBy(p => p.Item1).OrderBy(p => (connection?.BanList?.Contains(p.Item1) ?? false) ? 1 : 0).ThenByDescending(p => p.Item2).Select(p => p.Item1))
+                            foreach (ulong uniqueId in PavlovServerContext.Players.Where(p => p.ServerId == ServerId).AsEnumerable().Where(p => !(connection?.PlayerListPlayers?.ContainsKey(p.UniqueId) ?? false)).Select(p => (p.UniqueId, p.LastSeen)).Union(connection?.BanList?.Select(b => (b, DateTime.MinValue)) ?? Array.Empty<(ulong, DateTime)>()).DistinctBy(p => p.Item1).OrderBy(p => (connection?.BanList?.Contains(p.Item1) ?? false) ? 1 : 0).ThenByDescending(p => p.Item2).Select(p => p.Item1))
                             {
                                 <PlayerCard PlayerId="@uniqueId" ServerId="@ServerId" />
                             }
@@ -364,7 +366,12 @@
                                         {
                                             foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in connection.PlayerDetails)
                                             {
-                                                <option value="@connectionPlayerDetail.Key">@connectionPlayerDetail.Value.PlayerName</option>
+                                                string? playerName = connectionPlayerDetail.Value.PlayerName;
+                                                if (PlayersState.Value.PlayerSummaries.TryGetValue(connectionPlayerDetail.Key, out PlayerSummaryModel? playerSummary))
+                                                {
+                                                    playerName = playerSummary.Nickname;
+                                                }
+                                                <option value="@connectionPlayerDetail.Key">@playerName</option>
                                             }
                                         }
                                     </InputSelect>
@@ -396,7 +403,12 @@
                                         {
                                             foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in connection.PlayerDetails)
                                             {
-                                                <option value="@connectionPlayerDetail.Key">@connectionPlayerDetail.Value.PlayerName</option>
+                                                string? playerName = connectionPlayerDetail.Value.PlayerName;
+                                                if (PlayersState.Value.PlayerSummaries.TryGetValue(connectionPlayerDetail.Key, out PlayerSummaryModel? playerSummary))
+                                                {
+                                                    playerName = playerSummary.Nickname;
+                                                }
+                                                <option value="@connectionPlayerDetail.Key">@playerName</option>
                                             }
                                         }
                                     </InputSelect>
@@ -462,7 +474,12 @@
                                         {
                                             foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in connection.PlayerDetails)
                                             {
-                                                <option value="@connectionPlayerDetail.Key">@connectionPlayerDetail.Value.PlayerName</option>
+                                                string? playerName = connectionPlayerDetail.Value.PlayerName;
+                                                if (PlayersState.Value.PlayerSummaries.TryGetValue(connectionPlayerDetail.Key, out PlayerSummaryModel? playerSummary))
+                                                {
+                                                    playerName = playerSummary.Nickname;
+                                                }
+                                                <option value="@connectionPlayerDetail.Key">@playerName</option>
                                             }
                                         }
                                     </InputSelect>
@@ -499,7 +516,12 @@
                                         {
                                             foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in connection.PlayerDetails)
                                             {
-                                                <option value="@connectionPlayerDetail.Key">@connectionPlayerDetail.Value.PlayerName</option>
+                                                string? playerName = connectionPlayerDetail.Value.PlayerName;
+                                                if (PlayersState.Value.PlayerSummaries.TryGetValue(connectionPlayerDetail.Key, out PlayerSummaryModel? playerSummary))
+                                                {
+                                                    playerName = playerSummary.Nickname;
+                                                }
+                                                <option value="@connectionPlayerDetail.Key">@playerName</option>
                                             }
                                         }
                                     </InputSelect>
@@ -536,7 +558,12 @@
                                         {
                                             foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in connection.PlayerDetails)
                                             {
-                                                <option value="@connectionPlayerDetail.Key">@connectionPlayerDetail.Value.PlayerName</option>
+                                                string? playerName = connectionPlayerDetail.Value.PlayerName;
+                                                if (PlayersState.Value.PlayerSummaries.TryGetValue(connectionPlayerDetail.Key, out PlayerSummaryModel? playerSummary))
+                                                {
+                                                    playerName = playerSummary.Nickname;
+                                                }
+                                                <option value="@connectionPlayerDetail.Key">@playerName</option>
                                             }
                                         }
                                     </InputSelect>
@@ -570,7 +597,12 @@
                                         {
                                             foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in connection.PlayerDetails)
                                             {
-                                                <option value="@connectionPlayerDetail.Key">@connectionPlayerDetail.Value.PlayerName</option>
+                                                string? playerName = connectionPlayerDetail.Value.PlayerName;
+                                                if (PlayersState.Value.PlayerSummaries.TryGetValue(connectionPlayerDetail.Key, out PlayerSummaryModel? playerSummary))
+                                                {
+                                                    playerName = playerSummary.Nickname;
+                                                }
+                                                <option value="@connectionPlayerDetail.Key">@playerName</option>
                                             }
                                         }
                                     </InputSelect>
@@ -730,7 +762,12 @@
                                         {
                                             foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in connection.PlayerDetails)
                                             {
-                                                <option value="@connectionPlayerDetail.Key">@connectionPlayerDetail.Value.PlayerName</option>
+                                                string? playerName = connectionPlayerDetail.Value.PlayerName;
+                                                if (PlayersState.Value.PlayerSummaries.TryGetValue(connectionPlayerDetail.Key, out PlayerSummaryModel? playerSummary))
+                                                {
+                                                    playerName = playerSummary.Nickname;
+                                                }
+                                                <option value="@connectionPlayerDetail.Key">@playerName</option>
                                             }
                                         }
                                     </InputSelect>
