@@ -51,6 +51,7 @@
 		<PackageReference Include="AngleSharp" Version="0.17.1" />
 		<PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
 		<PackageReference Include="Blazored.Toast" Version="3.2.2" />
+		<PackageReference Include="BlazorTemplater" Version="1.5.0" />
 		<PackageReference Include="Fluxor.Blazor.Web" Version="5.5.0" />
 		<PackageReference Include="Fluxor.Blazor.Web.ReduxDevTools" Version="5.5.0" />
 		<PackageReference Include="GoogleSheetsWrapper" Version="1.0.37" />
