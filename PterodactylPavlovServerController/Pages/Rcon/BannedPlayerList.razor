@@ -1,0 +1,27 @@
+﻿@using PavlovVR_Rcon.Models.Pavlov;
+@using PterodactylPavlovServerController.Contexts;
+@using PterodactylPavlovServerController.Models;
+@using PterodactylPavlovServerController.Pages.Player
+@inject PavlovServerContext PavlovServerContext
+
+@if (Connection.BanList == null)
+{
+    return;
+}
+
+<div class="tab-pane container active px-0" id="offline">
+    @foreach (ulong uniqueId in Connection.BanList)
+    {
+        <PlayerCard PlayerId="@uniqueId" ServerId="@Connection.ServerId" />
+    }
+</div>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public PavlovRconConnection Connection { get; set; }
+
+    [Parameter]
+    [EditorRequired]
+    public ServerInfo ServerInfo { get; set; }
+}

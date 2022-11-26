@@ -1,0 +1,174 @@
+﻿@using Fluxor;
+@using PavlovVR_Rcon.Models.Pavlov;
+@using PterodactylPavlovServerController.Models;
+@using PterodactylPavlovServerController.Services;
+@using PterodactylPavlovServerController.Stores;
+@using PterodactylPavlovServerDomain.Models;
+@inject IDispatcher Dispatcher
+@inject IState<MapsState> MapsState
+@inject PavlovRconService RconService
+@inject IToastService Toast
+@inject ApiKeyService ApiKey
+@inject SteamWorkshopService SteamWorkshopService
+
+<div class="tab-pane container active px-0" id="maps">
+    <h3>Click a map to change to</h3>
+    @if (!MapsState.Value.ServerMaps.ContainsKey(Connection.ServerId))
+    {
+        @:Loading...
+    }
+    else
+    {
+        <button type="submit" class="btn btn-outline-primary mb-3" @onclick="@nextMap">Next map</button>
+        <br />
+
+        foreach (ServerMapModel mapRow in MapsState.Value.ServerMaps[Connection.ServerId])
+        {
+            MapWorkshopModel? mapRowDetail = null;
+            if (mapRow.IsWorkshopMap)
+            {
+                MapsState.Value.MapDetails.TryGetValue(mapRow.WorkshopId, out mapRowDetail);
+            }
+
+            <div class="card bg-dark me-2 mb-2" style="display: inline-block; width: 256px;@(ServerInfo.MapLabel == mapRow.MapLabel ? " background-color: #7D7 !important; color: #444;" : "")">
+                <a href="#" @onclick="() => changeMap(mapRow)" @onclick:preventDefault class="text-decoration-none">
+                    <img class="card-img-top" src="@(mapRowDetail == null ? "https://pavlov.bloodisgood.net/gunimages/unknown.png" : mapRowDetail.ImageURL + "/?imw=256&imh=256&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true")" alt="@mapRow.MapLabel" />
+                </a>
+                <div class="card-body">
+                    <a href="#" @onclick="() => changeMap(mapRow)" @onclick:preventDefault class="text-decoration-none">
+                        <h5 class="card-title">@(mapRowDetail == null ? mapRow.MapLabel : mapRowDetail.Name)</h5>
+                    </a>
+                    <p class="card-text">
+                        <div class="container px-0">
+                            <div class="row gx-0">
+                                <div class="col-auto px-1">
+                                    <b>GameMode:</b>
+                                </div>
+                                <div class="col text-end px-1">@mapRow.GameMode</div>
+                            </div>
+                            @if (mapRowDetail == null)
+                            {
+                                <div class="row gx-0">
+                                    <div class="col-auto px-1">Loading...</div>
+                                </div>
+                            }
+                        </div>
+                    </p>
+                </div>
+            </div>
+        }
+    }
+
+    <h3 class="mt-3">Enter a map name, workshop ID or workshop URL to change to</h3>
+    <EditForm Model="@mapChangeInput" OnValidSubmit="@mapChange">
+        <DataAnnotationsValidator />
+        <div class="container mb-5">
+            <div class="row">
+                <ValidationSummary />
+            </div>
+            <div class="row">
+                <div class="col ps-0">
+                    <InputText @bind-Value="mapChangeInput.Map" class="form-control" placeholder="Map name / ID / URL" />
+                </div>
+                <div class="col">
+                    <InputSelect @bind-Value="mapChangeInput.GameMode" class="form-select">
+                        <option selected disabled>Select a game mode</option>
+                        @foreach (GameMode gameMode in Enum.GetValues(typeof(GameMode)))
+                        {
+                            <option value="@gameMode">@gameMode</option>
+                        }
+                    </InputSelect>
+                </div>
+                <div class="col">
+                    <button type="submit" class="btn btn-outline-primary">Change map</button>
+                </div>
+
+            </div>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public PavlovRconConnection Connection { get; set; }
+
+    [Parameter]
+    [EditorRequired]
+    public ServerInfo ServerInfo { get; set; }
+
+    private async Task changeMap(ServerMapModel serverMap)
+    {
+        MapWorkshopModel? mapDetail = null;
+        if (serverMap.IsWorkshopMap)
+        {
+            MapsState.Value.MapDetails.TryGetValue(serverMap.WorkshopId, out mapDetail);
+        }
+
+        try
+        {
+            GameMode gameMode = Enum.Parse<GameMode>(serverMap.GameMode);
+            if (await RconService.SwitchMap(ApiKey.ApiKey, Connection.ServerId, serverMap.MapLabel, gameMode))
+            {
+                Toast.ShowSuccess($"Map switching to {(mapDetail == null ? serverMap.MapLabel : mapDetail.Name)} ({serverMap.GameMode})");
+            }
+            else
+            {
+                Toast.ShowError("Server refuses to switch map");
+            }
+        }
+        catch (Exception e)
+        {
+            Toast.ShowError(e.Message);
+            return;
+        }
+    }
+
+    private readonly MapChangeInputModel mapChangeInput = new();
+
+    private async Task mapChange()
+    {
+        if (mapChangeInput.MapLabel == null || mapChangeInput.GameMode == null)
+        {
+            Toast.ShowError("Map label and game mode are required for a map change");
+            return;
+        }
+
+        try
+        {
+            if (await RconService.SwitchMap(ApiKey.ApiKey, Connection.ServerId, mapChangeInput.MapLabel, mapChangeInput.GameMode.Value))
+            {
+                string mapName = mapChangeInput.MapLabel;
+                if (mapChangeInput.IsWorkshopMap)
+                {
+                    mapName = SteamWorkshopService.GetMapDetail(mapChangeInput.MapId!.Value).Name;
+                }
+
+                Toast.ShowSuccess($"Changing map to {mapName}");
+            }
+            else
+            {
+                Toast.ShowError("Server refused to switch map");
+            }
+        }
+        catch (Exception e)
+        {
+            Toast.ShowError(e.Message);
+            return;
+        }
+    }
+
+    private async Task nextMap()
+    {
+        try
+        {
+            await RconService.RotateMap(ApiKey.ApiKey, Connection.ServerId);
+            Toast.ShowSuccess("Map has been skipped");
+        }
+        catch (Exception e)
+        {
+            Toast.ShowError(e.Message);
+            return;
+        }
+    }
+}

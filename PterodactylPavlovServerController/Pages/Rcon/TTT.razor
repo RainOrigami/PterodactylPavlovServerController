@@ -1,0 +1,201 @@
+﻿@using Fluxor;
+@using PavlovVR_Rcon.Models.Pavlov;
+@using PterodactylPavlovServerController.Models;
+@using PterodactylPavlovServerController.Services;
+@using PterodactylPavlovServerController.Stores;
+@using Steam.Models.SteamCommunity;
+@inject IDispatcher Dispatcher
+@inject PavlovRconService RconService
+@inject IToastService Toast
+@inject ApiKeyService ApiKey
+@inject IState<PlayersState> PlayersState
+
+<div class="tab-pane container active px-0" id="ttt">
+    <div class="me-2" style="width: 425px; display: inline-block; vertical-align: top;">
+        <h3 class="mb-0">End round</h3>
+        <small class="text-muted">
+            Immediately ends the current round
+        </small>
+        <div class="mb-3">
+            <button type="submit" class="btn btn-warning form-control" @onclick="tttEndRoundSubmitted">End round</button>
+        </div>
+    </div>
+
+    <div class="me-2" style="width: 425px; display: inline-block; vertical-align: top;">
+        <h3 class="mb-0">Toggle timer</h3>
+        <small class="text-muted">
+            Pause or resume the current timer
+        </small>
+        <div class="mb-3">
+            <button class="btn btn-warning form-control" @onclick="tttToggleTimerSubmitted">Toggle timer</button>
+        </div>
+    </div>
+
+    <div class="me-2" style="width: 425px; display: inline-block; vertical-align: top;">
+        <h3 class="mb-0">Toggle skin menu</h3>
+        <small class="text-muted">
+            Toggle always enable skin menu on or off
+        </small>
+        <div class="mb-3">
+            <button class="btn btn-warning form-control" @onclick="tttToggleSkinMenuSubmitted">Toggle</button>
+        </div>
+    </div>
+
+    <div class="me-2" style="width: 425px; display: inline-block; vertical-align: top;">
+        <h3 class="mb-0">Karma</h3>
+        <small class="text-muted">
+            Set the karma of a player to a specific value or reset it to the default value
+        </small>
+        <EditForm Model="@karma" OnValidSubmit="@tttKarmaSubmitted" class="mt-3">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+            <div class="mb-3">
+                <InputSelect @bind-Value="karma.UniqueId" class="form-select">
+                    <option selected disabled>Select a player</option>
+
+                    @if (Connection.PlayerDetails != null)
+                    {
+                        foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in Connection.PlayerDetails)
+                        {
+                            string? playerName = connectionPlayerDetail.Value.PlayerName;
+                            if (PlayersState.Value.PlayerSummaries.TryGetValue(connectionPlayerDetail.Key, out PlayerSummaryModel? playerSummary))
+                            {
+                                playerName = playerSummary.Nickname;
+                            }
+                            <option value="@connectionPlayerDetail.Key">@playerName</option>
+                        }
+                    }
+                </InputSelect>
+            </div>
+            <div class="mb-3">
+                <label>Karma</label>
+                <InputNumber @bind-Value="karma.Amount" class="form-control" />
+            </div>
+            <div class="mb-3">
+                <button type="submit" class="btn btn-outline-success form-control" @onclick="@(() => karma.Set = true)">Set karma</button>
+            </div>
+            <div class="mb-3">
+                <button type="submit" class="btn btn-outline-warning form-control" @onclick="@(() => karma.Set = false)">Reset karma</button>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public PavlovRconConnection Connection { get; set; }
+
+    [Parameter]
+    [EditorRequired]
+    public ServerInfo ServerInfo { get; set; }
+
+    private readonly AddOrRemoveModModel addOrRemoveMod = new();
+    private readonly GiveCashModel giveCash = new();
+    private readonly GiveItemModel giveItem = new();
+    private readonly GiveTeamCashModel giveTeamCash = new();
+    private readonly GiveVehicleModel giveVehicle = new();
+    private readonly SetLimitedAmmoTypeModel limitedAmmoType = new();
+    private readonly SetPlayerSkinModel playerSkin = new();
+    private readonly SlapModel slap = new();
+    private readonly SetPinModel pin = new();
+    private readonly TTTKarmaModel karma = new();
+    private readonly CustomCommandModel customCommand = new();
+
+
+    private async Task tttEndRoundSubmitted()
+    {
+        try
+        {
+            if (await RconService.TTTEndRound(ApiKey.ApiKey, Connection.ServerId))
+            {
+                Toast.ShowSuccess("Round has been ended");
+            }
+            else
+            {
+                Toast.ShowError("Server refused to end the round");
+            }
+        }
+        catch (Exception e)
+        {
+            Toast.ShowError(e.Message);
+        }
+    }
+
+
+    private async Task tttKarmaSubmitted()
+    {
+        if (karma.Set!.Value && karma.Amount == null)
+        {
+            Toast.ShowError("You need to specify an amount to set");
+            return;
+        }
+
+        try
+        {
+            if (karma.Set!.Value)
+            {
+                if (await RconService.TTTSetKarma(ApiKey.ApiKey, Connection.ServerId, karma.UniqueId!.Value, karma.Amount!.Value))
+                {
+                    Toast.ShowSuccess("Player karma has been set");
+                }
+                else
+                {
+                    Toast.ShowError("Server refused to set player karma");
+                }
+                return;
+            }
+
+            if (await RconService.TTTFlushKarma(ApiKey.ApiKey, Connection.ServerId, karma.UniqueId!.Value))
+            {
+                Toast.ShowSuccess("Player karma has been reset");
+            }
+            else
+            {
+                Toast.ShowError("Server refused to reset player karma");
+            }
+        }
+        catch (Exception e)
+        {
+            Toast.ShowError(e.Message);
+        }
+    }
+
+    private async Task tttToggleTimerSubmitted()
+    {
+        try
+        {
+            (bool success, bool state) = await RconService.TTTPauseTimer(ApiKey.ApiKey, Connection.ServerId);
+            if (!success)
+            {
+                Toast.ShowError("Server refused to toggle pause timer");
+            }
+
+            Toast.ShowSuccess(state ? "Timer has been paused" : "Timer has been unpaused");
+        }
+        catch (Exception e)
+        {
+            Toast.ShowError(e.Message);
+        }
+    }
+
+    private async Task tttToggleSkinMenuSubmitted()
+    {
+        try
+        {
+            (bool success, bool state) = await RconService.TTTAlwaysEnableSkinMenu(ApiKey.ApiKey, Connection.ServerId);
+
+            if (!success)
+            {
+                Toast.ShowError("Server refused to toggle skin menu");
+                return;
+            }
+
+            Toast.ShowSuccess(state ? "Skin menu has been enabled" : "Skin menu has been disabled");
+        }
+        catch (Exception e)
+        {
+            Toast.ShowError(e.Message);
+        }
+    }
+}

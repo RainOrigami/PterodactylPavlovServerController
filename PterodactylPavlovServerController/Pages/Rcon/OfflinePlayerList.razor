@@ -1,0 +1,47 @@
+﻿@using PavlovVR_Rcon.Models.Pavlov;
+@using PterodactylPavlovServerController.Contexts;
+@using PterodactylPavlovServerController.Models;
+@using PterodactylPavlovServerController.Pages.Player
+@inject PavlovServerContext PavlovServerContext
+
+<div class="tab-pane container active px-0" id="offline">
+    @foreach (ulong uniqueId in offlinePlayerList.Skip(currentPage * pageSize).Take(pageSize))
+    {
+        <PlayerCard PlayerId="@uniqueId" ServerId="@Connection.ServerId" />
+    }
+
+    <div class="justify-content-center my-3">
+        @for (int i = 0; i < pageCount; i++)
+        {
+            int page = i;
+            <button class="m-1 btn @(currentPage == i ? "btn-secondary" : "btn-outline-secondary")" style="width: 50px" @onclick="@(() => currentPage = page)" @onclick:preventDefault>@(i + 1)</button>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public PavlovRconConnection Connection { get; set; }
+
+    [Parameter]
+    [EditorRequired]
+    public ServerInfo ServerInfo { get; set; }
+
+    private ulong[] offlinePlayerList = Array.Empty<ulong>();
+    private int currentPage = 0;
+    private int pageCount = 0;
+    private const int pageSize = 25;
+
+    protected override void OnParametersSet()
+    {
+        offlinePlayerList = PavlovServerContext.Players.Where(p => p.ServerId == Connection.ServerId).AsEnumerable().Where(p => !(Connection?.PlayerListPlayers?.ContainsKey(p.UniqueId) ?? false)).OrderByDescending(p => p.LastSeen).Select(p => p.UniqueId).ToArray();
+        pageCount = (int)Math.Ceiling(offlinePlayerList.Length / (decimal)pageSize);
+        if (currentPage > pageCount)
+        {
+            currentPage = pageCount;
+        }
+
+        base.OnParametersSet();
+    }
+}
