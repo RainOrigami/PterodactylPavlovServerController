@@ -16,6 +16,7 @@ public class PavlovRconConnection : IDisposable
 
     private readonly IConfiguration configuration;
     private readonly PavlovRconService pavlovRconService;
+    private readonly SteamService steamService;
     private readonly CancellationTokenSource updateCancellationTokenSource = new();
     private Dictionary<ulong, PlayerDetail>? playerDetails;
     private Dictionary<ulong, Player>? playerListPlayers;
@@ -23,10 +24,11 @@ public class PavlovRconConnection : IDisposable
     private ulong[]? banList;
     public string ApiKey { get; }
 
-    public PavlovRconConnection(string apiKey, PterodactylServerModel pterodactylServer, PavlovRconService pavlovRconService, IConfiguration configuration)
+    public PavlovRconConnection(string apiKey, PterodactylServerModel pterodactylServer, PavlovRconService pavlovRconService, SteamService steamService, IConfiguration configuration)
     {
         this.PterodactylServer = pterodactylServer;
         this.pavlovRconService = pavlovRconService;
+        this.steamService = steamService;
         this.configuration = configuration;
         this.ApiKey = apiKey;
     }
@@ -60,6 +62,8 @@ public class PavlovRconConnection : IDisposable
                 await this.updateServerInfo();
                 await this.updatePlayerList();
                 await this.updatePlayerDetails();
+                await this.updatePlayerSummaries();
+                await this.updatePlayerBans();
             }
             catch (Exception ex)
             {
@@ -190,5 +194,39 @@ public class PavlovRconConnection : IDisposable
         }
 
         this.playerDetails = newPlayerDetails.ToDictionary(k => k.UniqueId, v => v);
+    }
+
+    public async Task updatePlayerSummaries()
+    {
+        if (!this.Online.HasValue || !this.Online.Value || this.PlayerListPlayers == null || failCount > 0)
+        {
+            return;
+        }
+
+        foreach (ulong playerId in this.PlayerListPlayers.Keys)
+        {
+            try
+            {
+                await steamService.GetPlayerSummary(playerId);
+            }
+            catch { }
+        }
+    }
+
+    public async Task updatePlayerBans()
+    {
+        if (!this.Online.HasValue || !this.Online.Value || this.PlayerListPlayers == null || failCount > 0)
+        {
+            return;
+        }
+
+        foreach (ulong playerId in this.PlayerListPlayers.Keys)
+        {
+            try
+            {
+                await steamService.GetBans(playerId);
+            }
+            catch { }
+        }
     }
 }

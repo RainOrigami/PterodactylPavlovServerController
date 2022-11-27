@@ -115,7 +115,7 @@ public class PavlovRconConnectionService : IDisposable
 
     private void addServer(PterodactylServerModel server)
     {
-        PavlovRconConnection serverConnection = new(this.configuration["pterodactyl_apikey"], server, this.pavlovRconService, this.configuration);
+        PavlovRconConnection serverConnection = new(this.configuration["pterodactyl_apikey"], server, this.pavlovRconService, this.steamService, this.configuration);
         serverConnection.Run();
         this.connections.AddOrUpdate(server.ServerId, serverConnection, (k, v) => serverConnection);
     }
