@@ -1,4 +1,5 @@
 ﻿using BlazorTemplater;
+using NuGet.Packaging;
 using PavlovStatsReader;
 using PavlovStatsReader.Models;
 using PterodactylPavlovServerController.Models;
@@ -436,6 +437,7 @@ public class PavlovStatisticsService : IDisposable
             // Player stats
             Console.WriteLine("Generating player stats...");
             List<(PlayerSummaryModel summary, CPlayerStats playerStats, Dictionary<string, object> items)> playerStatistics = new List<(PlayerSummaryModel summary, CPlayerStats playerStats, Dictionary<string, object> items)>();
+            int playerRank = 0;
             foreach (CPlayerStats playerStats in getPlayers(allStats, serverStatsType))
             {
                 PlayerSummaryModel playerSummary;
@@ -451,7 +453,13 @@ public class PavlovStatisticsService : IDisposable
 
                 try
                 {
-                    playerStatistics.Add((playerSummary, playerStats, await getPlayerStats(playerStats, allStats, serverStatsType)));
+                    Dictionary<string, object> statItems = new()
+                    {
+                        { "Rank", $"#{++playerRank}" }
+                    };
+                    statItems.AddRange(await getPlayerStats(playerStats, allStats, serverStatsType));
+
+                    playerStatistics.Add((playerSummary, playerStats, statItems));
                 }
                 catch (Exception e)
                 {
