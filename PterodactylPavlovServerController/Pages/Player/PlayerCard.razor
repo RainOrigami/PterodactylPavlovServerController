@@ -19,6 +19,7 @@
 @inject IToastService Toast
 @inject ApiKeyService ApiKey
 @inject IConfiguration Configuration
+@inject CountryService CountryService
 
 @{
     PavlovRconConnection? connection = null;
@@ -87,10 +88,6 @@
                 <a href="@profileUrl" class="text-decoration-none" target="_blank">
                     <h5 class="card-title">
                         @playerName
-                        @if (playerSummary != null && !string.IsNullOrEmpty(playerSummary.CountryCode))
-                        {
-                            <img src="https://countryflagsapi.com/png/@playerSummary.CountryCode" alt="@playerSummary.CountryCode" height="16" class="ms-2"/>
-                        }
                     </h5>
                 </a>
                 <p class="card-text">
@@ -200,6 +197,29 @@
                                             </div>
                                         }
                                     }
+                                    @if (playerSummary != null && !string.IsNullOrEmpty(playerSummary.CountryCode))
+                                    {
+                                        <div class="row gx-0">
+                                            @if (countryModel == null)
+                                            {
+                                                <div class="col-auto px-1">
+                                                    <i class="fa-solid fa-earth-europe"></i>
+                                                </div>
+                                                <div class="col px-1">
+                                                    @playerSummary.CountryCode
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <div class="col-auto px-1">
+                                                    <img src="@countryModel.FlagUrl" alt="@countryModel.Code" width="16" />
+                                                </div>
+                                                <div class="col px-1">
+                                                    @countryModel.Name
+                                                </div>
+                                            }
+                                        </div>
+                                    }
                                 }
                             </div>
                             <div class="col col-auto">
@@ -257,11 +277,17 @@
 
     private PersistentPavlovPlayer? dbPlayer;
 
+    private CountryModel? countryModel;
+
     protected override async Task OnParametersSetAsync()
     {
         if (!PlayersState.Value.PlayerSummaries.ContainsKey(PlayerId))
         {
             await Task.Run(() => Dispatcher.Dispatch(new PlayersLoadSummaryAction(PlayerId)));
+        }
+        else
+        {
+            updateCountry();
         }
 
         if (!PlayersState.Value.PlayerBans.ContainsKey(PlayerId))
@@ -278,6 +304,26 @@
         await base.OnParametersSetAsync();
     }
 
+    private async void updateCountry()
+    {
+        if (countryModel != null || !PlayersState.Value.PlayerSummaries.ContainsKey(PlayerId))
+        {
+            return;
+        }
+
+        PlayerSummaryModel summary = PlayersState.Value.PlayerSummaries[PlayerId];
+        if (string.IsNullOrEmpty(summary.CountryCode))
+        {
+            return;
+        }
+
+        try
+        {
+            countryModel = await CountryService.GetCountry(PlayersState.Value.PlayerSummaries[PlayerId].CountryCode);
+        }
+        catch { }
+    }
+
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
@@ -286,6 +332,8 @@
 
     private async void refresh()
     {
+        updateCountry();
+
         await InvokeAsync(StateHasChanged);
     }
 

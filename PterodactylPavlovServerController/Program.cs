@@ -32,6 +32,7 @@ builder.Services.AddSingleton<StatsContext>();
 builder.Services.AddSingleton<StatsCalculator>();
 builder.Services.AddSingleton<PavlovStatisticsService>();
 builder.Services.AddSingleton<PavlovRconConnectionService>();
+builder.Services.AddSingleton<CountryService>();
 
 builder.Services.AddFluxor(options =>
 {

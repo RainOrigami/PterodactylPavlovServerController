@@ -185,6 +185,7 @@ public class PavlovStatisticsService : IDisposable
 
     private readonly IConfiguration configuration;
     private readonly PavlovServerService pavlovServerService;
+    private readonly CountryService countryService;
     private readonly PterodactylService pterodactylService;
     private readonly StatsCalculator statsCalculator;
 
@@ -193,7 +194,7 @@ public class PavlovStatisticsService : IDisposable
     private readonly SteamService steamService;
     private readonly SteamWorkshopService steamWorkshopService;
 
-    public PavlovStatisticsService(IConfiguration configuration, StatsContext statsContext, PterodactylService pterodactylService, SteamService steamService, StatsCalculator statsCalculator, SteamWorkshopService steamWorkshopService, PavlovServerService pavlovServerService)
+    public PavlovStatisticsService(IConfiguration configuration, StatsContext statsContext, PterodactylService pterodactylService, SteamService steamService, StatsCalculator statsCalculator, SteamWorkshopService steamWorkshopService, PavlovServerService pavlovServerService, CountryService countryService)
     {
         this.configuration = configuration;
         this.statsContext = statsContext;
@@ -202,6 +203,7 @@ public class PavlovStatisticsService : IDisposable
         this.statsCalculator = statsCalculator;
         this.steamWorkshopService = steamWorkshopService;
         this.pavlovServerService = pavlovServerService;
+        this.countryService = countryService;
         statsContext.Database.EnsureCreated();
     }
 
@@ -890,7 +892,12 @@ public class PavlovStatisticsService : IDisposable
 
         if (playerSummary != null && playerSummary.CountryCode != null)
         {
-            playerStatValues.Add("Country", new StatsImageModel($"https://countryflagsapi.com/png/{playerSummary.CountryCode}", playerSummary.CountryCode));
+            try
+            {
+                CountryModel countryModel = await this.countryService.GetCountry(playerSummary.CountryCode);
+                playerStatValues.Add("Country", new StatsImageModel(countryModel.FlagUrl, countryModel.Name));
+            }
+            catch { }
         }
 
         if (playerBans != null)
