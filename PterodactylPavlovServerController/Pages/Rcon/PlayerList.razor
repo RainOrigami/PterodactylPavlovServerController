@@ -4,36 +4,35 @@
 <div class="tab-pane container active px-0" id="players">
     @if (ServerInfo.Teams)
     {
+        List<ulong> blueTeam = new();
+        List<ulong> redTeam = new();
+
+        if (Connection.PlayerDetails is IReadOnlyDictionary<ulong, PlayerDetail> playersDetails)
+        {
+            blueTeam.AddRange(playersDetails.Where(kvp => kvp.Value.TeamId == 0).Select(kvp => kvp.Key));
+            redTeam.AddRange(playersDetails.Where(kvp => kvp.Value.TeamId == 1).Select(kvp => kvp.Key));
+        }
+
         <div class="row">
             <div class="col rounded h2 p-3 me-2" style="background-color: lightskyblue; color: #222;">
                 Blue Team
                 @if (ServerInfo.Team0Score != null)
                 {
-                    @:(@ServerInfo.Team0Score)
+                    <span> (@ServerInfo.Team0Score wins)</span>
                 }
+                <span> (@blueTeam.Count players)</span>
             </div>
             <div class="col rounded h2 p-3 ms-2" style="background-color: tomato; color: #222;">
                 Red Team
                 @if (ServerInfo.Team1Score != null)
                 {
-                    @:(@ServerInfo.Team1Score)
+                    <span> (@ServerInfo.Team1Score wins)</span>
                 }
+                <span> (@redTeam.Count players)</span>
             </div>
         </div>
 
         <div class="row">
-
-            @{
-                List<ulong> blueTeam = new();
-                List<ulong> redTeam = new();
-
-                if (Connection.PlayerDetails is IReadOnlyDictionary<ulong, PlayerDetail> playersDetails)
-                {
-                    blueTeam.AddRange(playersDetails.Where(kvp => kvp.Value.TeamId == 0).Select(kvp => kvp.Key));
-                    redTeam.AddRange(playersDetails.Where(kvp => kvp.Value.TeamId == 1).Select(kvp => kvp.Key));
-                }
-            }
-
             <div class="col ps-0">
                 <div class="container">
 
