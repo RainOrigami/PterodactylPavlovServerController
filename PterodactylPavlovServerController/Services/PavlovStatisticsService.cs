@@ -178,6 +178,9 @@ public class PavlovStatisticsService : IDisposable
         },
         {
             "minedeath", "Mine"
+        },
+        {
+            "fall", "Suicide by gravity"
         }
     };
 
