@@ -380,20 +380,37 @@ public class PavlovStatisticsService : IDisposable
             {
                 Console.WriteLine("Getting EFP cash...");
                 List<CBaseStats> baseStats = allStats.ToList();
-                baseStats.AddRange(allStats.OfType<CPlayerStats>().AsParallel().Select(async p =>
+                Regex cashFileRegex = new(@"^(?<UniqueId>\d+)\.txt$", RegexOptions.Compiled);
+                baseStats.AddRange(pterodactylService.FileList(this.configuration["pterodactyl_stats_apikey"], server.ServerId, "/Pavlov/Saved/Config/ModSave/").Select(p => cashFileRegex.Match(p)).Where(r => r.Success).Select(r => r.Groups["UniqueId"].Value).AsParallel().Select(async p =>
                 {
                     int cash = 0;
                     try
                     {
-                        Console.WriteLine($"Cash of {p.UniqueId}...");
-                        int.TryParse(await this.pterodactylService.ReadFile(this.configuration["pterodactyl_stats_apikey"], server.ServerId, $"/Pavlov/Saved/Config/ModSave/{p.UniqueId}.txt"), out cash);
+                        Console.WriteLine($"Cash of {p}...");
+                        int.TryParse(await this.pterodactylService.ReadFile(this.configuration["pterodactyl_stats_apikey"], server.ServerId, $"/Pavlov/Saved/Config/ModSave/{p}.txt"), out cash);
                     }
                     catch (Exception ex)
                     {
                         Console.WriteLine(ex);
                     }
-                    return new { Player = p, Cash = cash };
-                }).Select(c => new CEFPPlayerCashModel(c.Result.Player.UniqueId, c.Result.Cash)));
+                    return new CEFPPlayerCashModel(ulong.Parse(p), cash);
+                }).Select(p => p.Result).ToArray());
+
+                List<ulong> playerStats = baseStats.OfType<CPlayerStats>().Select(p => p.UniqueId).ToList();
+                List<CEFPPlayerCashModel> cashStats = baseStats.OfType<CEFPPlayerCashModel>().ToList();
+                foreach (CEFPPlayerCashModel cashModel in cashStats)
+                {
+                    if (playerStats.Contains(cashModel.UniqueId))
+                    {
+                        continue;
+                    }
+
+                    baseStats.Add(new CPlayerStats()
+                    {
+                        UniqueId = cashModel.UniqueId
+                    });
+                }
+
                 allStats = baseStats.ToArray();
             }
 
@@ -572,12 +589,13 @@ public class PavlovStatisticsService : IDisposable
         {
             serverCountStats.Add("Unique maps/modes", serverStats.TotalUniqueMaps.ToString());
             serverCountStats.Add("Total matches", serverStats.TotalMatchesPlayed.ToString());
+            serverCountStats.Add("Unique players", serverStats.TotalUniquePlayers.ToString());
         }
         else if (serverStatsType == "EFP")
         {
             serverCountStats.Add("Total cash", $"${ToKMB(allStats.OfType<CEFPPlayerCashModel>().Sum(s => s.Cash))}");
+            serverCountStats.Add("Unique players", allStats.OfType<CEFPPlayerCashModel>().Count().ToString());
         }
-        serverCountStats.Add("Unique players", serverStats.TotalUniquePlayers.ToString());
 
         return serverCountStats;
     }
@@ -848,7 +866,15 @@ public class PavlovStatisticsService : IDisposable
             playerStatValues.Add("Cash", $"${ToKMB(cash)}");
         }
 
-        playerStatValues.Add("K/D ratio", $"{Math.Round((double)playerStats.Kills / playerStats.Deaths, 1):0.0}");
+        if (playerStats.Deaths != 0 || playerStats.Kills != 0)
+        {
+            playerStatValues.Add("K/D ratio", $"{Math.Round((double)playerStats.Kills / playerStats.Deaths, 1):0.0}");
+        }
+        else
+        {
+            playerStatValues.Add("K/D ratio", $"N/A");
+        }
+
         playerStatValues.Add("Kills", $"{playerStats.Kills} ({Math.Round(this.calculateSafePercent(playerStats.Kills, totalKills), 1)}%)");
         playerStatValues.Add("Deaths", $"{playerStats.Deaths} ({Math.Round(this.calculateSafePercent(playerStats.Deaths, totalKills), 1)}%)");
         if (serverStatsType == "SND")

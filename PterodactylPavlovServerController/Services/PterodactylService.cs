@@ -5,6 +5,7 @@ using RestSharp;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Web;
 
 namespace PterodactylPavlovServerController.Services;
 
@@ -109,6 +110,13 @@ public class PterodactylService
         RestResponse readFileResponse = this.executeRestRequest(apiKey, $"client/servers/{serverId}/files/download?file={path}");
 
         return JsonDocument.Parse(readFileResponse.Content!).RootElement.GetProperty("attributes").GetProperty("url").ToString();
+    }
+
+    public List<string> FileList(string apiKey, string serverId, string path)
+    {
+        RestResponse fileListResponse = this.executeRestRequest(apiKey, $"client/servers/{serverId}/files/list?directory={HttpUtility.UrlEncode(path)}");
+
+        return JsonDocument.Parse(fileListResponse.Content!).RootElement.GetProperty("data").EnumerateArray().Select(x => x.GetProperty("attributes").GetProperty("name").GetString()).ToList();
     }
 
     public void WriteFile(string apiKey, string serverId, string path, string content)
