@@ -70,7 +70,14 @@ public class StatsReader
                                 }
                                 else
                                 {
-                                    statistic = (BaseStatistic)JsonConvert.DeserializeObject(property.Value.ToString(), statsType)!;
+                                    try
+                                    {
+                                        statistic = (BaseStatistic)JsonConvert.DeserializeObject(property.Value.ToString(), statsType)!;
+                                    }
+                                    catch
+                                    {
+                                        continue;
+                                    }
                                 }
 
                                 int previousNewline = 0;
