@@ -777,7 +777,7 @@ public class PavlovStatisticsService : IDisposable
                 gunName = PavlovStatisticsService.GunMap[gunKey];
             }
 
-            teamStatValues.Add("Best gun", new StatsLinkModel($"gun-{teamStats.BestGun}", gunName, $"{teamStats.BestGunKillCount} kills {Math.Round(this.calculateSafePercent(teamStats.BestGunKillCount, serverStats.TotalKills), 1)}%)"));
+            teamStatValues.Add("Best gun", new StatsLinkModel($"gun-{teamStats.BestGun}", gunName, $"{teamStats.BestGunKillCount} kills ({Math.Round(this.calculateSafePercent(teamStats.BestGunKillCount, serverStats.TotalKills), 1)}%)"));
         }
 
         return teamStatValues;
