@@ -124,7 +124,7 @@ public class PavlovRconConnection : IDisposable
         try
         {
             Player[] playerListPlayerModels = await this.pavlovRconService.GetActivePlayers(this.ApiKey, this.ServerId);
-            this.playerListPlayers = playerListPlayerModels.ToDictionary(k => k.UniqueId, v => v);
+            this.playerListPlayers = playerListPlayerModels.Where(p => p.UniqueId.HasValue).ToDictionary(k => k.UniqueId.Value, v => v);
         }
         catch (Exception ex)
         {
@@ -144,7 +144,7 @@ public class PavlovRconConnection : IDisposable
                 context.Players.Add(new PersistentPavlovPlayer()
                 {
                     ServerId = this.ServerId,
-                    UniqueId = player.UniqueId,
+                    UniqueId = player.UniqueId!.Value,
                     Username = player.Username,
                     LastSeen = DateTime.Now.ToUniversalTime()
                 });
