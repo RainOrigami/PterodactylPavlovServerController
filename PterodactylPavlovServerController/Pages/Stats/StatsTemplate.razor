@@ -4,13 +4,6 @@
 @using PterodactylPavlovServerController.Services;
 @using PterodactylPavlovServerDomain.Models;
 @using Steam.Models.SteamCommunity;
-@*@inject StatsContext StatsContext
-@inject PavlovServerService PavlovServerService
-@inject StatsCalculator StatsCalculator
-@inject PterodactylService PterodactylService
-@inject SteamWorkshopService SteamWorkshopService
-@inject SteamService SteamService
-@inject IConfiguration Configuration*@
 
 <style>
     .row-alternating {
@@ -42,21 +35,21 @@
 
     <h2>Table of contents</h2>
     <ol>
-        <li><a href="stats/@(ServerId)#serverstats" onclick="scrollToId('serverstats'); return false;" class="link-light">Server statistics</a></li>
+        <li><a href="stats/@(ServerId)#serverstats" class="link-light">Server statistics</a></li>
 
         @if (ServerStatsType == "SND")
         {
-            <li><a href="stats/@(ServerId)#mapstats" onclick="scrollToId('mapstats'); return false;" class="link-light">Map statistics</a></li>
+            <li><a href="stats/@(ServerId)#mapstats" class="link-light">Map statistics</a></li>
         }
 
-        <li><a href="stats/{server.ServerId}#gunstats" onclick="scrollToId('gunstats'); return false;" class="link-light">Gun statistics</a></li>
+        <li><a href="stats/@(ServerId)#gunstats" class="link-light">Gun statistics</a></li>
 
         @if (ServerStatsType == "SND")
         {
-            <li><a href="stats/{server.ServerId}#teamstats" onclick="scrollToId('teamstats'); return false;" class="link-light">Team statistics</a></li>
+            <li><a href="stats/@(ServerId)#teamstats" class="link-light">Team statistics</a></li>
         }
 
-        <li><a href="stats/{server.ServerId}#playerstats" onclick="scrollToId('playerstats'); return false;" class="link-light">Player statistics</a></li>
+        <li><a href="stats/@(ServerId)#playerstats" class="link-light">Player statistics</a></li>
     </ol>
 
     <h2 id="serverstats" class="mt-3">Server statistics</h2>

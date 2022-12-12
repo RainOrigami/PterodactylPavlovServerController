@@ -4,7 +4,7 @@
     <div class="card bg-dark h-100" style="width: @(cardWidth)px">
         @if (LinkURL != null)
         {
-            <a href="@LinkURL" target="@(OpenInBlank ? "_blank" : "_self")" onclick="@(LinkURL.StartsWith("#") ? $"scrollToId('{LinkURL[1..]}'); return false;" : "")">
+            <a href="@LinkURL" target="@(OpenInBlank ? "_blank" : "_self")">
                 <img class="card-img-top" src="@ImageURL" width="@cardWidth" height="@cardWidth" loading="lazy" />
             </a>
         }
@@ -17,7 +17,7 @@
             <h5 class="card-title px-3">
                 @if (LinkURL != null)
                 {
-                    <a href="@LinkURL" target="@(OpenInBlank ? "_blank" : "_self")" onclick="@(LinkURL.StartsWith("#") ? $"scrollToId('{LinkURL[1..]}'); return false;" : "")">
+                    <a href="@LinkURL" target="@(OpenInBlank ? "_blank" : "_self")">
                         @Title
                     </a>
                 }
@@ -43,7 +43,7 @@
                                 else if (item.Value is StatsOwnPercentageModel ownPercentage)
                                 {
                                     <span>
-                                        @ownPercentage.Text (@(ownPercentage.Percentage)%<a href="stats/@(ServerId)/#asterix-own-kills" )" onclick="scrollToId('asterix-own-kills'); return false;">*</a>)
+                                        @ownPercentage.Text (@(ownPercentage.Percentage)%<a href="stats/@(ServerId)#asterix-own-kills" )">*</a>)
                                     </span>
                                 }
                                 else if (item.Value is StatsImageModel statsImage)
@@ -52,12 +52,12 @@
                                 }
                                 else if (item.Value is StatsLinkModel statsLink)
                                 {
-                                    <a href="stats/@(ServerId)#@(statsLink.TargetId)" onclick="@($"scrollToId('{statsLink.TargetId}'); return false;")">@(statsLink.LinkText)</a>
+                                    <a href="stats/@(ServerId)#@(statsLink.TargetId)">@(statsLink.LinkText)</a>
                                     <br />
                                     if (statsLink.AdditionalText is StatsOwnPercentageModel additionalOwnPercentage)
                                     {
                                         <span>
-                                            @((MarkupString)HttpUtility.HtmlEncode(@additionalOwnPercentage.Text).Replace(" ", "&nbsp;"))&nbsp;(@(additionalOwnPercentage.Percentage)%<a href="stats/@(ServerId)/#asterix-own-kills" )" onclick="scrollToId('asterix-own-kills'); return false;">*</a>)
+                                            @((MarkupString)HttpUtility.HtmlEncode(@additionalOwnPercentage.Text).Replace(" ", "&nbsp;"))&nbsp;(@(additionalOwnPercentage.Percentage)%<a href="stats/@(ServerId)#asterix-own-kills" )">*</a>)
                                         </span>
                                     }
                                     else if (statsLink.AdditionalText is string additionalText)
@@ -72,7 +72,7 @@
                                 else if (item.Value is StatsSinceDateModel sinceDate)
                                 {
                                     <span>
-                                        @sinceDate.Text<a href="stats/@(ServerId)#asterix-different-date" onclick="scrollToId('asterix-different-date'); return false;" data-placement="top" title="@($"This value is measured since {sinceDate.Since.ToString("yyyy-MM-dd")}, not from the beginning of recorded stats")">**</a>
+                                        @sinceDate.Text<a href="stats/@(ServerId)#asterix-different-date" data-placement="top" title="@($"This value is measured since {sinceDate.Since.ToString("yyyy-MM-dd")}, not from the beginning of recorded stats")">**</a>
                                     </span>
                                 }
                             </div>
