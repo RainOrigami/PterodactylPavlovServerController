@@ -254,12 +254,12 @@ public class PavlovRconConnection : IDisposable
             if (!playerConnectionTime.TryGetValue(playerId, out DateTime lastMeasured))
             {
                 playerConnectionTime.Add(playerId, DateTime.Now);
+                lastMeasured = DateTime.Now;
             }
 
             PersistentPavlovPlayer? dbPlayer = await context.Players.SingleOrDefaultAsync(p => p.UniqueId == playerId && p.ServerId == this.ServerId);
             if (dbPlayer == null)
             {
-                // This is unlikely to happen
                 continue;
             }
 
