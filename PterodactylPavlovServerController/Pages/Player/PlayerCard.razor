@@ -44,6 +44,16 @@
 
     PlayersState.Value.PlayerBans.TryGetValue(PlayerId, out IReadOnlyCollection<PlayerBansModel>? playerBans);
 
+    PersistentPavlovPlayer? dbPlayer = null;
+
+    if (ServerId != null)
+    {
+        using (PavlovServerContext pavlovServerContext = new(Configuration))
+        {
+            dbPlayer = pavlovServerContext.Players.SingleOrDefault(p => p.ServerId == ServerId && p.UniqueId == PlayerId);
+        }
+    }
+
     string profileUrl;
     string avatarUrl;
     if (playerSummary != null)
@@ -285,8 +295,6 @@
     [EditorRequired]
     public ulong PlayerId { get; set; }
 
-    private PersistentPavlovPlayer? dbPlayer;
-
     private CountryModel? countryModel;
 
     protected override async Task OnParametersSetAsync()
@@ -303,12 +311,6 @@
         if (!PlayersState.Value.PlayerBans.ContainsKey(PlayerId))
         {
             await Task.Run(() => Dispatcher.Dispatch(new PlayersLoadBansAction(PlayerId)));
-        }
-
-        if (ServerId != null)
-        {
-            await using PavlovServerContext pavlovServerContext = new(Configuration);
-            dbPlayer = await pavlovServerContext.Players.SingleOrDefaultAsync(p => p.ServerId == ServerId && p.UniqueId == PlayerId);
         }
 
         await base.OnParametersSetAsync();
