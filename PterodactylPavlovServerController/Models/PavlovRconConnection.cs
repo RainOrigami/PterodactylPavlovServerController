@@ -1,4 +1,5 @@
-﻿using PavlovVR_Rcon.Models.Pavlov;
+﻿using Microsoft.EntityFrameworkCore;
+using PavlovVR_Rcon.Models.Pavlov;
 using PterodactylPavlovServerController.Contexts;
 using PterodactylPavlovServerController.Services;
 using PterodactylPavlovServerDomain.Models;
@@ -17,9 +18,11 @@ public class PavlovRconConnection : IDisposable
     private readonly IConfiguration configuration;
     private readonly PavlovRconService pavlovRconService;
     private readonly SteamService steamService;
+    private readonly PavlovServerContext context;
     private readonly CancellationTokenSource updateCancellationTokenSource = new();
     private Dictionary<ulong, PlayerDetail>? playerDetails;
     private Dictionary<ulong, Player>? playerListPlayers;
+    private Dictionary<ulong, DateTime> playerConnectionTime = new();
 
     private ulong[]? banList;
     public string ApiKey { get; }
@@ -31,6 +34,7 @@ public class PavlovRconConnection : IDisposable
         this.steamService = steamService;
         this.configuration = configuration;
         this.ApiKey = apiKey;
+        this.context = new(this.configuration);
     }
 
     public string ServerId => this.PterodactylServer.ServerId;
@@ -124,7 +128,7 @@ public class PavlovRconConnection : IDisposable
         try
         {
             Player[] playerListPlayerModels = await this.pavlovRconService.GetActivePlayers(this.ApiKey, this.ServerId);
-            this.playerListPlayers = playerListPlayerModels.Where(p => p.UniqueId.HasValue).ToDictionary(k => k.UniqueId.Value, v => v);
+            this.playerListPlayers = playerListPlayerModels.Where(p => p.UniqueId.HasValue).ToDictionary(k => k.UniqueId!.Value, v => v);
         }
         catch (Exception ex)
         {
@@ -134,31 +138,12 @@ public class PavlovRconConnection : IDisposable
 
         this.OnPlayerListUpdated?.Invoke(this.ServerId);
 
-        await using PavlovServerContext context = new(this.configuration);
-
         foreach (Player player in this.playerListPlayers.Values)
         {
-            PersistentPavlovPlayer? dbPlayer = context.Players.FirstOrDefault(p => p.UniqueId == player.UniqueId && p.ServerId == this.ServerId);
-            if (dbPlayer == null)
-            {
-                context.Players.Add(new PersistentPavlovPlayer()
-                {
-                    ServerId = this.ServerId,
-                    UniqueId = player.UniqueId!.Value,
-                    Username = player.Username,
-                    LastSeen = DateTime.Now.ToUniversalTime()
-                });
-            }
-            else
-            {
-                if (dbPlayer.Username != player.Username)
-                {
-                    dbPlayer.Username = player.Username;
-                }
-
-                dbPlayer.LastSeen = DateTime.Now.ToUniversalTime();
-            }
+            await this.persistPlayer(player);
         }
+
+        await this.measurePlayerOnlineTimes(this.playerListPlayers.Values.ToList());
 
         await context.SaveChangesAsync();
     }
@@ -227,6 +212,58 @@ public class PavlovRconConnection : IDisposable
                 await steamService.GetBans(playerId);
             }
             catch { }
+        }
+    }
+
+    private async Task persistPlayer(Player player)
+    {
+        PersistentPavlovPlayer? dbPlayer = await context.Players.SingleOrDefaultAsync(p => p.UniqueId == player.UniqueId && p.ServerId == this.ServerId);
+        if (dbPlayer == null)
+        {
+            context.Players.Add(new PersistentPavlovPlayer()
+            {
+                ServerId = this.ServerId,
+                UniqueId = player.UniqueId!.Value,
+                Username = player.Username,
+                LastSeen = DateTime.Now.ToUniversalTime()
+            });
+        }
+        else
+        {
+            if (dbPlayer.Username != player.Username)
+            {
+                dbPlayer.Username = player.Username;
+            }
+
+            dbPlayer.LastSeen = DateTime.Now.ToUniversalTime();
+        }
+    }
+
+    private async Task measurePlayerOnlineTimes(List<Player> players)
+    {
+        foreach (ulong playerId in playerConnectionTime.Keys)
+        {
+            if (players.All(p => p.UniqueId != playerId))
+            {
+                playerConnectionTime.Remove(playerId);
+            }
+        }
+
+        foreach (ulong playerId in players.Select(p => p.UniqueId!.Value))
+        {
+            if (!playerConnectionTime.TryGetValue(playerId, out DateTime lastMeasured))
+            {
+                playerConnectionTime.Add(playerId, DateTime.Now);
+            }
+
+            PersistentPavlovPlayer? dbPlayer = await context.Players.SingleOrDefaultAsync(p => p.UniqueId == playerId && p.ServerId == this.ServerId);
+            if (dbPlayer == null)
+            {
+                // This is unlikely to happen
+                continue;
+            }
+
+            dbPlayer.TotalTime += DateTime.Now - lastMeasured;
         }
     }
 }

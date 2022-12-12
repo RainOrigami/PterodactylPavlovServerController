@@ -12,4 +12,6 @@ public class PersistentPavlovPlayer
     public string Username { get; set; } = string.Empty;
 
     public DateTime LastSeen { get; set; } = DateTime.MinValue;
+
+    public TimeSpan TotalTime { get; set; } = TimeSpan.Zero;
 }
