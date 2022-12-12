@@ -251,13 +251,15 @@
                                         {
                                             <div class="row pb-1">
                                                 <div class="col">
-                                                    <a class="btn btn-outline-success" style="width: 120px;" href="#" @onclick="switchTeam" @onclick:preventDefault>Switch team</a>
+                                                    <Confirm @ref="switchConfirm" ConfirmationChanged="confirmSwitch" ConfirmationTitle="Switch this user?" ConfirmationMessage="@($"Do you really want to switch {playerName}?")" Id="@($"switch-{PlayerId}")" />
+                                                    <a class="btn btn-outline-success" style="width: 120px;" href="#" data-bs-toggle="modal" data-bs-target="#switch-@PlayerId">Switch team</a>
                                                 </div>
                                             </div>
                                         }
                                         <div class="row pb-1">
                                             <div class="col">
-                                                <a class="btn btn-outline-warning" style="width: 120px;" href="#" @onclick="kick" @onclick:preventDefault>Kick</a>
+                                                <Confirm @ref="kickConfirm" ConfirmationChanged="confirmKick" ConfirmationTitle="Kick this user?" ConfirmationMessage="@($"Do you really want to kick {playerName}?")" Id="@($"kick-{PlayerId}")" />
+                                                <a class="btn btn-outline-warning" style="width: 120px;" href="#" data-bs-toggle="modal" data-bs-target="#kick-@PlayerId">Kick</a>
                                             </div>
                                         </div>
                                     }
@@ -266,11 +268,13 @@
                                         <div class="col">
                                             @if (connection.BanList?.Contains(PlayerId) ?? false)
                                             {
-                                                <a class="btn btn-outline-danger" style="width: 120px;" href="#" @onclick="unban" @onclick:preventDefault>Unban</a>
+                                                <Confirm @ref="unbanConfirm" ConfirmationChanged="confirmUnban" ConfirmationTitle="Unban this user?" ConfirmationMessage="@($"Do you really want to unban {playerName}?")" Id="@($"unban-{PlayerId}")" />
+                                                <a class="btn btn-outline-danger" style="width: 120px;" href="#" data-bs-toggle="modal" data-bs-target="#unban-@PlayerId">Unban</a>
                                             }
                                             else
                                             {
-                                                <a class="btn btn-outline-danger" style="width: 120px;" href="#" @onclick="ban" @onclick:preventDefault>Ban</a>
+                                                <Confirm @ref="banConfirm" ConfirmationChanged="confirmBan" ConfirmationTitle="Ban this user?" ConfirmationMessage="@($"Do you really want to ban {playerName}?")" Id="@($"ban-{PlayerId}")" />
+                                                <a class="btn btn-outline-danger" style="width: 120px;" href="#" data-bs-toggle="modal" data-bs-target="#ban-@PlayerId">Ban</a>
                                             }
                                         </div>
                                     </div>
@@ -296,6 +300,51 @@
     public ulong PlayerId { get; set; }
 
     private CountryModel? countryModel;
+
+    private Confirm banConfirm { get; set; }
+    private Confirm unbanConfirm { get; set; }
+    private Confirm kickConfirm { get; set; }
+    private Confirm switchConfirm { get; set; }
+
+    private async Task confirmBan(bool confirmed)
+    {
+        if (!confirmed)
+        {
+            return;
+        }
+
+        await ban();
+    }
+
+    private async Task confirmUnban(bool confirmed)
+    {
+        if (!confirmed)
+        {
+            return;
+        }
+
+        await unban();
+    }
+
+    private async Task confirmKick(bool confirmed)
+    {
+        if (!confirmed)
+        {
+            return;
+        }
+
+        await kick();
+    }
+
+    private async Task confirmSwitch(bool confirmed)
+    {
+        if (!confirmed)
+        {
+            return;
+        }
+
+        await switchTeam();
+    }
 
     protected override async Task OnParametersSetAsync()
     {
