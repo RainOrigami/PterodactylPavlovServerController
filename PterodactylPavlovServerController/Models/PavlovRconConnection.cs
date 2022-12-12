@@ -71,7 +71,7 @@ public class PavlovRconConnection : IDisposable
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
+                Console.WriteLine(ex.ToString());
             }
 
             await Task.Delay(1000);
