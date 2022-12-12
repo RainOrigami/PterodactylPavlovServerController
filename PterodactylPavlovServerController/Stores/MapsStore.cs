@@ -76,7 +76,7 @@ public class MapsEffects
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex.Message);
+            Console.WriteLine(ex.ToString());
         }
 
         await Task.CompletedTask;

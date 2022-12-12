@@ -20,6 +20,7 @@
 @inject ApiKeyService ApiKey
 @inject IConfiguration Configuration
 @inject CountryService CountryService
+@inject PavlovServerContext PavlovServerContext
 
 @{
     PavlovRconConnection? connection = null;
@@ -48,10 +49,7 @@
 
     if (ServerId != null)
     {
-        using (PavlovServerContext pavlovServerContext = new(Configuration))
-        {
-            dbPlayer = pavlovServerContext.Players.SingleOrDefault(p => p.ServerId == ServerId && p.UniqueId == PlayerId);
-        }
+        dbPlayer = PavlovServerContext.Players.SingleOrDefault(p => p.ServerId == ServerId && p.UniqueId == PlayerId);
     }
 
     string profileUrl;

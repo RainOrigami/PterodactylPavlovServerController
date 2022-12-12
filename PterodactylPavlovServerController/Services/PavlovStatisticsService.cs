@@ -395,7 +395,7 @@ public class PavlovStatisticsService : IDisposable
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine(ex);
+                        Console.WriteLine(ex.ToString());
                     }
                     return new CEFPPlayerCashModel(ulong.Parse(p), cash);
                 }).Select(p => p.Result).ToArray());
@@ -995,7 +995,7 @@ public class PavlovStatisticsService : IDisposable
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine(ex);
+                    Console.WriteLine(ex.ToString());
                 }
 
                 sw.Stop();
