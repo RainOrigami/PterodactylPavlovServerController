@@ -1,7 +1,9 @@
 ﻿using BlazorTemplater;
+using Microsoft.EntityFrameworkCore;
 using NuGet.Packaging;
 using PavlovStatsReader;
 using PavlovStatsReader.Models;
+using PterodactylPavlovServerController.Contexts;
 using PterodactylPavlovServerController.Models;
 using PterodactylPavlovServerController.Pages.Stats;
 using PterodactylPavlovServerDomain.Models;
@@ -189,6 +191,7 @@ public class PavlovStatisticsService : IDisposable
     private readonly IConfiguration configuration;
     private readonly PavlovServerService pavlovServerService;
     private readonly CountryService countryService;
+    private readonly PavlovServerContext pavlovServerContext;
     private readonly PterodactylService pterodactylService;
     private readonly StatsCalculator statsCalculator;
 
@@ -207,6 +210,7 @@ public class PavlovStatisticsService : IDisposable
         this.steamWorkshopService = steamWorkshopService;
         this.pavlovServerService = pavlovServerService;
         this.countryService = countryService;
+        this.pavlovServerContext = new PavlovServerContext(this.configuration);
         statsContext.Database.EnsureCreated();
     }
 
@@ -479,7 +483,7 @@ public class PavlovStatisticsService : IDisposable
                     {
                         { "Rank", $"#{++playerRank}" }
                     };
-                    statItems.AddRange(await getPlayerStats(playerStats, allStats, serverStatsType));
+                    statItems.AddRange(await getPlayerStats(playerStats, allStats, serverStatsType, server.ServerId));
 
                     playerStatistics.Add((playerSummary, playerStats, statItems));
                 }
@@ -490,7 +494,7 @@ public class PavlovStatisticsService : IDisposable
             }
             templateRenderer.Set(m => m.PlayerStatistics, playerStatistics);
 
-            templateRenderer.Set(m => m.HonorableMentions, await getHonorableMentions(allStats, serverStatsType));
+            templateRenderer.Set(m => m.HonorableMentions, await getHonorableMentions(allStats, serverStatsType, server.ServerId));
             templateRenderer.Set(m => m.DishonorableMentions, await getDishonorableMentions(allStats, serverStatsType));
 
             Console.WriteLine("Rendering...");
@@ -501,7 +505,7 @@ public class PavlovStatisticsService : IDisposable
         Console.WriteLine("Stats written");
     }
 
-    private async Task<List<(string title, PlayerSummaryModel summary, Dictionary<string, object> items)>> getHonorableMentions(CBaseStats[] allStats, string serverStatsType)
+    private async Task<List<(string title, PlayerSummaryModel summary, Dictionary<string, object> items)>> getHonorableMentions(CBaseStats[] allStats, string serverStatsType, string serverId)
     {
         Console.WriteLine("Generating honorable player stats...");
 
@@ -521,6 +525,20 @@ public class PavlovStatisticsService : IDisposable
             honorableMentions.Add(await createPlayerMentionStat(playerStats, "Highest average score", "Score", p => p.AverageScore, p => p.TotalScore, false, (v, p) => $"{Math.Round(v, 0)}"));
             honorableMentions.Add(await createPlayerMentionStat(playerStats, "Most bomb plants", "Plants", p => p.BombsPlanted, p => p.TotalScore, false, (v, p) => $"{Math.Round(v, 0)}"));
             honorableMentions.Add(await createPlayerMentionStat(playerStats, "Most bomb defuses", "Defuses", p => p.BombsDefused, p => p.TotalScore, false, (v, p) => $"{Math.Round(v, 1)}"));
+        }
+
+        PersistentPavlovPlayer? dbPlayer = await pavlovServerContext.Players.Where(p => p.ServerId == serverId).OrderByDescending(p => p.TotalTime).ThenByDescending(p => p.LastSeen).FirstOrDefaultAsync();
+        if (dbPlayer != null)
+        {
+            PlayerSummaryModel? playerSummary = await this.steamService.GetPlayerSummary(dbPlayer.UniqueId);
+            if (playerSummary != null)
+            {
+                honorableMentions.Add(("Most time on this server", playerSummary, new Dictionary<string, object>()
+                {
+                    { "Player", new StatsLinkModel($"player-{playerSummary.SteamId}", playerSummary.Nickname, null) },
+                    { "Time", dbPlayer.TotalTime.ToString("d\\.hh\\:mm\\:ss") }
+                }));
+            }
         }
 
         return honorableMentions.Where(s => s.HasValue).Select(s => s!.Value).ToList();
@@ -800,7 +818,7 @@ public class PavlovStatisticsService : IDisposable
         }
     }
 
-    private async Task<Dictionary<string, object>> getPlayerStats(CPlayerStats playerStats, CBaseStats[] allStats, string serverStatsType)
+    private async Task<Dictionary<string, object>> getPlayerStats(CPlayerStats playerStats, CBaseStats[] allStats, string serverStatsType, string serverId)
     {
         Console.WriteLine($"Generating server player stats for {playerStats.UniqueId}");
 
@@ -939,6 +957,13 @@ public class PavlovStatisticsService : IDisposable
             {
                 playerStatValues.Add("VAC", new StatsColoredTextModel("No", "text-success"));
             }
+        }
+
+        PersistentPavlovPlayer? dbPlayer = await pavlovServerContext.Players.SingleOrDefaultAsync(p => p.ServerId == serverId && p.UniqueId == playerStats.UniqueId);
+        if (dbPlayer != null)
+        {
+            playerStatValues.Add("Last seen", dbPlayer.LastSeen.ToString("yyyy-MM-dd HH:mm:ss"));
+            playerStatValues.Add("Total time", new StatsSinceDateModel(dbPlayer.TotalTime.ToString("d\\.hh\\:mm\\:ss"), new DateTime(2022, 12, 12)));
         }
 
         return playerStatValues;
