@@ -5,12 +5,12 @@
         @if (LinkURL != null)
         {
             <a href="@LinkURL" target="@(OpenInBlank ? "_blank" : "_self")" onclick="@(LinkURL.StartsWith("#") ? $"scrollToId('{LinkURL[1..]}'); return false;" : "")">
-                <img class="card-img-top" src="@ImageURL" width="@cardWidth" height="@cardWidth" />
+                <img class="card-img-top" src="@ImageURL" width="@cardWidth" height="@cardWidth" loading="lazy" />
             </a>
         }
         else
         {
-            <img class="card-img-top" src="@ImageURL" width="@cardWidth" height="@cardWidth" />
+            <img class="card-img-top" src="@ImageURL" width="@cardWidth" height="@cardWidth" loading="lazy" />
         }
 
         <div class="card-body px-0">
@@ -48,7 +48,7 @@
                                 }
                                 else if (item.Value is StatsImageModel statsImage)
                                 {
-                                    <img src="@statsImage.ImageUrl" alt="@statsImage.ImageAlt" title="@statsImage.ImageAlt" height="16" class="ms-2" />
+                                    <img src="@statsImage.ImageUrl" alt="@statsImage.ImageAlt" title="@statsImage.ImageAlt" height="16" class="ms-2" loading="lazy" />
                                 }
                                 else if (item.Value is StatsLinkModel statsLink)
                                 {
