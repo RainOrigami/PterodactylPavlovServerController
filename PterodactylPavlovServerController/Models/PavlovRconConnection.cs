@@ -263,7 +263,8 @@ public class PavlovRconConnection : IDisposable
                 continue;
             }
 
-            dbPlayer.TotalTime += DateTime.Now - lastMeasured;
+            dbPlayer.TotalTime += (DateTime.Now - lastMeasured);
+            playerConnectionTime[playerId] = DateTime.Now;
         }
     }
 }
