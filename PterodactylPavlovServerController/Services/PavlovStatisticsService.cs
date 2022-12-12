@@ -536,7 +536,7 @@ public class PavlovStatisticsService : IDisposable
                 honorableMentions.Add(("Most time on this server", playerSummary, new Dictionary<string, object>()
                 {
                     { "Player", new StatsLinkModel($"player-{playerSummary.SteamId}", playerSummary.Nickname, null) },
-                    { "Time", dbPlayer.TotalTime.ToString("d\\.hh\\:mm\\:ss") }
+                    { "Time", new StatsSinceDateModel(dbPlayer.TotalTime.ToString("d\\.hh\\:mm\\:ss"), new DateTime(2022, 12, 12)) }
                 }));
             }
         }
@@ -962,7 +962,7 @@ public class PavlovStatisticsService : IDisposable
         PersistentPavlovPlayer? dbPlayer = await pavlovServerContext.Players.SingleOrDefaultAsync(p => p.ServerId == serverId && p.UniqueId == playerStats.UniqueId);
         if (dbPlayer != null)
         {
-            playerStatValues.Add("Last seen", dbPlayer.LastSeen.ToString("yyyy-MM-dd HH:mm:ss"));
+            playerStatValues.Add("Last seen", dbPlayer.LastSeen.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"));
             playerStatValues.Add("Total time", new StatsSinceDateModel(dbPlayer.TotalTime.ToString("d\\.hh\\:mm\\:ss"), new DateTime(2022, 12, 12)));
         }
 

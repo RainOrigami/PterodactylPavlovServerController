@@ -134,7 +134,8 @@
                                         <div class="col-auto px-1">
                                             <i class="fa-solid fa-calendar"></i>
                                         </div>
-                                        <div class="col px-1">@dbPlayer.LastSeen.ToString("dd.MM.yyyy HH:mm:ss") UTC</div>
+                                        <div class="col px-1">@dbPlayer.LastSeen.ToUniversalTime().ToString("dd.MM.yyyy HH:mm:ss") UTC</div>
+                                        <div class="col px-1">@dbPlayer.TotalTime.ToString("d\\.hh\\:mm\\:ss")</div>
                                     </div>
                                 }
 

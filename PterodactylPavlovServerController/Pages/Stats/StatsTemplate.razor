@@ -160,6 +160,11 @@
         Percentages marked with * are calculated using own amounts (eg. own kills), not total kill count.<br />
         Unmarked percentages are calculated using total amounts (eg. total kills).
     </p>
+    <h3 id="asterix-different-date" class="mt-3">Values marked with **</h3>
+    <p>
+        Values marked with ** have been measured beginning at a different time than other values. This is because that measurement has been added later.<br/>
+        Hover on the ** next to the value to see the date, when it was started to be measured.
+    </p>
     @if (ServerStatsType == "SND")
     {
         <h3 class="mt-3">Score</h3>
@@ -180,8 +185,9 @@
 
 <footer class="text-center text-lg-start bg-dark text-muted">
     <section class="d-flex justify-content-center justify-content-lg-between p-4 border-bottom">
-        Stats updated on @DateTime.UtcNow.ToLongDateString() @DateTime.UtcNow.ToLongTimeString() UTC.<br />
-        Stats are updated every eight hours.
+        Stats updated on @DateTime.UtcNow.ToLongDateString() @DateTime.UtcNow.ToLongTimeString().<br />
+        Stats are updated every eight hours.<br />
+        All times are UTC.
     </section>
     <div class="text-center p-4">
         Provided by:

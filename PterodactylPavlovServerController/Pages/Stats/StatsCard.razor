@@ -72,8 +72,7 @@
                                 else if (item.Value is StatsSinceDateModel sinceDate)
                                 {
                                     <span>
-                                        @sinceDate.Text
-                                        <a href="#" onclick="return false;" data-placement="top" title="@($"This value is measured since {sinceDate.Since.ToString("yyyy-MM-dd")}, not from the beginning of recorded stats")">**</a>
+                                        @sinceDate.Text<a href="stats/@(ServerId)#asterix-different-date" onclick="scrollToId('asterix-different-date'); return false;" data-placement="top" title="@($"This value is measured since {sinceDate.Since.ToString("yyyy-MM-dd")}, not from the beginning of recorded stats")">**</a>
                                     </span>
                                 }
                             </div>
