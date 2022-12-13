@@ -2,13 +2,22 @@
 @using Fluxor
 @using Microsoft.AspNetCore.Identity
 @using PterodactylPavlovServerController.Areas.Identity.Data
+@using PterodactylPavlovServerController.Contexts;
+@using PterodactylPavlovServerController.Models;
+@using PterodactylPavlovServerController.Services;
 @using PterodactylPavlovServerController.Stores
 @using PterodactylPavlovServerController.Pages.Player
+@using PterodactylPavlovServerDomain.Models;
+@using System.Web;
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject SignInManager<PterodactylPavlovServerControllerUser> SignInManager
 @inject UserManager<PterodactylPavlovServerControllerUser> UserManager
 @inject IHttpContextAccessor httpContextAccessor
 @inject IDispatcher Dispatcher
+@inject PavlovRconConnectionService Rcon
+@inject PavlovServerService PavlovServerService
+@inject ApiKeyService ApiKey
+@inject IConfiguration Configuration
 
 @{
     Dispatcher.Dispatch(new PageTitleSetAction("Home"));
@@ -23,4 +32,52 @@ else
     <h1>Hello!</h1>
 }
 
-Welcome to Pterodactyl Pavlov RCON.
+<h3>Audit log</h3>
+<table class="table table-striped table-dark table-hover">
+    <thead>
+        <tr>
+            <th scope="col">Server</th>
+            <th scope="col">User</th>
+            <th scope="col">Time</th>
+            <th scope="col" style="width: 100%">Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (audits != null)
+        {
+            foreach (AuditActionModel audit in audits)
+            {
+                <tr>
+                    <td nowrap>@(serverNames[audit.Server])</td>
+                    <td nowrap>@audit.User</td>
+                    <td nowrap>@audit.Time.ToString("dd.MM.yyyy HH:mm:ss") UTC</td>
+                    <td>@audit.Action</td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+@code {
+    private AuditActionModel[]? audits = null;
+    Dictionary<string, string> serverNames = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        PavlovRconConnection[] availableServers = Rcon.GetAllConnections(ApiKey.ApiKey);
+
+        using (PavlovServerContext pavlovServerContext = new(Configuration))
+        {
+            string[] serverIds = availableServers.Select(s => s.ServerId).ToArray();
+            audits = pavlovServerContext.AuditActions.Where(a => serverIds.Contains(a.Server)).OrderByDescending(a => a.Time).Take(100).ToArray();
+        }
+
+        serverNames.Clear();
+        foreach (string serverId in audits.Select(a => a.Server).Distinct())
+        {
+            serverNames.Add(serverId, availableServers.First(s => s.ServerId == serverId).PterodactylServer.Name);
+        }
+
+        await base.OnInitializedAsync();
+    }
+}

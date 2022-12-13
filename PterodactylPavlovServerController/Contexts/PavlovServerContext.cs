@@ -15,6 +15,7 @@ public class PavlovServerContext : DbContext
     }
 
     public DbSet<PersistentPavlovPlayerModel> Players { get; set; }
+    public DbSet<AuditActionModel> AuditActions { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -42,5 +43,7 @@ public class PavlovServerContext : DbContext
             p.UniqueId,
             p.ServerId,
         });
+
+        modelBuilder.Entity<AuditActionModel>().HasKey(a => new { a.Server, a.User, a.Action, a.Time });
     }
 }

@@ -9,6 +9,7 @@
 @inject IToastService Toast
 @inject ApiKeyService ApiKey
 @inject IState<PlayersState> PlayersState
+@inject AuditService AuditService
 
 <div class="tab-pane container active px-0" id="cheats">
     <div class="me-2" style="width: 425px; display: inline-block; vertical-align: top;">
@@ -269,6 +270,7 @@
             if (await RconService.GiveCash(ApiKey.ApiKey, Connection.ServerId, giveCash.UniqueId!.Value, giveCash.Amount!.Value))
             {
                 Toast.ShowSuccess("Player received cash", "Player cheat executed");
+                await AuditService.Add(Connection.ServerId, $"Gave player {giveCash.UniqueId!.Value} cash {giveCash.Amount!.Value}");
             }
             else
             {
@@ -288,6 +290,7 @@
             if (await RconService.GiveItem(ApiKey.ApiKey, Connection.ServerId, giveItem.UniqueId!.Value, giveItem.Item!.Value.ToString()))
             {
                 Toast.ShowSuccess("Player received item", "Player cheat executed");
+                await AuditService.Add(Connection.ServerId, $"Gave player {giveItem.UniqueId!.Value} item {giveItem.Item!.Value}");
             }
             else
             {
@@ -307,6 +310,7 @@
             if (await RconService.GiveTeamCash(ApiKey.ApiKey, Connection.ServerId, giveTeamCash.TeamId!.Value, giveTeamCash.Amount!.Value))
             {
                 Toast.ShowSuccess("Team received cash", "Player cheat executed");
+                await AuditService.Add(Connection.ServerId, $"Gave team {giveTeamCash.TeamId!.Value} cash {giveTeamCash.Amount!.Value}");
             }
             else
             {
@@ -326,6 +330,7 @@
             if (await RconService.GiveVehicle(ApiKey.ApiKey, Connection.ServerId, giveVehicle.UniqueId!.Value, giveVehicle.Vehicle!.Value.ToString()))
             {
                 Toast.ShowSuccess("Player received vehicle", "Player cheat executed");
+                await AuditService.Add(Connection.ServerId, $"Gave player {giveVehicle.UniqueId!.Value} vehicle {giveVehicle.Vehicle!.Value}");
             }
             else
             {
@@ -345,6 +350,7 @@
             if (await RconService.SetSkin(ApiKey.ApiKey, Connection.ServerId, playerSkin.UniqueId!.Value, playerSkin.Skin!.Value.ToString()))
             {
                 Toast.ShowSuccess("Player skin has been set", "Player cheat executed");
+                await AuditService.Add(Connection.ServerId, $"Set player {playerSkin.UniqueId!.Value} skin to {playerSkin.Skin!.Value}");
             }
             else
             {
@@ -363,6 +369,7 @@
         {
             await RconService.Slap(ApiKey.ApiKey, Connection.ServerId, slap.UniqueId!.Value, slap.Amount!.Value);
             Toast.ShowSuccess("Player has been slapped", "Player cheat executed");
+            await AuditService.Add(Connection.ServerId, $"Slapped player {slap.UniqueId!.Value} for {slap.Amount!.Value}");
         }
         catch (Exception e)
         {

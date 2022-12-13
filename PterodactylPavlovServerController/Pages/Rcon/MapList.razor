@@ -10,6 +10,7 @@
 @inject IToastService Toast
 @inject ApiKeyService ApiKey
 @inject SteamWorkshopService SteamWorkshopService
+@inject AuditService AuditService
 
 <div class="tab-pane container active px-0" id="maps">
     <h3>Click a map to change to</h3>
@@ -119,6 +120,7 @@
             if (await RconService.SwitchMap(ApiKey.ApiKey, Connection.ServerId, serverMap.MapLabel, gameMode))
             {
                 Toast.ShowSuccess($"Map switching to {(mapDetail == null ? serverMap.MapLabel : mapDetail.Name)} ({serverMap.GameMode})");
+                await AuditService.Add(Connection.ServerId, $"Changed map from {ServerInfo.MapLabel} to {serverMap.MapLabel} game mode {serverMap.GameMode}");
             }
             else
             {
@@ -153,6 +155,7 @@
                 }
 
                 Toast.ShowSuccess($"Changing map to {mapName}");
+                await AuditService.Add(Connection.ServerId, $"Changed map from {ServerInfo.MapLabel} to {mapChangeInput.MapLabel} game mode {mapChangeInput.GameMode.Value}");
             }
             else
             {
@@ -172,6 +175,7 @@
         {
             await RconService.RotateMap(ApiKey.ApiKey, Connection.ServerId);
             Toast.ShowSuccess("Map has been skipped");
+            await AuditService.Add(Connection.ServerId, $"Rotated map from {ServerInfo.MapLabel}");
         }
         catch (Exception e)
         {

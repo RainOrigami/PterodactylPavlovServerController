@@ -9,6 +9,7 @@
 @inject IToastService Toast
 @inject ApiKeyService ApiKey
 @inject IState<PlayersState> PlayersState
+@inject AuditService AuditService
 
 <div class="tab-pane container active px-0" id="ttt">
     <div class="me-2" style="width: 425px; display: inline-block; vertical-align: top;">
@@ -110,6 +111,7 @@
             if (await RconService.TTTEndRound(ApiKey.ApiKey, Connection.ServerId))
             {
                 Toast.ShowSuccess("Round has been ended");
+                await AuditService.Add(Connection.ServerId, $"Ended TTT round");
             }
             else
             {
@@ -138,6 +140,7 @@
                 if (await RconService.TTTSetKarma(ApiKey.ApiKey, Connection.ServerId, karma.UniqueId!.Value, karma.Amount!.Value))
                 {
                     Toast.ShowSuccess("Player karma has been set");
+                    await AuditService.Add(Connection.ServerId, $"Set TTT player {karma.UniqueId} karma to {karma.Amount}");
                 }
                 else
                 {
@@ -149,6 +152,7 @@
             if (await RconService.TTTFlushKarma(ApiKey.ApiKey, Connection.ServerId, karma.UniqueId!.Value))
             {
                 Toast.ShowSuccess("Player karma has been reset");
+                await AuditService.Add(Connection.ServerId, $"Reset TTT player {karma.UniqueId} karma");
             }
             else
             {
@@ -172,6 +176,7 @@
             }
 
             Toast.ShowSuccess(state ? "Timer has been paused" : "Timer has been unpaused");
+            await AuditService.Add(Connection.ServerId, $"Toggled TTT timer to state {state}");
         }
         catch (Exception e)
         {
@@ -192,6 +197,7 @@
             }
 
             Toast.ShowSuccess(state ? "Skin menu has been enabled" : "Skin menu has been disabled");
+            await AuditService.Add(Connection.ServerId, $"Toggled TTT skin menu to state {state}");
         }
         catch (Exception e)
         {

@@ -9,6 +9,8 @@
 @inject IToastService Toast
 @inject ApiKeyService ApiKey
 @inject IState<PlayersState> PlayersState
+@inject AuditService AuditService
+
 <div class="tab-pane container active px-0" id="server">
 
     <div class="me-2" style="width: 425px; display: inline-block; vertical-align: top;">
@@ -177,6 +179,7 @@
                 if (await RconService.AddMod(ApiKey.ApiKey, Connection.ServerId, addOrRemoveMod.UniqueId!.Value))
                 {
                     Toast.ShowSuccess("Player is now a moderator");
+                    await AuditService.Add(Connection.ServerId, $"Added moderator {addOrRemoveMod.UniqueId}");
                 }
                 else
                 {
@@ -188,6 +191,7 @@
                 if (await RconService.RemoveMod(ApiKey.ApiKey, Connection.ServerId, addOrRemoveMod.UniqueId!.Value))
                 {
                     Toast.ShowSuccess("Player is no longer a moderator");
+                    await AuditService.Add(Connection.ServerId, $"Removed moderator {addOrRemoveMod.UniqueId}");
                 }
                 else
                 {
@@ -208,6 +212,7 @@
             if (await RconService.SetLimitedAmmoType(ApiKey.ApiKey, Connection.ServerId, (int)limitedAmmoType.AmmoType!.Value))
             {
                 Toast.ShowSuccess("Ammo type has been set");
+                await AuditService.Add(Connection.ServerId, $"Ammo type set to {limitedAmmoType.AmmoType}");
             }
             else
             {
@@ -227,6 +232,7 @@
             if (await RconService.ResetSND(ApiKey.ApiKey, Connection.ServerId))
             {
                 Toast.ShowSuccess("SND round has been reset");
+                await AuditService.Add(Connection.ServerId, $"Reset SND round");
             }
             else
             {
@@ -259,11 +265,13 @@
 
                 await RconService.SetPin(ApiKey.ApiKey, Connection.ServerId, pin);
                 Toast.ShowSuccess("Pin has been set");
+                await AuditService.Add(Connection.ServerId, $"Pin set to {pin}");
                 return;
             }
 
             await RconService.SetPin(ApiKey.ApiKey, Connection.ServerId, null);
             Toast.ShowSuccess("Pin has been removed");
+            await AuditService.Add(Connection.ServerId, $"Pin removed");
         }
         catch (Exception e)
         {
@@ -278,6 +286,7 @@
             if (await RconService.Shownametags(ApiKey.ApiKey, Connection.ServerId, true))
             {
                 Toast.ShowSuccess("Nametags have been made visible");
+                await AuditService.Add(Connection.ServerId, $"Enabled nametags");
             }
             else
             {
@@ -297,6 +306,7 @@
             if (await RconService.Shownametags(ApiKey.ApiKey, Connection.ServerId, false))
             {
                 Toast.ShowSuccess("Nametags have been made invisible");
+                await AuditService.Add(Connection.ServerId, $"Disabled nametags");
             }
             else
             {
@@ -314,6 +324,7 @@
         try
         {
             Toast.ShowSuccess(await RconService.CustomCommand(ApiKey.ApiKey, Connection.ServerId, customCommand.Command!));
+            await AuditService.Add(Connection.ServerId, $"Executed custom command: {customCommand.Command}");
         }
         catch (Exception e)
         {

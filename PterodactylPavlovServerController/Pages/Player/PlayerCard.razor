@@ -20,6 +20,7 @@
 @inject ApiKeyService ApiKey
 @inject IConfiguration Configuration
 @inject CountryService CountryService
+@inject AuditService AuditService
 
 @{
     PavlovRconConnection? connection = null;
@@ -436,6 +437,8 @@
         {
             await RconService.SwitchTeam(ApiKey.ApiKey, ServerId, playerDetail.UniqueId, playerDetail.TeamId == 0 ? 1 : 0, seperateConnection);
             Toast.ShowSuccess("Player has been switched!");
+
+            await AuditService.Add(ServerId, $"Switched team of player {PlayerId} from {playerDetail.TeamId}");
         }
         catch (Exception ex)
         {
@@ -464,6 +467,7 @@
             if (await RconService.KickPlayer(ApiKey.ApiKey, ServerId, PlayerId, seperateConnection))
             {
                 Toast.ShowWarning("Player has been kicked!");
+                await AuditService.Add(ServerId, $"Kicked player {PlayerId}");
             }
             else
             {
@@ -497,6 +501,7 @@
             if (await RconService.BanPlayer(ApiKey.ApiKey, ServerId, PlayerId, seperateConnection))
             {
                 Toast.ShowWarning("Player has been banned!");
+                await AuditService.Add(ServerId, $"Banned player {PlayerId}");
             }
             else
             {
@@ -530,6 +535,7 @@
             if (await RconService.UnbanPlayer(ApiKey.ApiKey, ServerId, PlayerId, seperateConnection))
             {
                 Toast.ShowSuccess("Player has been unbanned!");
+                await AuditService.Add(ServerId, $"Unbanned player {PlayerId}");
             }
             else
             {

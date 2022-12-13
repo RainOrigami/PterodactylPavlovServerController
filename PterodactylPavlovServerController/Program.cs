@@ -22,6 +22,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ApiKeyService>();
 builder.Services.AddScoped<PavlovServerContext>();
 builder.Services.AddScoped<PterodactylContext>();
+builder.Services.AddScoped<AuditService>();
 builder.Services.AddSingleton<PavlovRconService>();
 builder.Services.AddSingleton<GoogleSheetService>();
 builder.Services.AddSingleton<PterodactylService>();
