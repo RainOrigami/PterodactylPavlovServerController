@@ -2,12 +2,18 @@
 
 ASP.net web API (.net 6) for controlling aspects of Pavlov VR servers in Pterodactyl
 
-This project is in ongoing development and WIP. Expect bugs. Only tested with SND servers so far!
+This project is in ongoing development and WIP. Expect bugs. Only tested with SND and EFP servers so far!
 
-Example of generated server, map, gun and player statistics: https://admin.bloodisgood.net/ppsc/stats/072fd1a7
+Example of generated server, map, gun and player statistics: https://pavlov.bloodisgood.net/stats/hearth
 
-Screenshot RCON tool:
-![image](https://user-images.githubusercontent.com/51454971/201521103-1d8d53bc-abb1-479d-9327-893b17a4a759.png)
+Screenshots RCON tool:
+![image](https://user-images.githubusercontent.com/51454971/207369321-296b2e9b-a175-494b-8c08-c0a0aef2a85c.png)
+![image](https://user-images.githubusercontent.com/51454971/207370777-2a82d388-e559-4b3f-bd51-60cf268e6f56.png)
+![image](https://user-images.githubusercontent.com/51454971/207370942-1db451c3-c9ba-4c65-ac33-eb622347433b.png)
+![image](https://user-images.githubusercontent.com/51454971/207371400-bacc1678-c265-49dc-93d8-a50d97a7dacb.png)
+
+Screenshot audit log:
+![image](https://user-images.githubusercontent.com/51454971/207370120-c13f4af1-d1eb-46b7-92ea-b19e116fe4a7.png)
 
 Screenshot Google map sheet:
 ![image](https://user-images.githubusercontent.com/51454971/201521477-8aa1d69b-dd15-424a-a288-4d3c7b91fdd8.png)
@@ -25,12 +31,20 @@ Screenshot Google map sheet:
   Fetch server name from Game.ini as fallback from Pterodactyl    
   Fetch banned players list from RCON for easy unbanning    
   Fetch map information from Steam workshop (map image, name) - no more dealing with UGC123456789  
-  Fetch user information from Steam API (avatar, name, VAC bans, game bans)
-  Persistent players, to ban or inspect when they have left the server
-  Kicking, banning, team switch individual players
-  Cheats coming soon (give cash, give item, give vehicle, etc...)
+  Fetch user information from Steam API (avatar, name, VAC bans, game bans)  
+  Persistent players, to ban or inspect when they have left the server  
+  Kicking, banning, team switch individual players  
+  Cheats (give cash, give item, give vehicle, etc...)  
+  Server control (ammo type, pin, name tags, mods, ...)  
+  Measure player time on server and last seen  
+  Ban reason and player comments  
+  Audit log
 - **Pavlov statistics**
-  Process Pavlov server logs into statistics
+  Process Pavlov server logs into statistics  
+  Include VAC state  
+  Include player time spent on server  
+  Include last seen date and time  
+  Works with SND and EFP
   
 # Install
 
