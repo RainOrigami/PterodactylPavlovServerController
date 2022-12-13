@@ -191,7 +191,6 @@ public class PavlovStatisticsService : IDisposable
     private readonly IConfiguration configuration;
     private readonly PavlovServerService pavlovServerService;
     private readonly CountryService countryService;
-    private readonly PavlovServerContext pavlovServerContext;
     private readonly PterodactylService pterodactylService;
     private readonly StatsCalculator statsCalculator;
 
@@ -210,7 +209,6 @@ public class PavlovStatisticsService : IDisposable
         this.steamWorkshopService = steamWorkshopService;
         this.pavlovServerService = pavlovServerService;
         this.countryService = countryService;
-        this.pavlovServerContext = new PavlovServerContext(this.configuration);
         statsContext.Database.EnsureCreated();
     }
 
@@ -527,16 +525,17 @@ public class PavlovStatisticsService : IDisposable
             honorableMentions.Add(await createPlayerMentionStat(playerStats, "Most bomb defuses", "Defuses", p => p.BombsDefused, p => p.TotalScore, false, (v, p) => $"{Math.Round(v, 1)}"));
         }
 
-        PersistentPavlovPlayer? dbPlayer = await pavlovServerContext.Players.Where(p => p.ServerId == serverId).OrderByDescending(p => p.TotalTime).ThenByDescending(p => p.LastSeen).FirstOrDefaultAsync();
-        if (dbPlayer != null)
+        using PavlovServerContext pavlovServerContext = new(this.configuration);
+        PersistentPavlovPlayer? mostTimeDbPlayer = await pavlovServerContext.Players.Where(p => p.ServerId == serverId).OrderByDescending(p => p.TotalTime).ThenByDescending(p => p.LastSeen).FirstOrDefaultAsync();
+        if (mostTimeDbPlayer != null)
         {
-            PlayerSummaryModel? playerSummary = await this.steamService.GetPlayerSummary(dbPlayer.UniqueId);
+            PlayerSummaryModel? playerSummary = await this.steamService.GetPlayerSummary(mostTimeDbPlayer.UniqueId);
             if (playerSummary != null)
             {
                 honorableMentions.Add(("Most time on this server", playerSummary, new Dictionary<string, object>()
                 {
                     { "Player", new StatsLinkModel($"player-{playerSummary.SteamId}", playerSummary.Nickname, null) },
-                    { "Time", new StatsSinceDateModel(dbPlayer.TotalTime.ToString("d\\.hh\\:mm\\:ss"), new DateTime(2022, 12, 12)) }
+                    { "Time", new StatsSinceDateModel(mostTimeDbPlayer.TotalTime.ToString("d\\.hh\\:mm\\:ss"), new DateTime(2022, 12, 12)) }
                 }));
             }
         }
@@ -959,6 +958,7 @@ public class PavlovStatisticsService : IDisposable
             }
         }
 
+        using PavlovServerContext pavlovServerContext = new(this.configuration);
         PersistentPavlovPlayer? dbPlayer = await pavlovServerContext.Players.SingleOrDefaultAsync(p => p.ServerId == serverId && p.UniqueId == playerStats.UniqueId);
         if (dbPlayer != null)
         {
