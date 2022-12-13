@@ -14,7 +14,7 @@ public class PavlovServerContext : DbContext
         this.configuration = configuration;
     }
 
-    public DbSet<PersistentPavlovPlayer> Players { get; set; }
+    public DbSet<PersistentPavlovPlayerModel> Players { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -37,7 +37,7 @@ public class PavlovServerContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<PersistentPavlovPlayer>().HasKey(p => new
+        modelBuilder.Entity<PersistentPavlovPlayerModel>().HasKey(p => new
         {
             p.UniqueId,
             p.ServerId,

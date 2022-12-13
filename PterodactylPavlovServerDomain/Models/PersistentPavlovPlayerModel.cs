@@ -2,7 +2,7 @@
 
 namespace PterodactylPavlovServerDomain.Models;
 
-public class PersistentPavlovPlayer
+public class PersistentPavlovPlayerModel
 {
     public ulong UniqueId { get; set; }
 

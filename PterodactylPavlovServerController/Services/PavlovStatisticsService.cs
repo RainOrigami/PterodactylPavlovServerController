@@ -526,7 +526,7 @@ public class PavlovStatisticsService : IDisposable
         }
 
         using PavlovServerContext pavlovServerContext = new(this.configuration);
-        PersistentPavlovPlayer? mostTimeDbPlayer = await pavlovServerContext.Players.Where(p => p.ServerId == serverId).OrderByDescending(p => p.TotalTime).ThenByDescending(p => p.LastSeen).FirstOrDefaultAsync();
+        PersistentPavlovPlayerModel? mostTimeDbPlayer = await pavlovServerContext.Players.Where(p => p.ServerId == serverId).OrderByDescending(p => p.TotalTime).ThenByDescending(p => p.LastSeen).FirstOrDefaultAsync();
         if (mostTimeDbPlayer != null)
         {
             PlayerSummaryModel? playerSummary = await this.steamService.GetPlayerSummary(mostTimeDbPlayer.UniqueId);
@@ -959,7 +959,7 @@ public class PavlovStatisticsService : IDisposable
         }
 
         using PavlovServerContext pavlovServerContext = new(this.configuration);
-        PersistentPavlovPlayer? dbPlayer = await pavlovServerContext.Players.SingleOrDefaultAsync(p => p.ServerId == serverId && p.UniqueId == playerStats.UniqueId);
+        PersistentPavlovPlayerModel? dbPlayer = await pavlovServerContext.Players.SingleOrDefaultAsync(p => p.ServerId == serverId && p.UniqueId == playerStats.UniqueId);
         if (dbPlayer != null)
         {
             playerStatValues.Add("Last seen", dbPlayer.LastSeen.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss"));

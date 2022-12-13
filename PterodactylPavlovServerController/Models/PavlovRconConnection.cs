@@ -217,10 +217,10 @@ public class PavlovRconConnection : IDisposable
 
     private async Task persistPlayer(Player player)
     {
-        PersistentPavlovPlayer? dbPlayer = await context.Players.SingleOrDefaultAsync(p => p.UniqueId == player.UniqueId && p.ServerId == this.ServerId);
+        PersistentPavlovPlayerModel? dbPlayer = await context.Players.SingleOrDefaultAsync(p => p.UniqueId == player.UniqueId && p.ServerId == this.ServerId);
         if (dbPlayer == null)
         {
-            context.Players.Add(new PersistentPavlovPlayer()
+            context.Players.Add(new PersistentPavlovPlayerModel()
             {
                 ServerId = this.ServerId,
                 UniqueId = player.UniqueId!.Value,
@@ -257,7 +257,7 @@ public class PavlovRconConnection : IDisposable
                 lastMeasured = DateTime.Now;
             }
 
-            PersistentPavlovPlayer? dbPlayer = await context.Players.SingleOrDefaultAsync(p => p.UniqueId == playerId && p.ServerId == this.ServerId);
+            PersistentPavlovPlayerModel? dbPlayer = await context.Players.SingleOrDefaultAsync(p => p.UniqueId == playerId && p.ServerId == this.ServerId);
             if (dbPlayer == null)
             {
                 continue;

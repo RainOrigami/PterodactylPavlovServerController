@@ -44,7 +44,7 @@
 
     PlayersState.Value.PlayerBans.TryGetValue(PlayerId, out IReadOnlyCollection<PlayerBansModel>? playerBans);
 
-    PersistentPavlovPlayer? dbPlayer = null;
+    PersistentPavlovPlayerModel? dbPlayer = null;
 
     if (ServerId != null)
     {
