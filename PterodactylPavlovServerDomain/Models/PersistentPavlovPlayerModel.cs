@@ -14,4 +14,8 @@ public class PersistentPavlovPlayerModel
     public DateTime LastSeen { get; set; } = DateTime.MinValue;
 
     public TimeSpan TotalTime { get; set; } = TimeSpan.Zero;
+
+    public string? BanReason { get; set; } = null;
+
+    public string Comments { get; set; } = string.Empty;
 }

@@ -1,0 +1,26 @@
+﻿@using PterodactylPavlovServerController.Services;
+@inject IConfiguration Configuration
+@inject AuditService AuditService
+
+<div class="modal fade" id="@Id" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Comments on @PlayerName</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <textarea class="form-control" @bind="@comments" placeholder="Player comments" rows="8"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" data-bs-dismiss="modal"
+                        @onclick="@(() => OnCommentChange(comments))">
+                    Save
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
