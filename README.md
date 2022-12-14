@@ -7,7 +7,7 @@ This project is in ongoing development and WIP. Expect bugs. Only tested with SN
 Example of generated server, map, gun and player statistics: https://pavlov.bloodisgood.net/stats/hearth
 
 Screenshots RCON tool:
-![image](https://user-images.githubusercontent.com/51454971/207369321-296b2e9b-a175-494b-8c08-c0a0aef2a85c.png)
+![image](https://user-images.githubusercontent.com/51454971/207735949-8b683379-bfce-4e0d-a8ba-a9e38a59b5ca.png)
 ![image](https://user-images.githubusercontent.com/51454971/207370777-2a82d388-e559-4b3f-bd51-60cf268e6f56.png)
 ![image](https://user-images.githubusercontent.com/51454971/207370942-1db451c3-c9ba-4c65-ac33-eb622347433b.png)
 ![image](https://user-images.githubusercontent.com/51454971/207371400-bacc1678-c265-49dc-93d8-a50d97a7dacb.png)
