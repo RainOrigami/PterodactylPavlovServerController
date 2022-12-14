@@ -183,6 +183,15 @@ public class PavlovStatisticsService : IDisposable
         },
         {
             "fall", "Suicide by gravity"
+        },
+        {
+            "grenade_us", "Explosive grenade (US)"
+        },
+        {
+            "sten", "STEN"
+        },
+        {
+            "tripalarm", "Trip mine"
         }
     };
 
