@@ -15,6 +15,9 @@ Screenshots RCON tool:
 Screenshot audit log:
 ![image](https://user-images.githubusercontent.com/51454971/207370120-c13f4af1-d1eb-46b7-92ea-b19e116fe4a7.png)
 
+Screenshot map rotation editor:
+![image](https://user-images.githubusercontent.com/51454971/207660927-0e74fd44-1b97-4d81-91ed-545c0cf7bfea.png)
+
 Screenshot Google map sheet:
 ![image](https://user-images.githubusercontent.com/51454971/201521477-8aa1d69b-dd15-424a-a288-4d3c7b91fdd8.png)
 
@@ -39,7 +42,10 @@ Screenshot Google map sheet:
   Measure player time on server and last seen  
   Ban reason and player comments  
   Audit log
-- **Pavlov statistics**
+- **Map rotation editor**  
+  Change map rotation
+  Save multiple map rotation presets
+- **Pavlov statistics**  
   Process Pavlov server logs into statistics  
   Include VAC state  
   Include player time spent on server  
