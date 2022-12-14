@@ -25,9 +25,9 @@ Screenshot map rotation editor:
   Uses Pterodactyl user API keys to interact with Pterodactyl    
 - **Pavlov server control through RCON**  
   Automatically fetch available servers and connection information from Pterodactyl    
-  Automatically fetch map rotation from Pterodactyl    
-  Fetch server name from Game.ini as fallback from Pterodactyl    
-  Fetch banned players list from RCON for easy unbanning    
+  Automatically fetch map rotation from Pterodactyl  
+  Fetch server name from Game.ini as fallback from Pterodactyl  
+  Fetch banned players list from RCON for easy unbanning  
   Fetch map information from Steam workshop (map image, name) - no more dealing with UGC123456789  
   Fetch user information from Steam API (avatar, name, VAC bans, game bans)  
   Persistent players, to ban or inspect when they have left the server  
@@ -38,7 +38,7 @@ Screenshot map rotation editor:
   Ban reason and player comments  
   Audit log
 - **Map rotation editor**  
-  Change map rotation
+  Change map rotation  
   Save multiple map rotation presets
 - **Pavlov statistics**  
   Process Pavlov server logs into statistics  
