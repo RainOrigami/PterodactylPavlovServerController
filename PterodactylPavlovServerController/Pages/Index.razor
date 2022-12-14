@@ -14,10 +14,7 @@
 @inject UserManager<PterodactylPavlovServerControllerUser> UserManager
 @inject IHttpContextAccessor httpContextAccessor
 @inject IDispatcher Dispatcher
-@inject PavlovRconConnectionService Rcon
-@inject PavlovServerService PavlovServerService
-@inject ApiKeyService ApiKey
-@inject IConfiguration Configuration
+
 
 @{
     Dispatcher.Dispatch(new PageTitleSetAction("Home"));
@@ -32,52 +29,155 @@ else
     <h1>Hello!</h1>
 }
 
-<h3>Audit log</h3>
-<table class="table table-striped table-dark table-hover">
-    <thead>
-        <tr>
-            <th scope="col">Server</th>
-            <th scope="col">User</th>
-            <th scope="col">Time</th>
-            <th scope="col" style="width: 100%">Action</th>
-        </tr>
-    </thead>
-    <tbody>
-        @if (audits != null)
-        {
-            foreach (AuditActionModel audit in audits)
-            {
-                <tr>
-                    <td nowrap>@(serverNames[audit.Server])</td>
-                    <td nowrap>@audit.User</td>
-                    <td nowrap>@audit.Time.ToString("dd.MM.yyyy HH:mm:ss") UTC</td>
-                    <td>@audit.Action</td>
-                </tr>
-            }
-        }
-    </tbody>
-</table>
+Welcome to PPSC - the Pterodactyl Pavlov Server Control.
+<br />
+<br />
+<h3>Changelog</h3>
 
-@code {
-    private AuditActionModel[]? audits = null;
-    Dictionary<string, string> serverNames = new();
+<h4>A4.02</h4>
+<ul>
+    <li>Adds map rotation editor to supercede Google Sheets</li>
+</ul>
 
-    protected override async Task OnInitializedAsync()
-    {
-        PavlovRconConnection[] availableServers = Rcon.GetAllConnections(ApiKey.ApiKey);
+<h4>A4.01</h4>
+<ul>
+    <li>Adds changelog</li>
+    <li>Moves audit trail</li>
+    <li>Stats
+        <ul>
+            <li>Adds more EFP guns</li>
+        </ul>
+    </li>
+</ul>
 
-        using (PavlovServerContext pavlovServerContext = new(Configuration))
-        {
-            string[] serverIds = availableServers.Select(s => s.ServerId).ToArray();
-            audits = pavlovServerContext.AuditActions.Where(a => serverIds.Contains(a.Server)).OrderByDescending(a => a.Time).Take(100).ToArray();
-        }
+<h4>A4.00</h4>
+<ul>
+    <li>Adds auditing service</li>
+    <li>Adds ban reason and templates</li>
+    <li>Adds player comments</li>
+</ul>
 
-        serverNames.Clear();
-        foreach (string serverId in audits.Select(a => a.Server).Distinct())
-        {
-            serverNames.Add(serverId, availableServers.First(s => s.ServerId == serverId).PterodactylServer.Name);
-        }
+<h4>A3.10</h4>
+<ul>
+    <li>Workaround for Pavlov sending empty player</li>
+    <li>Adds measuring of player time spent on server</li>
+    <li>Adds confirmation dialogs to player actions (switch, kick, ban)</li>
+    <li>Stats
+        <ul>
+            <li>Adds total player time to player card</li>
+            <li>Adds last seen to player card</li>
+            <li>Set steam avatars to lazy loading to improve loading times of large stat pages</li>
+            <li>Improves layout, fixing anchor navigation</li>
+        </ul>
+    </li>
+    <li>Backend improvements</li>
+</ul>
 
-        await base.OnInitializedAsync();
-    }
-}
+<h4>A3.09</h4>
+<ul>
+    <li>Stats
+        <ul>
+            <li>Fixes missing brace in best gun in map stats</li>
+        </ul>
+    </li>
+</ul>
+
+<h4>A3.08</h4>
+<ul>
+    <li>Stats
+        <ul>
+            <li>Fixes EFP stats not showing players with zero kills, deaths, assists</li>
+        </ul>
+    </li>
+</ul>
+
+<h4>A3.07</h4>
+<ul>
+    <li>Improve Steam profile and bans load times</li>
+    <li>Design improvements</li>
+    <li>Improve RCON page load times</li>
+    <li>Change country flags API to something more robust</li>
+    <li>Adds open workshop page link to map list</li>
+    <li>Adds player count to team titles</li>
+    <li></li>
+    <li></li>
+    <li>Stats
+        <ul>
+            <li>Add player rank</li>
+            <li>Adds hover tooltip to country images</li>
+            <li>Adds more missing guns</li>
+        </ul>
+    </li>
+</ul>
+
+<h4>A3.06</h4>
+<ul>
+    <li>Hides last seen when not available</li>
+    <li>Adds country flag to player card, if available</li>
+    <li>Improves error toast</li>
+    <li>Use steam player names in cheat dropdowns, if available</li>
+    <li>Fixes Steam API Too Many Requests error</li>
+    <li>Improve load times</li>
+    <li>Stats
+        <ul>
+            <li>Adds country flag to player card, if available</li>
+            <li>Adds some missing EFP guns</li>
+            <li>Adds cash for EFP</li>
+            <li>Fixes gun stats best player percentage</li>
+            <li>Implements blazor based stats</li>
+            <li>Fixes missing server name in title</li>
+        </ul>
+    </li>
+    <li>Backend improvements</li>
+</ul>
+
+<h4>A3.05</h4>
+<ul>
+    <li>Fixes player name not using Steam name in player card</li>
+    <li>Disables switch team button when no teams on server</li>
+    <li>Fixes banned players not being displayed when banned before being on server</li>
+    <li>Fixes custom RCON command parameter handling</li>
+    <li>Stats
+        <ul>
+            <li>Adds some EFP weapons</li>
+            <li>Fixes inconsistent gun names</li>
+            <li>Adds stats for non-SND/EFP</li>
+            <li>Backend improvements when downloading stats</li>
+        </ul>
+    </li>
+</ul>
+
+<h4>A3.04</h4>
+<ul>
+    <li>Adds custom RCON command execution</li>
+    <li>Backend improvements</li>
+</ul>
+
+<h4>A3.03</h4>
+<ul>
+    <li>Adds last seen to offline player card</li>
+    <li>Better handling of failed RCON commands</li>
+    <li>Adds player count to left menu</li>
+    <li>Fixes crashes</li>
+    <li>Backend improvements</li>
+</ul>
+
+<h4>A3.02</h4>
+<ul>
+    <li>Improved error handling during map change</li>
+    <li>Added stats link in server card</li>
+    <li>Fixes F5 crash</li>
+    <li>Adds player cheats, server and TTT commands</li>
+    <li>Backend improvements</li>
+    <li>Stats
+        <ul>
+           <li>Fixes</li>
+           <li>Adds played rounds to player card</li>
+        </ul>
+    </li>
+</ul>
+
+<h4>A3.01</h4>
+<ul>
+    <li>Blazor based RCON client to supercede windows client</li>
+</ul>

@@ -16,6 +16,8 @@ public class PavlovServerContext : DbContext
 
     public DbSet<PersistentPavlovPlayerModel> Players { get; set; }
     public DbSet<AuditActionModel> AuditActions { get; set; }
+    public DbSet<MapRotationModel> MapRotations { get; set; }
+    public DbSet<ServerMapModel> Maps { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -44,6 +46,21 @@ public class PavlovServerContext : DbContext
             p.ServerId,
         });
 
-        modelBuilder.Entity<AuditActionModel>().HasKey(a => new { a.Server, a.User, a.Action, a.Time });
+        modelBuilder.Entity<AuditActionModel>().HasKey(a => a.Id);
+
+        modelBuilder.Entity<ServerMapModel>().HasKey(m => new { m.MapLabel, m.GameMode });
+        modelBuilder.Entity<MapRotationModel>().HasKey(r => new { r.ServerId, r.Name });
+
+        modelBuilder.Entity<MapRotationModel>()
+            .HasMany(r => r.Maps)
+            .WithMany(m => m.Rotations)
+            .UsingEntity<MapInMapRotationModel>(
+                j => j.HasOne(pm => pm.Map)
+                    .WithMany(m => m.MapsInRotation)
+                    .HasForeignKey(pm => new { pm.MapLabel, pm.GameMode }),
+                j => j.HasOne(pr => pr.Rotation)
+                .WithMany(r => r.MapsInRotation)
+                .HasForeignKey(pr => new { pr.ServerId, pr.RotationName }),
+                j => j.ToTable("MapsInRotation").HasKey(t => new { t.MapLabel, t.GameMode, t.ServerId, t.RotationName, t.Order }));
     }
 }

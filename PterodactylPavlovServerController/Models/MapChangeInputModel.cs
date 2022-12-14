@@ -11,7 +11,7 @@ public class MapChangeInputModel
     [Required]
     public GameMode? GameMode { get; set; }
 
-    public bool IsWorkshopMap => this.Map != null && (this.Map.StartsWith("UGC") || this.Map.StartsWith("https://steamcommunity.com/sharedfiles/filedetails/?id=") || long.TryParse(this.Map, out _));
+    public bool IsWorkshopMap => this.Map != null && (this.Map.StartsWith("UGC") || this.Map.Contains("steamcommunity.com/sharedfiles/filedetails/?id=") || long.TryParse(this.Map, out _));
 
     public long? MapId
     {
@@ -27,9 +27,13 @@ public class MapChangeInputModel
             {
                 mapIdString = this.Map[3..];
             }
-            else if (this.Map.StartsWith("https://steamcommunity.com/sharedfiles/filedetails/?id="))
+            else if (this.Map.Contains("steamcommunity.com/sharedfiles/filedetails/?id="))
             {
                 mapIdString = this.Map[(this.Map.IndexOf("?id=", StringComparison.Ordinal) + 4)..];
+                if (mapIdString.Contains('&'))
+                {
+                    mapIdString = mapIdString[0..mapIdString.IndexOf("&")];
+                }
             }
             else
             {

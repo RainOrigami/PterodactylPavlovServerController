@@ -35,6 +35,13 @@ public class PavlovServerService
         return mapRows;
     }
 
+    public async Task ApplyMapList(string apiKey, string serverId, ServerMapModel[] maps)
+    {
+        List<string> gameIniContent = (await this.pterodactylService.ReadFile(apiKey, serverId, this.configuration["pavlov_gameinipath"]!)).Split('\n').Select(l => l.Trim('\r')).Where(l => !l.StartsWith("MapRotation=")).ToList();
+        gameIniContent.AddRange(maps.Select(r => $"MapRotation=(MapId=\"{r.MapLabel}\", GameMode=\"{r.GameMode}\")"));
+        this.pterodactylService.WriteFile(apiKey, serverId, this.configuration["pavlov_gameinipath"]!, string.Join('\n', gameIniContent));
+    }
+
     public async Task<ServerMapModel[]> GetCurrentMapRotation(string apiKey, string serverId)
     {
         return (await this.pterodactylService.ReadFile(apiKey, serverId, this.configuration["pavlov_gameinipath"]!)).Split('\n').Select(l => l.Trim('\r')).Where(l => l.StartsWith("MapRotation=")).Select(l => PavlovServerService.mapRotationLineRegex.Match(l)).Where(m => m.Success).Select(m => new ServerMapModel

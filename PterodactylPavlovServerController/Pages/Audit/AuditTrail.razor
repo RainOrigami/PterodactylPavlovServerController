@@ -1,0 +1,65 @@
+﻿@page "/audit"
+@using Fluxor;
+@using PterodactylPavlovServerController.Contexts;
+@using PterodactylPavlovServerController.Models;
+@using PterodactylPavlovServerController.Services;
+@using PterodactylPavlovServerController.Stores;
+@using PterodactylPavlovServerDomain.Models;
+@inject PavlovRconConnectionService Rcon
+@inject PavlovServerService PavlovServerService
+@inject ApiKeyService ApiKey
+@inject IConfiguration Configuration
+@inject IDispatcher Dispatcher
+
+@{
+    Dispatcher.Dispatch(new PageTitleSetAction("Audit log"));
+}
+
+<table class="table table-striped table-dark table-hover">
+    <thead>
+        <tr>
+            <th scope="col">Server</th>
+            <th scope="col">User</th>
+            <th scope="col">Time</th>
+            <th scope="col" style="width: 100%">Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (audits != null)
+        {
+            foreach (AuditActionModel audit in audits)
+            {
+                <tr>
+                    <td nowrap>@(serverNames[audit.Server])</td>
+                    <td nowrap>@audit.User</td>
+                    <td nowrap>@audit.Time.ToString("dd.MM.yyyy HH:mm:ss") UTC</td>
+                    <td>@audit.Action</td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+@code {
+    private AuditActionModel[]? audits = null;
+    Dictionary<string, string> serverNames = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        PavlovRconConnection[] availableServers = Rcon.GetAllConnections(ApiKey.ApiKey);
+
+        using (PavlovServerContext pavlovServerContext = new(Configuration))
+        {
+            string[] serverIds = availableServers.Select(s => s.ServerId).ToArray();
+            audits = pavlovServerContext.AuditActions.Where(a => serverIds.Contains(a.Server)).OrderByDescending(a => a.Time).Take(100).ToArray();
+        }
+
+        serverNames.Clear();
+        foreach (string serverId in audits.Select(a => a.Server).Distinct())
+        {
+            serverNames.Add(serverId, availableServers.First(s => s.ServerId == serverId).PterodactylServer.Name);
+        }
+
+        await base.OnInitializedAsync();
+    }
+}
