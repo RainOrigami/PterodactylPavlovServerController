@@ -11,7 +11,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="GoogleSheetsWrapper" Version="1.0.49" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
     <PackageReference Include="PavlovVR-Rcon" Version="1.0.4" />
   </ItemGroup>

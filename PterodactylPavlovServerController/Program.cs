@@ -24,7 +24,6 @@ builder.Services.AddScoped<PavlovServerContext>();
 builder.Services.AddScoped<PterodactylContext>();
 builder.Services.AddScoped<AuditService>();
 builder.Services.AddSingleton<PavlovRconService>();
-builder.Services.AddSingleton<GoogleSheetService>();
 builder.Services.AddSingleton<PterodactylService>();
 builder.Services.AddSingleton<PavlovServerService>();
 builder.Services.AddSingleton<SteamWorkshopService>();
