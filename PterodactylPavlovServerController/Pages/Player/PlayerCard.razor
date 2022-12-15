@@ -242,14 +242,23 @@
                                         </div>
                                     }
                                 }
-                                @if (!string.IsNullOrEmpty(dbPlayer?.BanReason))
+                                @if (connection.BanList.Contains(PlayerId) || !string.IsNullOrEmpty(dbPlayer?.BanReason))
                                 {
                                     <div class="row gx-0">
                                         <div class="col-auto px-1">
                                             <i class="fa-solid fa-gavel"></i>
                                         </div>
                                         <div class="col px-1">
-                                            @dbPlayer.BanReason
+                                            @(dbPlayer?.BanReason ?? "No reason specified")
+                                            @if (dbPlayer?.UnbanAt == null && connection.BanList.Contains(PlayerId))
+                                            {
+                                                @: (Permanent)
+                                            }
+                                            else if (dbPlayer?.UnbanAt != null)
+                                            {
+
+                                                @: (Until @dbPlayer.UnbanAt.Value.ToString("dd.MM.yyyy HH:mm:ss") UTC)
+                                            }
                                         </div>
                                     </div>
                                 }
@@ -345,7 +354,7 @@
             return;
         }
 
-        await ban(banConfirmArgs.Reason);
+        await ban(banConfirmArgs.Reason, banConfirmArgs.Duration);
     }
 
     private async Task confirmUnban(bool confirmed)
@@ -510,7 +519,7 @@
         }
     }
 
-    private async Task ban(string? reason)
+    private async Task ban(string? reason, int duration)
     {
         if (ServerId == null)
         {
@@ -537,16 +546,26 @@
                     reason = "No reason given";
                 }
 
-                await AuditService.Add(ServerId, $"Banned player {PlayerId} for reason \"{reason}\"");
+                await AuditService.Add(ServerId, $"Banned player {PlayerId} for reason \"{reason}\" and duration {duration}s");
 
                 using (PavlovServerContext pavlovServerContext = new(Configuration))
                 {
                     PersistentPavlovPlayerModel? dbPlayer = await pavlovServerContext.Players.FirstOrDefaultAsync(p => p.UniqueId == PlayerId && p.ServerId == ServerId);
-                    if (dbPlayer != null)
+                    if (dbPlayer == null)
                     {
-                        dbPlayer.BanReason = reason;
-                        await pavlovServerContext.SaveChangesAsync();
+                        dbPlayer = new PersistentPavlovPlayerModel()
+                            {
+                                ServerId = ServerId,
+                                UniqueId = PlayerId
+                            };
+                        pavlovServerContext.Players.Add(dbPlayer);
                     }
+                    dbPlayer.BanReason = reason;
+                    if (duration != -1)
+                    {
+                        dbPlayer.UnbanAt = DateTime.Now.AddSeconds(duration);
+                    }
+                    await pavlovServerContext.SaveChangesAsync();
                 }
             }
             else
@@ -582,6 +601,16 @@
             {
                 Toast.ShowSuccess("Player has been unbanned!");
                 await AuditService.Add(ServerId, $"Unbanned player {PlayerId}");
+
+                using (PavlovServerContext pavlovServerContext = new(Configuration))
+                {
+                    PersistentPavlovPlayerModel? dbPlayer = await pavlovServerContext.Players.FirstOrDefaultAsync(p => p.UniqueId == PlayerId && p.ServerId == ServerId);
+                    if (dbPlayer != null)
+                    {
+                        dbPlayer.UnbanAt = null;
+                        await pavlovServerContext.SaveChangesAsync();
+                    }
+                }
             }
             else
             {

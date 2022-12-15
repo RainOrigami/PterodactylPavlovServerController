@@ -16,6 +16,7 @@ public class PersistentPavlovPlayerModel
     public TimeSpan TotalTime { get; set; } = TimeSpan.Zero;
 
     public string? BanReason { get; set; } = null;
+    public DateTime? UnbanAt { get; set; } = null;
 
     public string Comments { get; set; } = string.Empty;
     public ulong TotalMoneyEarned { get; set; }

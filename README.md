@@ -36,6 +36,7 @@ Screenshot map rotation editor:
   Server control (ammo type, pin, name tags, mods, ...)  
   Measure player time on server and last seen  
   Ban reason and player comments  
+  Time-based bans and automatic unbanning  
   Audit log
 - **Map rotation editor**  
   Change map rotation  

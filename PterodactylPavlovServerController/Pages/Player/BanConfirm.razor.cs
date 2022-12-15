@@ -21,9 +21,16 @@ public partial class BanConfirm
     public EventCallback<BanConfirmEventArgumentsModel> ConfirmationChanged { get; set; }
 
     private string customReason = string.Empty;
+    private int duration = -1;
+    private string customDuration = string.Empty;
 
     protected async Task OnConfirmationChange(bool value, string? reason = null)
     {
-        await ConfirmationChanged.InvokeAsync(new BanConfirmEventArgumentsModel(value, reason));
+        if (duration == -2)
+        {
+            duration = int.Parse(customDuration) * 60 * 60;
+        }
+
+        await ConfirmationChanged.InvokeAsync(new BanConfirmEventArgumentsModel(value, reason, duration));
     }
 }

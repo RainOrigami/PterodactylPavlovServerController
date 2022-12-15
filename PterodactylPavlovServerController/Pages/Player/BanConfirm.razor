@@ -11,42 +11,87 @@
             <div class="modal-body">
                 @ConfirmationMessage
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-danger" data-bs-dismiss="modal"
+            <div class="modal-body">
+                <h2>Duration</h2>
+                <InputRadioGroup @bind-Value="duration" Name="@($"ban-duration-{Id}")">
+                    <div class="form-check">
+                        <label class="form-check-label">
+                            <InputRadio Value="-1" class="form-check-input" checked />
+                            Perma
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <label class="form-check-label">
+                            <InputRadio Value="3600" class="form-check-input" />
+                            1 hour
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <label class="form-check-label">
+                            <InputRadio Value="86400" class="form-check-input" />
+                            1 day
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <label class="form-check-label">
+                            <InputRadio Value="604800" class="form-check-input" />
+                            1 week
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <label class="form-check-label">
+                            <InputRadio Value="2419200" class="form-check-input" />
+                            1 month
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <label class="form-check-label">
+                            <InputRadio Value="-2" class="form-check-input" />
+                            Custom: <InputText type="number" @bind-Value="customDuration" /> hours
+                        </label>
+                    </div>
+                </InputRadioGroup>
+            </div>
+            <div class="modal-body">
+                <h2>Presets</h2>
+                <button type="button" class="btn btn-danger my-1" data-bs-dismiss="modal"
                         @onclick="@(() => OnConfirmationChange(true, "Cheats / Exploits"))">
                     Cheats / Exploits
                 </button>
-                <button type="button" class="btn btn-danger" data-bs-dismiss="modal"
+                <button type="button" class="btn btn-danger my-1" data-bs-dismiss="modal"
                         @onclick="@(() => OnConfirmationChange(true, "Toxic"))">
                     Toxic
                 </button>
-                <button type="button" class="btn btn-danger" data-bs-dismiss="modal"
+                <button type="button" class="btn btn-danger my-1" data-bs-dismiss="modal"
                         @onclick="@(() => OnConfirmationChange(true, "Griefer"))">
                     Griefer
                 </button>
-                <button type="button" class="btn btn-danger" data-bs-dismiss="modal"
+                <button type="button" class="btn btn-danger my-1" data-bs-dismiss="modal"
                         @onclick="@(() => OnConfirmationChange(true, "Ping too high"))">
                     Ping too high
                 </button>
-                <button type="button" class="btn btn-danger" data-bs-dismiss="modal"
+                <button type="button" class="btn btn-danger my-1" data-bs-dismiss="modal"
                         @onclick="@(() => OnConfirmationChange(true, "Too young / squeaker"))">
                     Too young / squeaker
                 </button>
-                <button type="button" class="btn btn-danger" data-bs-dismiss="modal"
+                <button type="button" class="btn btn-danger my-1" data-bs-dismiss="modal"
                         @onclick="@(() => OnConfirmationChange(true, "Voice spam"))">
                     Voice spam
                 </button>
-                <button type="button" class="btn btn-danger" data-bs-dismiss="modal"
+                <button type="button" class="btn btn-danger my-1" data-bs-dismiss="modal"
                         @onclick="@(() => OnConfirmationChange(true, "No reason"))">
                     No reason
                 </button>
-                <br/>
+            </div>
+            <div class="modal-body">
+                <h2>Custom reason</h2>
                 <input type="text" class="form-control mt-3" @bind-value="@customReason" placeholder="Custom ban reason" />
-                <button type="button" class="btn btn-danger w-100" data-bs-dismiss="modal"
+                <button type="button" class="btn btn-danger w-100 my-1" data-bs-dismiss="modal"
                         @onclick="@(() => OnConfirmationChange(true, customReason))">
                     Ban with custom reason
                 </button>
-                <br />
+            </div>
+            <div class="modal-footer">
                 <button type="button" class="btn btn-secondary w-100" data-bs-dismiss="modal"
                         @onclick="() => OnConfirmationChange(false)">
                     Cancel

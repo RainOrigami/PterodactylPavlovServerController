@@ -16,7 +16,7 @@ public class PavlovRconConnection : IDisposable
     private readonly IConfiguration configuration;
     private readonly PavlovRconService pavlovRconService;
     private readonly SteamService steamService;
-    private readonly PavlovServerContext context;
+    private PavlovServerContext? context = null;
     private readonly CancellationTokenSource updateCancellationTokenSource = new();
     private Dictionary<ulong, PlayerDetail>? playerDetails;
     private Dictionary<ulong, Player>? playerListPlayers;
@@ -32,7 +32,6 @@ public class PavlovRconConnection : IDisposable
         this.steamService = steamService;
         this.configuration = configuration;
         ApiKey = apiKey;
-        context = new(this.configuration);
     }
 
     public string ServerId => PterodactylServer.ServerId;
@@ -61,11 +60,22 @@ public class PavlovRconConnection : IDisposable
         {
             try
             {
+                if (context != null)
+                {
+                    await context.DisposeAsync();
+                }
+
+                context = new(this.configuration);
                 await updateServerInfo();
                 await updatePlayerList();
                 await updatePlayerDetails();
                 await updatePlayerSummaries();
                 await updatePlayerBans();
+                await unbanPlayers();
+
+                await context.SaveChangesAsync();
+                await context.DisposeAsync();
+                context = null;
             }
             catch (Exception ex)
             {
@@ -142,8 +152,6 @@ public class PavlovRconConnection : IDisposable
         }
 
         await measurePlayerOnlineTimes(playerListPlayers.Values.ToList());
-
-        await context.SaveChangesAsync();
     }
 
     public event PlayerDetailUpdate? OnPlayerDetailUpdated;
@@ -272,8 +280,6 @@ public class PavlovRconConnection : IDisposable
 
     private async Task measurePlayerIncome(List<PlayerDetail> players)
     {
-        using PavlovServerContext pavlovServerContext = new(configuration);
-
         foreach (ulong playerId in lastPlayerMoney.Keys)
         {
             if (players.All(p => p.UniqueId != playerId))
@@ -304,5 +310,20 @@ public class PavlovRconConnection : IDisposable
             lastPlayerMoney[player.UniqueId] = player.Cash;
         }
 
+    }
+
+    private async Task unbanPlayers()
+    {
+        foreach (PersistentPavlovPlayerModel bannedPlayer in context.Players.Where(p => p.ServerId == ServerId && p.UnbanAt != null && p.UnbanAt < DateTime.Now))
+        {
+            try
+            {
+                if (await pavlovRconService.UnbanPlayer(ApiKey, ServerId, bannedPlayer.UniqueId))
+                {
+                    bannedPlayer.UnbanAt = null;
+                }
+            }
+            catch { }
+        }
     }
 }
