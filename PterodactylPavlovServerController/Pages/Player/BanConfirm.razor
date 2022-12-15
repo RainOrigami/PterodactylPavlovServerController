@@ -25,6 +25,18 @@
                     Griefer
                 </button>
                 <button type="button" class="btn btn-danger" data-bs-dismiss="modal"
+                        @onclick="@(() => OnConfirmationChange(true, "Ping too high"))">
+                    Ping too high
+                </button>
+                <button type="button" class="btn btn-danger" data-bs-dismiss="modal"
+                        @onclick="@(() => OnConfirmationChange(true, "Too young / squeaker"))">
+                    Too young / squeaker
+                </button>
+                <button type="button" class="btn btn-danger" data-bs-dismiss="modal"
+                        @onclick="@(() => OnConfirmationChange(true, "Voice spam"))">
+                    Voice spam
+                </button>
+                <button type="button" class="btn btn-danger" data-bs-dismiss="modal"
                         @onclick="@(() => OnConfirmationChange(true, "No reason"))">
                     No reason
                 </button>
