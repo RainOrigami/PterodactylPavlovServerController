@@ -49,14 +49,13 @@ Screenshot map rotation editor:
   
 # Install
 
-This tool requires multiple databases. Supported are sqlserver, mysql and sqlite. For the Pterodactyl DB only mysql is supported.
+This tool requires multiple databases. Only mysql/mariadb is supported.
 
 ## appsettings.json
 - `PavlovStats` - Database to store converted server logs containing statistics data for generating the server stats
-- `PavlovServers` - Database to store persistent players
+- `PavlovServers` - Database to store persistent players, audit log and map rotations
 - `Pterodactyl` - Your existing Pterodactyl database (mysql)
 - `PPSC` - PPSC user database stores users (without password!) and API keys for registration and login
-- `db_type` - Specify the db type of the three databases `PavlovStats`, `PavlovServers` and `PPSC`. Possible values: `sqlserver`, `mysql`, `sqlite`.
 - `pterodactyl_baseurl` - The base URL of your Pterodactyl installation, used for API requests
 - `pterodactyl_apikey` - The generic Pterodactyl API key - used for getting Pavlov servers for controling. Recommended to create a system account, use its API key and assign it to all Pavlov servers that should be accessible through PPSC (permissions: File Read, File Read-Content, File Update, Startup Read)
 - `pterodactyl_stats_apikey` - The statistics Pterodactyl API key - used for getting Pavlov servers for creating statistics. Recommended to create a system account, use its API key and assign it to all Pavlov servers that should have a statistic generated (permissions: File Create, File Read, File Read-Content, File Delete)
@@ -69,7 +68,7 @@ This tool requires multiple databases. Supported are sqlserver, mysql and sqlite
 
 It is recommended to create two Pterodactyl system accounts, one for PPSC to access the server for rcon, and one for generating statistics. This way you or your users can control specifically which server should be accessible in PPSC rcon and which server should used for statistics generation. These are independent, you can generate stats for servers that are not accessible to PPSC rcon.
 
-The three databases `PavlovStats`, `PavlovServers` and `PPSC` can probably all point to the same database, if you don't want to create three different DBs. Not 100% sure tho.
+For upgrading it is important that `PavlovStats`, `PavlovServers` and `PPSC` are all seperate databases.
 
 # Some notes
 
