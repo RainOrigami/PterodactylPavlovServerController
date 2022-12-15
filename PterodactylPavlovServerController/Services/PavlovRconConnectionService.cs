@@ -1,5 +1,4 @@
-﻿using PterodactylPavlovServerController.Models;
-using PterodactylPavlovServerDomain.Models;
+﻿using PterodactylPavlovServerDomain.Models;
 using System.Collections.Concurrent;
 
 namespace PterodactylPavlovServerController.Services;

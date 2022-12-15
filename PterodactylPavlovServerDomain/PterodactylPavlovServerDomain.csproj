@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net7.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
@@ -12,7 +12,11 @@
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
-    <PackageReference Include="PavlovVR-Rcon" Version="1.0.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\PavlovVR-Rcon\PavlovVR-Rcon\PavlovVR-Rcon.csproj" />
+    <ProjectReference Include="..\..\SteamWebAPI2\src\SteamWebAPI2\SteamWebAPI2.csproj" />
   </ItemGroup>
 
 </Project>

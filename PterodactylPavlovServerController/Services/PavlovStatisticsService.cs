@@ -218,7 +218,7 @@ public class PavlovStatisticsService : IDisposable
         this.steamWorkshopService = steamWorkshopService;
         this.pavlovServerService = pavlovServerService;
         this.countryService = countryService;
-        statsContext.Database.EnsureCreated();
+        statsContext.Database.Migrate();
     }
 
     public void Dispose()

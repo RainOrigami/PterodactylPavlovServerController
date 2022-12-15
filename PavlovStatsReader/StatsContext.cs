@@ -26,22 +26,9 @@ public class StatsContext : DbContext
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         string connectionString = this.configuration.GetConnectionString("PavlovStats")!;
-        switch (this.configuration["db_type"])
-        {
-            case "sqlserver":
-                optionsBuilder.UseSqlServer(connectionString);
-                break;
-            case "mysql":
-                optionsBuilder.UseMySQL(connectionString);
-                break;
-            case "sqlite":
-                optionsBuilder.UseSqlite(connectionString);
-                break;
-            default:
-                throw new Exception("Invalid database type provided. Valid DB types are: sqlserver, mysql, sqlite");
-        }
-
+        optionsBuilder.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
         optionsBuilder.UseLazyLoadingProxies();
+        base.OnConfiguring(optionsBuilder);
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

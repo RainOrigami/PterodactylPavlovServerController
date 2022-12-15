@@ -18,4 +18,5 @@ public class PersistentPavlovPlayerModel
     public string? BanReason { get; set; } = null;
 
     public string Comments { get; set; } = string.Empty;
+    public ulong TotalMoneyEarned { get; set; }
 }

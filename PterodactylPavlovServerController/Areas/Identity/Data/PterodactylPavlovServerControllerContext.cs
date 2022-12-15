@@ -16,20 +16,7 @@ public class PterodactylPavlovServerControllerContext : IdentityDbContext<Pterod
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         string connectionString = this.configuration.GetConnectionString("PPSC")!;
-        switch (this.configuration["db_type"])
-        {
-            case "sqlserver":
-                optionsBuilder.UseSqlServer(connectionString);
-                break;
-            case "mysql":
-                optionsBuilder.UseMySQL(connectionString);
-                break;
-            case "sqlite":
-                optionsBuilder.UseSqlite(connectionString);
-                break;
-            default:
-                throw new Exception("Invalid database type provided. Valid DB types are: sqlserver, mysql, sqlite");
-        }
+        optionsBuilder.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
 
         base.OnConfiguring(optionsBuilder);
     }

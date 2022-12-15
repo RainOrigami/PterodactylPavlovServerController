@@ -19,7 +19,7 @@ public class PterodactylContext : DbContext
         {
             throw new Exception("Connection string required");
         }
-        optionsBuilder.UseMySQL(connectionString);
+        optionsBuilder.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

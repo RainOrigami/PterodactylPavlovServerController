@@ -1,11 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using PavlovVR_Rcon.Models.Pavlov;
 using PterodactylPavlovServerController.Contexts;
-using PterodactylPavlovServerController.Services;
 using PterodactylPavlovServerDomain.Models;
 
-// TODO: not really a model, move somewhere else
-namespace PterodactylPavlovServerController.Models;
+namespace PterodactylPavlovServerController.Services;
 
 public class PavlovRconConnection : IDisposable
 {
@@ -29,45 +27,45 @@ public class PavlovRconConnection : IDisposable
 
     public PavlovRconConnection(string apiKey, PterodactylServerModel pterodactylServer, PavlovRconService pavlovRconService, SteamService steamService, IConfiguration configuration)
     {
-        this.PterodactylServer = pterodactylServer;
+        PterodactylServer = pterodactylServer;
         this.pavlovRconService = pavlovRconService;
         this.steamService = steamService;
         this.configuration = configuration;
-        this.ApiKey = apiKey;
-        this.context = new(this.configuration);
+        ApiKey = apiKey;
+        context = new(this.configuration);
     }
 
-    public string ServerId => this.PterodactylServer.ServerId;
+    public string ServerId => PterodactylServer.ServerId;
 
     public bool? Online { get; private set; }
 
     public PterodactylServerModel PterodactylServer { get; }
     public ServerInfo? ServerInfo { get; private set; }
-    public IReadOnlyDictionary<ulong, Player>? PlayerListPlayers => this.playerListPlayers;
-    public IReadOnlyDictionary<ulong, PlayerDetail>? PlayerDetails => this.playerDetails;
-    public ulong[]? BanList => this.banList;
+    public IReadOnlyDictionary<ulong, Player>? PlayerListPlayers => playerListPlayers;
+    public IReadOnlyDictionary<ulong, PlayerDetail>? PlayerDetails => playerDetails;
+    public ulong[]? BanList => banList;
 
     public void Dispose()
     {
-        this.updateCancellationTokenSource.Cancel();
+        updateCancellationTokenSource.Cancel();
     }
 
     public void Run()
     {
-        Task.Run(this.run);
+        Task.Run(run);
     }
 
     private async Task run()
     {
-        while (!this.updateCancellationTokenSource.Token.IsCancellationRequested)
+        while (!updateCancellationTokenSource.Token.IsCancellationRequested)
         {
             try
             {
-                await this.updateServerInfo();
-                await this.updatePlayerList();
-                await this.updatePlayerDetails();
-                await this.updatePlayerSummaries();
-                await this.updatePlayerBans();
+                await updateServerInfo();
+                await updatePlayerList();
+                await updatePlayerDetails();
+                await updatePlayerSummaries();
+                await updatePlayerBans();
             }
             catch (Exception ex)
             {
@@ -89,61 +87,61 @@ public class PavlovRconConnection : IDisposable
     {
         try
         {
-            this.ServerInfo = await this.pavlovRconService.GetServerInfo(this.ApiKey, this.ServerId);
-            this.banList = await this.pavlovRconService.Banlist(this.ApiKey, this.ServerId);
+            ServerInfo = await pavlovRconService.GetServerInfo(ApiKey, ServerId);
+            banList = await pavlovRconService.Banlist(ApiKey, ServerId);
         }
         catch (Exception ex)
         {
-            if (this.failCount++ >= maxFailCount)
+            if (failCount++ >= maxFailCount)
             {
 
-                this.Online = false;
-                this.OnServerOnlineStateChanged?.Invoke(this.ServerId);
-                this.OnServerErrorRaised?.Invoke(this.ServerId, $"Error during server info update: {ex.Message}");
+                Online = false;
+                OnServerOnlineStateChanged?.Invoke(ServerId);
+                OnServerErrorRaised?.Invoke(ServerId, $"Error during server info update: {ex.Message}");
             }
 
             return;
         }
 
-        if (!this.Online.HasValue || !this.Online.Value)
+        if (!Online.HasValue || !Online.Value)
         {
-            this.Online = true;
-            this.OnServerOnlineStateChanged?.Invoke(this.ServerId);
+            Online = true;
+            OnServerOnlineStateChanged?.Invoke(ServerId);
         }
 
-        this.failCount = 0;
+        failCount = 0;
 
-        this.OnServerInfoUpdated?.Invoke(this.ServerId);
+        OnServerInfoUpdated?.Invoke(ServerId);
     }
 
     public event ServerUpdated? OnPlayerListUpdated;
 
     private async Task updatePlayerList()
     {
-        if (!this.Online.HasValue || !this.Online.Value || failCount > 0)
+        if (!Online.HasValue || !Online.Value || failCount > 0)
         {
             return;
         }
 
         try
         {
-            Player[] playerListPlayerModels = await this.pavlovRconService.GetActivePlayers(this.ApiKey, this.ServerId);
-            this.playerListPlayers = playerListPlayerModels.Where(p => p.UniqueId.HasValue).ToDictionary(k => k.UniqueId!.Value, v => v);
+            Player[] playerListPlayerModels = await pavlovRconService.GetActivePlayers(ApiKey, ServerId);
+            playerListPlayers = playerListPlayerModels.Where(p => p.UniqueId.HasValue).ToDictionary(k => k.UniqueId!.Value, v => v);
         }
         catch (Exception ex)
         {
-            this.OnServerErrorRaised?.Invoke(this.ServerId, $"Error during player list update: {ex.Message}");
+            OnServerErrorRaised?.Invoke(ServerId, $"Error during player list update: {ex.Message}");
             return;
         }
 
-        this.OnPlayerListUpdated?.Invoke(this.ServerId);
+        OnPlayerListUpdated?.Invoke(ServerId);
 
-        foreach (Player player in this.playerListPlayers.Values)
+        foreach (Player player in playerListPlayers.Values)
         {
-            await this.persistPlayer(player);
+            await persistPlayer(player);
         }
 
-        await this.measurePlayerOnlineTimes(this.playerListPlayers.Values.ToList());
+        await measurePlayerOnlineTimes(playerListPlayers.Values.ToList());
 
         await context.SaveChangesAsync();
     }
@@ -152,17 +150,17 @@ public class PavlovRconConnection : IDisposable
 
     private async Task updatePlayerDetails()
     {
-        if (!this.Online.HasValue || !this.Online.Value || this.PlayerListPlayers == null || failCount > 0)
+        if (!Online.HasValue || !Online.Value || PlayerListPlayers == null || failCount > 0)
         {
             return;
         }
 
         List<PlayerDetail> newPlayerDetails = new();
-        foreach (ulong playerId in this.PlayerListPlayers.Keys)
+        foreach (ulong playerId in PlayerListPlayers.Keys)
         {
             try
             {
-                PlayerDetail playerDetail = await this.pavlovRconService.GetActivePlayerDetail(this.ApiKey, this.ServerId, playerId);
+                PlayerDetail playerDetail = await pavlovRconService.GetActivePlayerDetail(ApiKey, ServerId, playerId);
 
                 if (playerDetail == null)
                 {
@@ -170,25 +168,27 @@ public class PavlovRconConnection : IDisposable
                 }
 
                 newPlayerDetails.Add(playerDetail);
-                this.OnPlayerDetailUpdated?.Invoke(this.ServerId, playerDetail);
+                OnPlayerDetailUpdated?.Invoke(ServerId, playerDetail);
             }
             catch (Exception ex)
             {
-                this.OnServerErrorRaised?.Invoke(this.ServerId, $"Error during player detail update: {ex.Message}");
+                OnServerErrorRaised?.Invoke(ServerId, $"Error during player detail update: {ex.Message}");
             }
         }
 
-        this.playerDetails = newPlayerDetails.ToDictionary(k => k.UniqueId, v => v);
+        playerDetails = newPlayerDetails.ToDictionary(k => k.UniqueId, v => v);
+
+        await measurePlayerIncome(newPlayerDetails);
     }
 
     public async Task updatePlayerSummaries()
     {
-        if (!this.Online.HasValue || !this.Online.Value || this.PlayerListPlayers == null || failCount > 0)
+        if (!Online.HasValue || !Online.Value || PlayerListPlayers == null || failCount > 0)
         {
             return;
         }
 
-        foreach (ulong playerId in this.PlayerListPlayers.Keys)
+        foreach (ulong playerId in PlayerListPlayers.Keys)
         {
             try
             {
@@ -200,12 +200,12 @@ public class PavlovRconConnection : IDisposable
 
     public async Task updatePlayerBans()
     {
-        if (!this.Online.HasValue || !this.Online.Value || this.PlayerListPlayers == null || failCount > 0)
+        if (!Online.HasValue || !Online.Value || PlayerListPlayers == null || failCount > 0)
         {
             return;
         }
 
-        foreach (ulong playerId in this.PlayerListPlayers.Keys)
+        foreach (ulong playerId in PlayerListPlayers.Keys)
         {
             try
             {
@@ -217,12 +217,12 @@ public class PavlovRconConnection : IDisposable
 
     private async Task persistPlayer(Player player)
     {
-        PersistentPavlovPlayerModel? dbPlayer = await context.Players.SingleOrDefaultAsync(p => p.UniqueId == player.UniqueId && p.ServerId == this.ServerId);
+        PersistentPavlovPlayerModel? dbPlayer = await context.Players.SingleOrDefaultAsync(p => p.UniqueId == player.UniqueId && p.ServerId == ServerId);
         if (dbPlayer == null)
         {
             context.Players.Add(new PersistentPavlovPlayerModel()
             {
-                ServerId = this.ServerId,
+                ServerId = ServerId,
                 UniqueId = player.UniqueId!.Value,
                 Username = player.Username,
                 LastSeen = DateTime.Now.ToUniversalTime()
@@ -257,14 +257,48 @@ public class PavlovRconConnection : IDisposable
                 lastMeasured = DateTime.Now;
             }
 
-            PersistentPavlovPlayerModel? dbPlayer = await context.Players.SingleOrDefaultAsync(p => p.UniqueId == playerId && p.ServerId == this.ServerId);
+            PersistentPavlovPlayerModel? dbPlayer = await context.Players.SingleOrDefaultAsync(p => p.UniqueId == playerId && p.ServerId == ServerId);
             if (dbPlayer == null)
             {
                 continue;
             }
 
-            dbPlayer.TotalTime += (DateTime.Now - lastMeasured);
+            dbPlayer.TotalTime += DateTime.Now - lastMeasured;
             playerConnectionTime[playerId] = DateTime.Now;
         }
+    }
+
+    private Dictionary<ulong, int> lastPlayerMoney = new();
+
+    private async Task measurePlayerIncome(List<PlayerDetail> players)
+    {
+        using PavlovServerContext pavlovServerContext = new(configuration);
+
+        foreach (ulong playerId in lastPlayerMoney.Keys)
+        {
+            if (players.All(p => p.UniqueId != playerId))
+            {
+                lastPlayerMoney.Remove(playerId);
+            }
+        }
+
+        foreach (PlayerDetail player in players)
+        {
+            if (!lastPlayerMoney.TryGetValue(player.UniqueId, out int lastMoney))
+            {
+                lastPlayerMoney.Add(player.UniqueId, player.Cash);
+                lastMoney = player.Cash;
+            }
+
+            PersistentPavlovPlayerModel? dbPlayer = await context.Players.SingleOrDefaultAsync(p => p.UniqueId == player.UniqueId && p.ServerId == ServerId);
+            if (dbPlayer == null)
+            {
+                continue;
+            }
+
+            dbPlayer.TotalMoneyEarned += (uint)Math.Max(player.Cash - lastMoney, 0);
+            lastPlayerMoney[player.UniqueId] = player.Cash;
+        }
+
     }
 }

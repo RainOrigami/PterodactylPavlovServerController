@@ -78,10 +78,7 @@ public class SteamService
 
             lock (this.playerSummariesCache)
             {
-                if (this.playerSummariesCache.ContainsKey(steamId))
-                {
-                    this.playerSummariesCache.Remove(steamId);
-                }
+                this.playerSummariesCache.Remove(steamId);
 
                 this.playerSummariesCache.Add(steamId, (lastUpdated.Value, playerSummary));
                 File.WriteAllText(this.configuration["steam_summarycache"]!, JsonConvert.SerializeObject(this.playerSummariesCache));
@@ -132,10 +129,7 @@ public class SteamService
 
             lock (this.playerBansCache)
             {
-                if (this.playerBansCache.ContainsKey(steamId))
-                {
-                    this.playerBansCache.Remove(steamId);
-                }
+                this.playerBansCache.Remove(steamId);
 
                 this.playerBansCache.Add(steamId, (lastUpdated.Value, playerBans));
                 File.WriteAllText(this.configuration["steam_bancache"]!, JsonConvert.SerializeObject(this.playerBansCache));
