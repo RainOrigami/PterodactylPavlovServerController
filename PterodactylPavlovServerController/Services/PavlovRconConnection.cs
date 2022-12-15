@@ -296,7 +296,11 @@ public class PavlovRconConnection : IDisposable
                 continue;
             }
 
-            dbPlayer.TotalMoneyEarned += (uint)Math.Max(player.Cash - lastMoney, 0);
+            if (player.Cash != 900)
+            {
+                dbPlayer.TotalMoneyEarned += (uint)Math.Max(player.Cash - lastMoney, 0);
+            }
+
             lastPlayerMoney[player.UniqueId] = player.Cash;
         }
 
