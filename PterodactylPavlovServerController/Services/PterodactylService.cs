@@ -171,7 +171,7 @@ public class PterodactylService
 
     public PterodactylServerModel[] GetServers(string apiKey)
     {
-        return JsonDocument.Parse(this.executeRestRequest(apiKey, "client?include=egg").Content!).RootElement.GetProperty("data").EnumerateArray().Select(e => e.GetProperty("attributes")).Where(a => a.GetProperty("relationships").GetProperty("egg").GetProperty("attributes").GetProperty("name").GetString()?.Equals("Pavlov VR") ?? false).Select(a => new PterodactylServerModel
+        return JsonDocument.Parse(this.executeRestRequest(apiKey, "client?include=egg").Content!).RootElement.GetProperty("data").EnumerateArray().Select(e => e.GetProperty("attributes")).Where(a => a.GetProperty("relationships").GetProperty("egg").GetProperty("attributes").GetProperty("name").GetString()?.Contains("Pavlov VR") ?? false).Select(a => new PterodactylServerModel
         {
             Name = a.GetProperty("name").GetString() ?? "-unnamed-",
             ServerId = a.GetProperty("identifier").GetString() ?? "-invalid-",
