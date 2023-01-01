@@ -31,9 +31,12 @@ public class PavlovRconService
 
     private async Task<T> execute<T>(Func<PavlovRcon, Task<T>> action, string apiKey, string serverId, bool separateConnectionion)
     {
-        if (!this.commandRuning.ContainsKey(serverId))
+        lock (this.commandRuning)
         {
-            this.commandRuning.Add(serverId, false);
+            if (!this.commandRuning.ContainsKey(serverId))
+            {
+                this.commandRuning.Add(serverId, false);
+            }
         }
 
         while (!separateConnectionion && this.commandRuning[serverId])
