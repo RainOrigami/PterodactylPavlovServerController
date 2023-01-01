@@ -180,7 +180,7 @@
         storedMapRotations = await pavlovServerContext.MapRotations.Where(r => r.ServerId == ServerId).Include(r => r.Maps).ToArrayAsync();
 
         currentRotation = await PavlovServerService.GetCurrentMapRotation(ApiKey.ApiKey, ServerId);
-        currentRotationModel = storedMapRotations.FirstOrDefault(r => r.MapsInRotation.OrderBy(m => m.Order).Select(m => m.Map).SequenceEqual(currentRotation, new ServerMapModel()));
+        currentRotationModel = storedMapRotations.FirstOrDefault(r => r.MapsInRotation?.OrderBy(m => m.Order).Select(m => m.Map).SequenceEqual(currentRotation, new ServerMapModel()) ?? false);
         if (currentRotationModel != null)
         {
             rotationName = currentRotationModel.Name;
@@ -208,7 +208,7 @@
 
         MapRotationModel mapRotation = storedMapRotations!.First(r => r.Name == setMapRotationModel.Name);
         currentRotationModel = mapRotation;
-        currentRotation = mapRotation.MapsInRotation.OrderBy(m => m.Order).Select(m => m.Map).ToArray();
+        currentRotation = mapRotation.MapsInRotation?.OrderBy(m => m.Order).Select(m => m.Map).ToArray();
         rotationName = mapRotation.Name;
 
         await Task.CompletedTask;
@@ -296,9 +296,11 @@
         if (pavlovServerContext.MapRotations.Include(r => r.Maps).FirstOrDefault(r => r.ServerId == ServerId && r.Name == rotationName) is MapRotationModel targetMapRotation)
         {
             targetMapRotation.Maps.Clear();
+            if (targetMapRotation.MapsInRotation == null)
+            {
+                targetMapRotation.MapsInRotation = new List<MapInMapRotationModel>();
+            }
             targetMapRotation.MapsInRotation.Clear();
-
-
         }
         else
         {
