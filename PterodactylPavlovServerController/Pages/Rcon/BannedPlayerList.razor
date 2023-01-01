@@ -13,7 +13,7 @@
 <div class="tab-pane container active px-0" id="offline">
     @foreach (ulong uniqueId in Connection.BanList)
     {
-        <PlayerCard PlayerId="@uniqueId" ServerId="@Connection.ServerId" />
+        <PlayerCard @key="uniqueId" PlayerId="@uniqueId" ServerId="@Connection.ServerId" />
     }
 </div>
 

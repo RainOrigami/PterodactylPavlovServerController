@@ -8,7 +8,7 @@
 <div class="tab-pane container active px-0" id="offline">
     @foreach (ulong uniqueId in offlinePlayerList.Skip(currentPage * pageSize).Take(pageSize))
     {
-        <PlayerCard PlayerId="@uniqueId" ServerId="@Connection.ServerId" />
+        <PlayerCard @key="uniqueId" PlayerId="@uniqueId" ServerId="@Connection.ServerId" />
     }
 
     <div class="justify-content-center my-3">
