@@ -69,6 +69,28 @@
     }
 
     string playerName;
+    List<string> allNames = new();
+
+    if (!string.IsNullOrEmpty(playerSummary?.Nickname))
+    {
+        allNames.Add(playerSummary.Nickname);
+    }
+
+    if (!string.IsNullOrEmpty(playerListPlayer?.Username) && !allNames.Contains(playerListPlayer.Username))
+    {
+        allNames.Add(playerListPlayer.Username);
+    }
+
+    if (!string.IsNullOrEmpty(dbPlayer?.Username) && !allNames.Contains(dbPlayer.Username))
+    {
+        allNames.Add(dbPlayer.Username);
+    }
+
+    if (allNames.Count == 0)
+    {
+        allNames.Add(PlayerId.ToString());
+    }
+
     if (playerSummary != null)
     {
         playerName = playerSummary.Nickname;
@@ -97,10 +119,14 @@
         <div class="col">
             <div class="card-body">
                 <a href="@profileUrl" class="text-decoration-none" target="_blank">
-                    <h5 class="card-title">
-                        @playerName
+                    <h5 class="card-title my-0 @(allNames.Count > 1 ? "text-danger" : "")">
+                        @allNames[0]
                     </h5>
                 </a>
+                @if (allNames.Count > 1)
+                {
+                    <small style="position: relative; top: -5px;">@string.Join(", ", allNames.Skip(1))</small>
+                }
                 <p class="card-text">
                     <div class="container px-0">
                         <div class="row">
