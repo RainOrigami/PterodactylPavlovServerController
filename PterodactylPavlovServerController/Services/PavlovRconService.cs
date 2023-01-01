@@ -10,11 +10,13 @@ public class PavlovRconService
 {
     private static readonly Dictionary<string, PavlovRcon> pavlovRconConnections = new();
     private readonly PterodactylService pterodactylService;
+    private readonly IConfiguration configuration;
     private DateTime lastCommand = DateTime.MinValue;
 
-    public PavlovRconService(PterodactylService pterodactylService)
+    public PavlovRconService(PterodactylService pterodactylService, IConfiguration configuration)
     {
         this.pterodactylService = pterodactylService;
+        this.configuration = configuration;
     }
 
     private readonly Dictionary<string, bool> commandRuning = new();
@@ -180,16 +182,21 @@ public class PavlovRconService
 
     private async Task<PavlovRcon> openConnection(string apiKey, string serverId, bool separateConnectionion)
     {
+        if (this.configuration.GetValue<bool>("logRconToFile") && !Directory.Exists("./logs"))
+        {
+            Directory.CreateDirectory("./logs");
+        }
+
         if (separateConnectionion)
         {
-            PavlovRcon rcon = new PavlovRcon(this.pterodactylService.GetHost(apiKey, serverId), int.Parse(this.pterodactylService.GetStartupVariable(apiKey, serverId, "RCON_PORT")), this.pterodactylService.GetStartupVariable(apiKey, serverId, "RCON_PASSWORD"), true);
+            PavlovRcon rcon = new PavlovRcon(this.pterodactylService.GetHost(apiKey, serverId), int.Parse(this.pterodactylService.GetStartupVariable(apiKey, serverId, "RCON_PORT")), this.pterodactylService.GetStartupVariable(apiKey, serverId, "RCON_PASSWORD"), true, this.configuration.GetValue<bool>("logRconToFile") ? $"./logs/{DateTime.Now:yyyy-MM-dd-HH-mm-ss}_{serverId}_rcon.log" : null);
             await rcon.Connect(new CancellationTokenSource(2000).Token);
             return rcon;
         }
 
         if (!PavlovRconService.pavlovRconConnections.ContainsKey(serverId))
         {
-            PavlovRconService.pavlovRconConnections.Add(serverId, new PavlovRcon(this.pterodactylService.GetHost(apiKey, serverId), int.Parse(this.pterodactylService.GetStartupVariable(apiKey, serverId, "RCON_PORT")), this.pterodactylService.GetStartupVariable(apiKey, serverId, "RCON_PASSWORD"), true));
+            PavlovRconService.pavlovRconConnections.Add(serverId, new PavlovRcon(this.pterodactylService.GetHost(apiKey, serverId), int.Parse(this.pterodactylService.GetStartupVariable(apiKey, serverId, "RCON_PORT")), this.pterodactylService.GetStartupVariable(apiKey, serverId, "RCON_PASSWORD"), true, this.configuration.GetValue<bool>("logRconToFile") ? $"./logs/{DateTime.Now:yyyy-MM-dd-HH-mm-ss}_{serverId}_rcon.log" : null));
         }
 
         if (!PavlovRconService.pavlovRconConnections[serverId].Connected)
