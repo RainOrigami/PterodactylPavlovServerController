@@ -302,8 +302,12 @@ public class PavlovRconConnection : IDisposable
                 continue;
             }
 
-            if (player.Cash != 900)
+            if (player.Cash != 900 && lastMoney != 900)
             {
+                if (ServerInfo?.MapLabel == "UGC2835308991")
+                {
+                    dbPlayer.EFPCash = player.Cash;
+                }
                 dbPlayer.TotalMoneyEarned += (uint)Math.Max(player.Cash - lastMoney, 0);
             }
 

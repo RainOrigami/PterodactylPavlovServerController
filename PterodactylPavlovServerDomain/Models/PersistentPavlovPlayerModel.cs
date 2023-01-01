@@ -20,4 +20,6 @@ public class PersistentPavlovPlayerModel
 
     public string Comments { get; set; } = string.Empty;
     public ulong TotalMoneyEarned { get; set; }
+
+    public int? EFPCash { get; set; }
 }
