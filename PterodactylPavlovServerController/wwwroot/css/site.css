@@ -74,3 +74,12 @@ a, .btn-link {
 .blazor-error-boundary::after {
     content: "An error has occurred."
 }
+
+.spoiler {
+    color: black;
+    background-color: black;
+}
+
+.spoiler:hover {
+    color: white;
+}

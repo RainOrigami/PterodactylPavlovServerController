@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using PavlovVR_Rcon.Models.Pavlov;
 using PterodactylPavlovServerController.Contexts;
+using PterodactylPavlovServerDomain.Extensions;
 using PterodactylPavlovServerDomain.Models;
 
 namespace PterodactylPavlovServerController.Services;
@@ -122,6 +123,47 @@ public class PavlovRconConnection : IDisposable
         failCount = 0;
 
         OnServerInfoUpdated?.Invoke(ServerId);
+
+        await handleReservedSlots();
+    }
+
+    private bool? isReserveSlotPinLocked = null;
+    public bool IsReserveSlotPinLocked => isReserveSlotPinLocked.HasValue && isReserveSlotPinLocked.Value;
+
+    private async Task handleReservedSlots()
+    {
+        if (ServerInfo == null)
+        {
+            return;
+        }
+
+        int? reservedSlotCount = configuration.GetValue<int>($"reservedSlots.{ServerId}");
+        int? reservedSlotPin = configuration.GetValue<int>($"reservedSlotPin.{ServerId}");
+        if (!reservedSlotCount.HasValue || !reservedSlotPin.HasValue || reservedSlotCount.Value == 0 || reservedSlotPin.Value < 1000)
+        {
+            return;
+        }
+
+        if (!isReserveSlotPinLocked.HasValue)
+        {
+            await pavlovRconService.SetPin(ApiKey, ServerId, null);
+            isReserveSlotPinLocked = false;
+        }
+
+        if (ServerInfo.MaximumPlayerCount() - ServerInfo.CurrentPlayerCount() <= reservedSlotCount.Value)
+        {
+            if (!isReserveSlotPinLocked.Value)
+            {
+                await pavlovRconService.SetPin(ApiKey, ServerId, reservedSlotPin);
+            }
+        }
+        else
+        {
+            if (isReserveSlotPinLocked.Value)
+            {
+                await pavlovRconService.SetPin(ApiKey, ServerId, null);
+            }
+        }
     }
 
     public event ServerUpdated? OnPlayerListUpdated;

@@ -24,6 +24,7 @@
 @inject PavlovServerContext PavlovServerContext
 @inject SteamWorkshopService SteamWorkshopService
 @inject ApiKeyService ApiKey
+@inject IConfiguration Configuration
 
 @{
     if (!Rcon.Initialised)
@@ -106,7 +107,21 @@
                                         <div class="col-auto px-1">
                                             <i class="fa-solid fa-person-rifle" style="color: limegreen;"></i>
                                         </div>
-                                        <div class="col px-1">@(connection.PlayerListPlayers == null ? $"{serverInfo.CurrentPlayerCount()}*" : connection.PlayerListPlayers.Count)&nbsp;/&nbsp;@serverInfo.MaximumPlayerCount()</div>
+                                        <div class="col px-1">
+                                            @(connection.PlayerListPlayers == null ? $"{serverInfo.CurrentPlayerCount()}*" : connection.PlayerListPlayers.Count)&nbsp;/&nbsp;@serverInfo.MaximumPlayerCount()
+                                            @{
+                                                int? reservedSlotCount = Configuration.GetValue<int>($"reservedSlots.{ServerId}");
+                                                int? reservedSlotPin = Configuration.GetValue<int>($"reservedSlotPin.{ServerId}");
+                                                if (reservedSlotCount.HasValue && reservedSlotPin.HasValue && reservedSlotCount > 0 && reservedSlotPin >= 1000)
+                                                {
+                                                    <span> - @reservedSlotCount.Value reserved (PIN: <span class="spoiler">@reservedSlotPin.Value</span>)</span>
+                                                    if (connection.IsReserveSlotPinLocked)
+                                                    {
+                                                        <i class="fa-regular fa-lock"></i>
+                                                    }
+                                                }
+                                            }
+                                        </div>
                                     </div>
                                     <div class="row gx-0">
                                         <div class="col-auto px-1">
