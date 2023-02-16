@@ -4,7 +4,7 @@ ASP.net web API (.net 6) for controlling aspects of Pavlov VR servers in Pteroda
 
 This project is in ongoing development and WIP. Expect bugs. Only tested with SND and EFP servers so far!
 
-Example of generated server, map, gun and player statistics: https://pavlov.bloodisgood.net/stats/hearth
+Example of generated server, map, gun and player statistics: https://pavlov.bloodisgood.org/stats/hearth
 
 Screenshots RCON tool:
 ![image](https://user-images.githubusercontent.com/51454971/207735949-8b683379-bfce-4e0d-a8ba-a9e38a59b5ca.png)
