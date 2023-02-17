@@ -64,6 +64,7 @@
 
                     @if (Connection.PlayerDetails != null)
                     {
+                        <option value="0">- Give to everybody -</option>
                         foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in Connection.PlayerDetails)
                         {
                             string? playerName = connectionPlayerDetail.Value.PlayerName;
@@ -287,6 +288,30 @@
     {
         try
         {
+            if (giveItem.UniqueId!.Value == 0)
+            {
+                if (Connection.PlayerDetails == null)
+                {
+                    return;
+                }
+
+                foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in Connection.PlayerDetails)
+                {
+                    try
+                    {
+                        await RconService.GiveItem(ApiKey.ApiKey, Connection.ServerId, connectionPlayerDetail.Key, giveItem.Item!.Value.ToString());
+                    }
+                    catch (Exception e)
+                    {
+                        Toast.ShowError(e.Message);
+                    }
+                }
+
+                await AuditService.Add(Connection.ServerId, $"Gave all players item {giveItem.Item!.Value}");
+                Toast.ShowSuccess("All players received item", "Player cheat executed");
+                return;
+            }
+
             if (await RconService.GiveItem(ApiKey.ApiKey, Connection.ServerId, giveItem.UniqueId!.Value, giveItem.Item!.Value.ToString()))
             {
                 Toast.ShowSuccess("Player received item", "Player cheat executed");
