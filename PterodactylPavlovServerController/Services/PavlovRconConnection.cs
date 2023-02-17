@@ -155,6 +155,7 @@ public class PavlovRconConnection : IDisposable
             if (!isReserveSlotPinLocked.Value)
             {
                 await pavlovRconService.SetPin(ApiKey, ServerId, reservedSlotPin);
+                isReserveSlotPinLocked = true;
             }
         }
         else
@@ -162,6 +163,7 @@ public class PavlovRconConnection : IDisposable
             if (isReserveSlotPinLocked.Value)
             {
                 await pavlovRconService.SetPin(ApiKey, ServerId, null);
+                isReserveSlotPinLocked = false;
             }
         }
     }
