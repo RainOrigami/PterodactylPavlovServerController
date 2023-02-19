@@ -197,9 +197,6 @@
                     <li class="nav-item" role="presentation">
                         <a class="nav-link @(currentTab == "settings" ? "active" : "")" style="font-size: 2em;" href="#server" @onclick="@(() => currentTab = "settings")" @onclick:preventDefault>Setting</a>
                     </li>
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link @(currentTab == "rotation" ? "active" : "")" style="font-size: 2em;" href="#server" @onclick="@(() => currentTab = "rotation")" @onclick:preventDefault>Map rotation</a>
-                    </li>
                 </ul>
 
                 <div class="tab-content">
@@ -230,9 +227,6 @@
                                 break;
                             case "settings":
                                 <ServerSettingsComponent Connection="connection" ServerInfo="serverInfo" />
-                                break;
-                            case "rotation":
-                                <MapRotationComponent Connection="connection" ServerInfo="serverInfo" />
                                 break;
                         }
                     }
