@@ -202,25 +202,25 @@
                         switch (currentTab)
                         {
                             case "players":
-                                <PlayerList Connection="connection" ServerInfo="serverInfo" />
+                                <PlayerListComponent Connection="connection" ServerInfo="serverInfo" />
                                 break;
                             case "maps":
-                                <MapList Connection="connection" ServerInfo="serverInfo" />
+                                <MapListComponent Connection="connection" ServerInfo="serverInfo" />
                                 break;
                             case "offline":
-                                <OfflinePlayerList Connection="connection" ServerInfo="serverInfo" />
+                                <OfflinePlayerListComponent Connection="connection" ServerInfo="serverInfo" />
                                 break;
                             case "banned":
-                                <BannedPlayerList Connection="connection" ServerInfo="serverInfo" />
+                                <BannedPlayerListComponent Connection="connection" ServerInfo="serverInfo" />
                                 break;
                             case "cheats":
-                                <Cheats Connection="connection" ServerInfo="serverInfo" />
+                                <CheatsComponent Connection="connection" ServerInfo="serverInfo" />
                                 break;
                             case "server":
-                                <ServerControl Connection="connection" ServerInfo="serverInfo" />
+                                <ServerControlComponent Connection="connection" ServerInfo="serverInfo" />
                                 break;
                             case "ttt":
-                                <TTT Connection="connection" ServerInfo="serverInfo" />
+                                <TTTComponent Connection="connection" ServerInfo="serverInfo" />
                                 break;
                         }
                     }
