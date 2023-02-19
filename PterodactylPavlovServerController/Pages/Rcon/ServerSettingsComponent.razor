@@ -111,7 +111,7 @@
                 return;
             }
 
-            if (reservedSlots.Amount < 0)
+            if (reservedSlots.Amount <= 0)
             {
                 Toast.ShowError("Reserved slots amount must be a positive value.");
                 return;
@@ -137,6 +137,7 @@
                         ServerId = Connection.ServerId,
                         SettingName = ServerSettings.SETTING_RESERVED_SLOT_PIN
                     };
+                await pavlovServerContext.Settings.AddAsync(pin);
             }
 
             if (amount == null)
@@ -146,11 +147,15 @@
                         ServerId = Connection.ServerId,
                         SettingName = ServerSettings.SETTING_RESERVED_SLOT_AMOUNT
                     };
+                await pavlovServerContext.Settings.AddAsync(amount);
             }
 
             pin.SettingValue = reservedSlots.Pin.ToString();
             amount.SettingValue = reservedSlots.Amount.ToString();
             await pavlovServerContext.SaveChangesAsync();
+
+            await AuditService.Add(Connection.ServerId, $"Set reserved slots to amount {reservedSlots.Amount} and pin -redacted-");
+            Toast.ShowSuccess($"Successfully enabled {reservedSlots.Amount} reserved slots");
         }
         catch (Exception e)
         {
