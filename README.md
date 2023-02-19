@@ -38,6 +38,8 @@ Screenshot map rotation editor:
   Ban reason and player comments  
   Time-based bans and automatic unbanning  
   Audit log
+  **Pavlov server automation through RCON**  
+  Reserved slots functionality
 - **Map rotation editor**  
   Change map rotation  
   Save multiple map rotation presets
