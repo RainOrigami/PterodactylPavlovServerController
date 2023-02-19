@@ -27,6 +27,8 @@
 
                     @if (Connection.PlayerDetails != null)
                     {
+                        <option value="0">- Give to everybody -</option>
+
                         foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in Connection.PlayerDetails)
                         {
                             string? playerName = connectionPlayerDetail.Value.PlayerName;
@@ -65,6 +67,7 @@
                     @if (Connection.PlayerDetails != null)
                     {
                         <option value="0">- Give to everybody -</option>
+
                         foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in Connection.PlayerDetails)
                         {
                             string? playerName = connectionPlayerDetail.Value.PlayerName;
@@ -136,6 +139,8 @@
 
                     @if (Connection.PlayerDetails != null)
                     {
+                        <option value="0">- Give to everybody -</option>
+
                         foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in Connection.PlayerDetails)
                         {
                             string? playerName = connectionPlayerDetail.Value.PlayerName;
@@ -178,6 +183,8 @@
 
                     @if (Connection.PlayerDetails != null)
                     {
+                        <option value="0">- Give to everybody -</option>
+
                         foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in Connection.PlayerDetails)
                         {
                             string? playerName = connectionPlayerDetail.Value.PlayerName;
@@ -220,6 +227,8 @@
 
                     @if (Connection.PlayerDetails != null)
                     {
+                        <option value="0">- Slap everybody -</option>
+
                         foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in Connection.PlayerDetails)
                         {
                             string? playerName = connectionPlayerDetail.Value.PlayerName;
@@ -290,12 +299,7 @@
         {
             if (giveItem.UniqueId!.Value == 0)
             {
-                if (Connection.PlayerDetails == null)
-                {
-                    return;
-                }
-
-                foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in Connection.PlayerDetails)
+                foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in Connection.PlayerDetails!)
                 {
                     try
                     {
@@ -352,6 +356,25 @@
     {
         try
         {
+            if (giveItem.UniqueId!.Value == 0)
+            {
+                foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in Connection.PlayerDetails!)
+                {
+                    try
+                    {
+                        await RconService.GiveVehicle(ApiKey.ApiKey, Connection.ServerId, connectionPlayerDetail.Key, giveVehicle.Vehicle!.Value.ToString());
+                    }
+                    catch (Exception e)
+                    {
+                        Toast.ShowError(e.Message);
+                    }
+                }
+
+                await AuditService.Add(Connection.ServerId, $"Gave all players vehicle {giveVehicle.Vehicle!.Value}");
+                Toast.ShowSuccess("All players received vehicle", "Player cheat executed");
+                return;
+            }
+
             if (await RconService.GiveVehicle(ApiKey.ApiKey, Connection.ServerId, giveVehicle.UniqueId!.Value, giveVehicle.Vehicle!.Value.ToString()))
             {
                 Toast.ShowSuccess("Player received vehicle", "Player cheat executed");
@@ -372,6 +395,25 @@
     {
         try
         {
+            if (giveItem.UniqueId!.Value == 0)
+            {
+                foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in Connection.PlayerDetails!)
+                {
+                    try
+                    {
+                        await RconService.SetSkin(ApiKey.ApiKey, Connection.ServerId, connectionPlayerDetail.Key, playerSkin.Skin!.Value.ToString());
+                    }
+                    catch (Exception e)
+                    {
+                        Toast.ShowError(e.Message);
+                    }
+                }
+
+                Toast.ShowSuccess("All player skins have been set", "Player cheat executed");
+                await AuditService.Add(Connection.ServerId, $"Set all players skin to {playerSkin.Skin!.Value}");
+                return;
+            }
+
             if (await RconService.SetSkin(ApiKey.ApiKey, Connection.ServerId, playerSkin.UniqueId!.Value, playerSkin.Skin!.Value.ToString()))
             {
                 Toast.ShowSuccess("Player skin has been set", "Player cheat executed");
@@ -392,6 +434,25 @@
     {
         try
         {
+            if (giveItem.UniqueId!.Value == 0)
+            {
+                foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in Connection.PlayerDetails!)
+                {
+                    try
+                    {
+                        await RconService.Slap(ApiKey.ApiKey, Connection.ServerId, connectionPlayerDetail.Key, slap.Amount!.Value);
+                    }
+                    catch (Exception e)
+                    {
+                        Toast.ShowError(e.Message);
+                    }
+                }
+
+                Toast.ShowSuccess("All players have been slapped", "Player cheat executed");
+                await AuditService.Add(Connection.ServerId, $"Slapped all players for {slap.Amount!.Value}");
+                return;
+            }
+
             await RconService.Slap(ApiKey.ApiKey, Connection.ServerId, slap.UniqueId!.Value, slap.Amount!.Value);
             Toast.ShowSuccess("Player has been slapped", "Player cheat executed");
             await AuditService.Add(Connection.ServerId, $"Slapped player {slap.UniqueId!.Value} for {slap.Amount!.Value}");
