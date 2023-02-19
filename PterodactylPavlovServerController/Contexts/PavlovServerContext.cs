@@ -18,6 +18,7 @@ public class PavlovServerContext : DbContext
     public DbSet<AuditActionModel> AuditActions { get; set; }
     public DbSet<MapRotationModel> MapRotations { get; set; }
     public DbSet<ServerMapModel> Maps { get; set; }
+    public DbSet<ServerSettings> Settings { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -38,6 +39,7 @@ public class PavlovServerContext : DbContext
 
         modelBuilder.Entity<ServerMapModel>().HasKey(m => new { m.MapLabel, m.GameMode });
         modelBuilder.Entity<MapRotationModel>().HasKey(r => new { r.ServerId, r.Name });
+        modelBuilder.Entity<ServerSettings>().HasKey(s => new { s.ServerId, s.SettingName });
 
         modelBuilder.Entity<MapRotationModel>()
             .HasMany(r => r.Maps)

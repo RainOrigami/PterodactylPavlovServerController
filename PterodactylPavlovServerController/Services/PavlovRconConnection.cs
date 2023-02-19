@@ -127,8 +127,8 @@ public class PavlovRconConnection : IDisposable
         await handleReservedSlots();
     }
 
-    private bool? isReserveSlotPinLocked = null;
-    public bool IsReserveSlotPinLocked => isReserveSlotPinLocked.HasValue && isReserveSlotPinLocked.Value;
+    private int? currentPin = 0;
+    public bool IsReserveSlotPinLocked => currentPin.HasValue;
 
     private async Task handleReservedSlots()
     {
@@ -137,33 +137,45 @@ public class PavlovRconConnection : IDisposable
             return;
         }
 
-        int? reservedSlotCount = configuration.GetValue<int>($"reservedSlots.{ServerId}");
-        int? reservedSlotPin = configuration.GetValue<int>($"reservedSlotPin.{ServerId}");
-        if (!reservedSlotCount.HasValue || !reservedSlotPin.HasValue || reservedSlotCount.Value == 0 || reservedSlotPin.Value < 1000)
+        PavlovServerContext pavlovServerContext = new(configuration);
+        ServerSettings? pin = await pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == ServerId && s.SettingName == ServerSettings.SETTING_RESERVED_SLOT_PIN);
+        ServerSettings? amount = await pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == ServerId && s.SettingName == ServerSettings.SETTING_RESERVED_SLOT_AMOUNT);
+
+        if (amount == null || pin == null)
         {
             return;
         }
 
-        if (!isReserveSlotPinLocked.HasValue)
+        if (!int.TryParse(pin.SettingValue, out int reservedSlotPin) || !int.TryParse(amount.SettingValue, out int reservedSlotAmount))
         {
-            await pavlovRconService.SetPin(ApiKey, ServerId, null);
-            isReserveSlotPinLocked = false;
+            return;
         }
 
-        if (ServerInfo.MaximumPlayerCount() - ServerInfo.CurrentPlayerCount() <= reservedSlotCount.Value)
+        if (reservedSlotPin < 1000 || reservedSlotPin > 9999 || reservedSlotAmount <= 0 || reservedSlotAmount >= ServerInfo.MaximumPlayerCount())
         {
-            if (!isReserveSlotPinLocked.Value)
+            return;
+        }
+
+        if (currentPin.HasValue && currentPin.Value == 0)
+        {
+            await pavlovRconService.SetPin(ApiKey, ServerId, null);
+            currentPin = null;
+        }
+
+        if (ServerInfo.MaximumPlayerCount() - ServerInfo.CurrentPlayerCount() <= reservedSlotAmount)
+        {
+            if (!currentPin.HasValue || currentPin.Value != reservedSlotPin)
             {
                 await pavlovRconService.SetPin(ApiKey, ServerId, reservedSlotPin);
-                isReserveSlotPinLocked = true;
+                currentPin = reservedSlotPin;
             }
         }
         else
         {
-            if (isReserveSlotPinLocked.Value)
+            if (currentPin.HasValue)
             {
                 await pavlovRconService.SetPin(ApiKey, ServerId, null);
-                isReserveSlotPinLocked = false;
+                currentPin = null;
             }
         }
     }

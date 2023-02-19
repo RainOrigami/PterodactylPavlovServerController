@@ -1,0 +1,160 @@
+﻿@using Microsoft.EntityFrameworkCore;
+@using PavlovVR_Rcon.Models.Pavlov;
+@using PterodactylPavlovServerController.Contexts;
+@using PterodactylPavlovServerController.Models;
+@using PterodactylPavlovServerController.Services;
+@using PterodactylPavlovServerDomain.Extensions;
+@using PterodactylPavlovServerDomain.Models;
+
+@inject IConfiguration Configuration
+@inject IToastService Toast
+@inject AuditService AuditService
+
+<div class="tab-pane container active px-0" id="rotation">
+    <div class="me-2" style="width: 425px; display: inline-block; vertical-align: top;">
+        <h3 class="mb-0">Reserved slots</h3>
+        <small class="text-muted">
+            Reserved slots will keep the specified amount of slots free by locking the server with a pin once the threshold is reached. To disable reserved slots, set the amount and pin fields to zero and save.
+        </small>
+        <EditForm Model="@reservedSlots" OnValidSubmit="@reservedSlotsSubmitted" class="mt-3">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="mb-3">
+                <label>Amount</label>
+                <InputNumber @bind-Value="reservedSlots.Amount" class="form-control" />
+            </div>
+            <div class="mb-3">
+                <label>Pin</label>
+                <InputNumber @bind-Value="reservedSlots.Pin" class="form-control" />
+            </div>
+            <div class="mb-3">
+                <button type="submit" class="btn btn-outline-success form-control">Save</button>
+            </div>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public PavlovRconConnection Connection { get; set; }
+
+    [Parameter]
+    [EditorRequired]
+    public ServerInfo ServerInfo { get; set; }
+
+    private string serverId = string.Empty;
+
+    private readonly ReservedSlotsModel reservedSlots = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await initialise();
+
+        await base.OnParametersSetAsync();
+    }
+
+    private async Task initialise()
+    {
+        if (ServerInfo == null)
+        {
+            return;
+        }
+
+        if (serverId == Connection.ServerId)
+        {
+            return;
+        }
+
+        serverId = Connection.ServerId;
+        PavlovServerContext pavlovServerContext = new(Configuration);
+
+        ServerSettings? pin = await pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == Connection.ServerId && s.SettingName == ServerSettings.SETTING_RESERVED_SLOT_PIN);
+        ServerSettings? amount = await pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == Connection.ServerId && s.SettingName == ServerSettings.SETTING_RESERVED_SLOT_AMOUNT);
+
+        if (pin != null && int.TryParse(pin.SettingValue, out int pinValue))
+        {
+            reservedSlots.Pin = pinValue;
+        }
+
+        if (amount != null && int.TryParse(amount.SettingValue, out int amountValue))
+        {
+            reservedSlots.Amount = amountValue;
+        }
+    }
+
+    private async Task reservedSlotsSubmitted()
+    {
+        try
+        {
+            PavlovServerContext pavlovServerContext = new(Configuration);
+            ServerSettings? pin = await pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == Connection.ServerId && s.SettingName == ServerSettings.SETTING_RESERVED_SLOT_PIN);
+            ServerSettings? amount = await pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == Connection.ServerId && s.SettingName == ServerSettings.SETTING_RESERVED_SLOT_AMOUNT);
+
+            if (reservedSlots.Pin == 0 && reservedSlots.Amount == 0)
+            {
+                if (pin != null)
+                {
+                    pavlovServerContext.Settings.Remove(pin);
+                }
+
+                if (amount != null)
+                {
+                    pavlovServerContext.Settings.Remove(amount);
+                }
+
+                await pavlovServerContext.SaveChangesAsync();
+
+                await AuditService.Add(Connection.ServerId, $"Removed reserved slots");
+                Toast.ShowSuccess("Removed reserved slots");
+                return;
+            }
+
+            if (reservedSlots.Amount < 0)
+            {
+                Toast.ShowError("Reserved slots amount must be a positive value.");
+                return;
+            }
+
+            if (reservedSlots.Amount >= Connection.ServerInfo!.MaximumPlayerCount())
+            {
+                Toast.ShowError("Reserved slots amount exceeds maximum player count.");
+                return;
+            }
+
+            if (reservedSlots.Pin < 1000 || reservedSlots.Pin > 9999)
+            {
+                // TODO: Verify that pin indeed must be four digits, or if Pavlov supports less or more digits.
+                Toast.ShowError("Pin must be exactly four digits.");
+                return;
+            }
+
+            if (pin == null)
+            {
+                pin = new()
+                    {
+                        ServerId = Connection.ServerId,
+                        SettingName = ServerSettings.SETTING_RESERVED_SLOT_PIN
+                    };
+            }
+
+            if (amount == null)
+            {
+                amount = new()
+                    {
+                        ServerId = Connection.ServerId,
+                        SettingName = ServerSettings.SETTING_RESERVED_SLOT_AMOUNT
+                    };
+            }
+
+            pin.SettingValue = reservedSlots.Pin.ToString();
+            amount.SettingValue = reservedSlots.Amount.ToString();
+            await pavlovServerContext.SaveChangesAsync();
+        }
+        catch (Exception e)
+        {
+            Toast.ShowError(e.Message);
+        }
+    }
+}
