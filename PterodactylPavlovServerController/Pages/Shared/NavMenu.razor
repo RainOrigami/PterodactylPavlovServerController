@@ -78,22 +78,6 @@
                 }
             </div>
         </div>
-        <div class="nav-item has-submenu px-3">
-            <span class="nav-link text-light">
-                <i class="fa-solid fa-map"></i> Map rotation
-            </span>
-            <div class="submenu flex-column ms-3">
-                @foreach (PavlovRconConnection connection in Rcon.GetAllConnections(ApiKey.ApiKey).OrderBy(c => c.PterodactylServer.Name))
-                {
-                    <div class="nav-item">
-                        <NavLink class="nav-link" style="" href="@($"maps/{connection.ServerId}")">
-                            <i class="fa-solid fa-layer-group"></i>
-                            @connection.PterodactylServer.Name
-                        </NavLink>
-                    </div>
-                }
-            </div>
-        </div>
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="Identity/Account/Logout" Match="NavLinkMatch.All">
                 <i class="fa-solid fa-user-lock pe-2"></i> Logout

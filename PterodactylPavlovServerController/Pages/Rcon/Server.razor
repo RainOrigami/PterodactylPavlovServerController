@@ -194,6 +194,9 @@
                             <a class="nav-link @(currentTab == "ttt" ? "active" : "")" style="font-size: 2em;" href="#ttt" @onclick="@(() => currentTab = "ttt")" @onclick:preventDefault>TTT</a>
                         </li>
                     }
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link @(currentTab == "rotation" ? "active" : "")" style="font-size: 2em;" href="#server" @onclick="@(() => currentTab = "rotation")" @onclick:preventDefault>Map rotation</a>
+                    </li>
                 </ul>
 
                 <div class="tab-content">
@@ -221,6 +224,9 @@
                                 break;
                             case "ttt":
                                 <TTTComponent Connection="connection" ServerInfo="serverInfo" />
+                                break;
+                            case "rotation":
+                                <MapRotationComponent Connection="connection" ServerInfo="serverInfo" />
                                 break;
                         }
                     }
