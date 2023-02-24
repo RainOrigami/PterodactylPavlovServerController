@@ -277,6 +277,25 @@
     {
         try
         {
+            if (giveCash.UniqueId!.Value == 0)
+            {
+                foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in Connection.PlayerDetails!)
+                {
+                    try
+                    {
+                        await RconService.GiveCash(ApiKey.ApiKey, Connection.ServerId, connectionPlayerDetail.Key, giveCash.Amount!.Value);
+                    }
+                    catch (Exception e)
+                    {
+                        Toast.ShowError(e.Message);
+                    }
+                }
+
+                await AuditService.Add(Connection.ServerId, $"Gave all players cash {giveCash.Amount!.Value}");
+                Toast.ShowSuccess("All players received cash", "Player cheat executed");
+                return;
+            }
+
             if (await RconService.GiveCash(ApiKey.ApiKey, Connection.ServerId, giveCash.UniqueId!.Value, giveCash.Amount!.Value))
             {
                 Toast.ShowSuccess("Player received cash", "Player cheat executed");
@@ -356,7 +375,7 @@
     {
         try
         {
-            if (giveItem.UniqueId!.Value == 0)
+            if (giveVehicle.UniqueId!.Value == 0)
             {
                 foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in Connection.PlayerDetails!)
                 {
@@ -395,7 +414,7 @@
     {
         try
         {
-            if (giveItem.UniqueId!.Value == 0)
+            if (playerSkin.UniqueId!.Value == 0)
             {
                 foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in Connection.PlayerDetails!)
                 {
@@ -434,7 +453,7 @@
     {
         try
         {
-            if (giveItem.UniqueId!.Value == 0)
+            if (slap.UniqueId!.Value == 0)
             {
                 foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in Connection.PlayerDetails!)
                 {
