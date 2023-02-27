@@ -1,6 +1,7 @@
 ﻿@page "/rcon/{ServerId}"
 @using Fluxor
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore;
 @using PavlovVR_Rcon.Models.Pavlov
 @using PterodactylPavlovServerController.Areas.Identity.Data
 @using PterodactylPavlovServerController.Contexts
@@ -110,11 +111,9 @@
                                         <div class="col px-1">
                                             @(connection.PlayerListPlayers == null ? $"{serverInfo.CurrentPlayerCount()}*" : connection.PlayerListPlayers.Count)&nbsp;/&nbsp;@serverInfo.MaximumPlayerCount()
                                             @{
-                                                int? reservedSlotCount = Configuration.GetValue<int>($"reservedSlots.{ServerId}");
-                                                int? reservedSlotPin = Configuration.GetValue<int>($"reservedSlotPin.{ServerId}");
-                                                if (reservedSlotCount.HasValue && reservedSlotPin.HasValue && reservedSlotCount > 0 && reservedSlotPin >= 1000)
+                                                if (reservedSlotPin >= 1000 && reservedSlotPin <= 9999 && reservedSlotAmount > 0 && reservedSlotAmount < serverInfo.MaximumPlayerCount())
                                                 {
-                                                    <span> - @reservedSlotCount.Value reserved (PIN: <span class="spoiler">@reservedSlotPin.Value</span>)</span>
+                                                    <span> - @reservedSlotAmount reserved (PIN: <span class="spoiler">@reservedSlotPin</span>)</span>
                                                     if (connection.IsReserveSlotPinLocked)
                                                     {
                                                         <i class="fa-regular fa-lock"></i>
@@ -245,6 +244,9 @@
 
     private const bool separateConnection = false;
 
+    private int reservedSlotPin = 0;
+    private int reservedSlotAmount = 0;
+
     [Parameter]
     [EditorRequired]
     public string ServerId { get; set; } = string.Empty;
@@ -281,6 +283,16 @@
                 Dispatcher.Dispatch(new PavlovServerLoadNameFromGameIniAction(connection.ApiKey, ServerId));
             }
             await loadMaps(connection);
+        }
+
+        PavlovServerContext pavlovServerContext = new(Configuration);
+        ServerSettings? pin = await pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == ServerId && s.SettingName == ServerSettings.SETTING_RESERVED_SLOT_PIN);
+        ServerSettings? amount = await pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == ServerId && s.SettingName == ServerSettings.SETTING_RESERVED_SLOT_AMOUNT);
+
+        if (amount != null && pin != null)
+        {
+            int.TryParse(pin.SettingValue, out reservedSlotPin);
+            int.TryParse(amount.SettingValue, out reservedSlotAmount);
         }
 
         await base.OnParametersSetAsync();
