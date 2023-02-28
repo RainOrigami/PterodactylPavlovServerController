@@ -180,14 +180,14 @@ public class PavlovRconService
         return await execute(async (rcon) => (await new BanListCommand().ExecuteCommand(rcon)).BanList, apiKey, serverId, separateConnection);
     }
 
-    private async Task<PavlovRcon> openConnection(string apiKey, string serverId, bool separateConnectionion)
+    private async Task<PavlovRcon> openConnection(string apiKey, string serverId, bool separateConnection)
     {
         if (this.configuration.GetValue<bool>("logRconToFile") && !Directory.Exists("./logs"))
         {
             Directory.CreateDirectory("./logs");
         }
 
-        if (separateConnectionion)
+        if (separateConnection)
         {
             PavlovRcon rcon = new PavlovRcon(this.pterodactylService.GetHost(apiKey, serverId), int.Parse(this.pterodactylService.GetStartupVariable(apiKey, serverId, "RCON_PORT")), this.pterodactylService.GetStartupVariable(apiKey, serverId, "RCON_PASSWORD"), true, this.configuration.GetValue<bool>("logRconToFile") ? $"./logs/{DateTime.Now:yyyy-MM-dd-HH-mm-ss}_{serverId}_rcon.log" : null);
             await rcon.Connect(new CancellationTokenSource(2000).Token);

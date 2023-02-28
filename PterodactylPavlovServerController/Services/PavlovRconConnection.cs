@@ -1,7 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using PavlovVR_Rcon.Models.Pavlov;
 using PterodactylPavlovServerController.Contexts;
-using PterodactylPavlovServerDomain.Extensions;
 using PterodactylPavlovServerDomain.Models;
 
 namespace PterodactylPavlovServerController.Services;
@@ -123,61 +122,6 @@ public class PavlovRconConnection : IDisposable
         failCount = 0;
 
         OnServerInfoUpdated?.Invoke(ServerId);
-
-        await handleReservedSlots();
-    }
-
-    private int? currentPin = 0;
-    public bool IsReserveSlotPinLocked => currentPin.HasValue;
-
-    private async Task handleReservedSlots()
-    {
-        if (ServerInfo == null)
-        {
-            return;
-        }
-
-        PavlovServerContext pavlovServerContext = new(configuration);
-        ServerSettings? pin = await pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == ServerId && s.SettingName == ServerSettings.SETTING_RESERVED_SLOT_PIN);
-        ServerSettings? amount = await pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == ServerId && s.SettingName == ServerSettings.SETTING_RESERVED_SLOT_AMOUNT);
-
-        if (amount == null || pin == null)
-        {
-            return;
-        }
-
-        if (!int.TryParse(pin.SettingValue, out int reservedSlotPin) || !int.TryParse(amount.SettingValue, out int reservedSlotAmount))
-        {
-            return;
-        }
-
-        if (reservedSlotPin < 1000 || reservedSlotPin > 9999 || reservedSlotAmount <= 0 || reservedSlotAmount >= ServerInfo.MaximumPlayerCount())
-        {
-            return;
-        }
-
-        if (currentPin.HasValue && currentPin.Value == 0)
-        {
-            await pavlovRconService.SetPin(ApiKey, ServerId, null);
-            currentPin = null;
-        }
-
-        if (ServerInfo.MaximumPlayerCount() - ServerInfo.CurrentPlayerCount() <= reservedSlotAmount)
-        {
-            if (!currentPin.HasValue || currentPin.Value != reservedSlotPin)
-            {
-                await pavlovRconService.SetPin(ApiKey, ServerId, reservedSlotPin);
-                currentPin = reservedSlotPin;
-            }
-        }
-        else
-        {
-            if (currentPin.HasValue)
-            {
-                await pavlovRconService.SetPin(ApiKey, ServerId, null);
-                currentPin = null;
-            }
-        }
     }
 
     public event ServerUpdated? OnPlayerListUpdated;

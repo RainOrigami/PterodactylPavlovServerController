@@ -26,6 +26,7 @@
 @inject SteamWorkshopService SteamWorkshopService
 @inject ApiKeyService ApiKey
 @inject IConfiguration Configuration
+@inject PavlovRconConnectionService PavlovRconConnectionService
 
 @{
     if (!Rcon.Initialised)
@@ -114,7 +115,7 @@
                                                 if (reservedSlotPin >= 1000 && reservedSlotPin <= 9999 && reservedSlotAmount > 0 && reservedSlotAmount < serverInfo.MaximumPlayerCount())
                                                 {
                                                     <span> - @reservedSlotAmount reserved (PIN: <span class="spoiler">@reservedSlotPin</span>)</span>
-                                                    if (connection.IsReserveSlotPinLocked)
+                                                    if (this.PavlovRconConnectionService.GetReservedSlotService(server.ServerId)!.IsPinLocked)
                                                     {
                                                         <i class="fa-regular fa-lock"></i>
                                                     }
