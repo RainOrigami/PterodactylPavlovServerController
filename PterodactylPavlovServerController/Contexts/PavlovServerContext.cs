@@ -1,4 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using PavlovVR_Rcon.Models.Pavlov;
 using PterodactylPavlovServerDomain.Models;
 
 namespace PterodactylPavlovServerController.Contexts;
@@ -19,6 +21,7 @@ public class PavlovServerContext : DbContext
     public DbSet<MapRotationModel> MapRotations { get; set; }
     public DbSet<ServerMapModel> Maps { get; set; }
     public DbSet<ServerSettings> Settings { get; set; }
+    public DbSet<ServerWarmupItemModel> WarmupItems { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -40,6 +43,8 @@ public class PavlovServerContext : DbContext
         modelBuilder.Entity<ServerMapModel>().HasKey(m => new { m.MapLabel, m.GameMode });
         modelBuilder.Entity<MapRotationModel>().HasKey(r => new { r.ServerId, r.Name });
         modelBuilder.Entity<ServerSettings>().HasKey(s => new { s.ServerId, s.SettingName });
+        modelBuilder.Entity<ServerWarmupItemModel>().HasKey(w => new { w.ServerId, w.Item });
+        modelBuilder.Entity<ServerWarmupItemModel>().Property(w => w.Item).HasConversion(new EnumToStringConverter<Item>());
 
         modelBuilder.Entity<MapRotationModel>()
             .HasMany(r => r.Maps)

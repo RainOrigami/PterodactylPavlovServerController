@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PterodactylPavlovServerController.Contexts;
 
@@ -10,9 +11,11 @@ using PterodactylPavlovServerController.Contexts;
 namespace PterodactylPavlovServerController.Migrations.PavlovServer
 {
     [DbContext(typeof(PavlovServerContext))]
-    partial class PavlovServerContextModelSnapshot : ModelSnapshot
+    [Migration("20230302160915_WarmupKey")]
+    partial class WarmupKey
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -160,8 +163,8 @@ namespace PterodactylPavlovServerController.Migrations.PavlovServer
                     b.Property<string>("ServerId")
                         .HasColumnType("varchar(255)");
 
-                    b.Property<string>("Item")
-                        .HasColumnType("varchar(255)");
+                    b.Property<int>("Item")
+                        .HasColumnType("int");
 
                     b.HasKey("ServerId", "Item");
 
