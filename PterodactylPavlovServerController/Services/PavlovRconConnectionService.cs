@@ -98,7 +98,7 @@ public class PavlovRconConnectionService : IDisposable
                     this.lastFullRefresh = DateTime.Now;
                 }
 
-                this.pterodactylServers ??= this.pterodactylService.GetServers(this.configuration["pterodactyl_apikey"]);
+                this.pterodactylServers ??= this.pterodactylService.GetServers(this.configuration["pterodactyl_apikey"]!);
 
                 this.pterodactylServers.Where(s => !this.connections.ContainsKey(s.ServerId)).AsParallel().ForAll(this.addServer);
                 this.Initialised = true;
@@ -115,7 +115,7 @@ public class PavlovRconConnectionService : IDisposable
 
     private void addServer(PterodactylServerModel server)
     {
-        PavlovRconConnection serverConnection = new(this.configuration["pterodactyl_apikey"], server, this.pavlovRconService, this.steamService, this.configuration);
+        PavlovRconConnection serverConnection = new(this.configuration["pterodactyl_apikey"]!, server, this.pavlovRconService, this.steamService, this.configuration);
         serverConnection.Run();
         this.connections.AddOrUpdate(server.ServerId, serverConnection, (k, v) => serverConnection);
         ReservedSlotService reservedSlotService = new(this.configuration["pterodactyl_apikey"]!, serverConnection, this.pavlovRconService, this.configuration);
