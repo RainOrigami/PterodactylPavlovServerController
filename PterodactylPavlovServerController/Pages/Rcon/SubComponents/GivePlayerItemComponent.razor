@@ -43,7 +43,7 @@
         <div class="mb-3">
             <InputSelect @bind-Value="giveItem.Item" class="form-select">
                 <option selected disabled>Select an item</option>
-                @foreach (Item item in Enum.GetValues(typeof(Item)))
+                @foreach (Item item in Enum.GetValues(typeof(Item)).OfType<Item>().OrderBy(i => i.ToString()))
                 {
                     <option value="@item">@item</option>
                 }

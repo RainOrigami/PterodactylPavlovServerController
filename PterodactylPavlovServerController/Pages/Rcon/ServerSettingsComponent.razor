@@ -74,7 +74,7 @@
                         <EditForm Context="addItem" Model="@addWarmupItemModel" OnValidSubmit="@addItem" style="width: 385px;">
                             <InputSelect @bind-Value="addWarmupItemModel.Item" class="form-select mb-1">
                                 <option selected disabled>Select an item</option>
-                                @foreach (Item item in Enum.GetValues(typeof(Item)))
+                                @foreach (Item item in Enum.GetValues(typeof(Item)).OfType<Item>().OrderBy(i => i.ToString()))
                                 {
                                     <option value="@item">@item</option>
                                 }
