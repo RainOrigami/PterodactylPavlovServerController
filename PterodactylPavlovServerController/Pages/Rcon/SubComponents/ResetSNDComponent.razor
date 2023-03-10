@@ -1,0 +1,50 @@
+﻿@using PavlovVR_Rcon.Models.Pavlov;
+@using PterodactylPavlovServerController.Services;
+@using PterodactylPavlovServerController.Stores;
+@inject PavlovRconService RconService
+@inject IToastService Toast
+@inject ApiKeyService ApiKey
+@inject AuditService AuditService
+
+@if (ServerInfo.GameMode == GameMode.SND.ToString())
+{
+            <div class="me-2" style="width: 425px; display: inline-block; vertical-align: top;">
+                <h3 class="mb-0">Reset SND</h3>
+                <small class="text-muted">
+                    Resets and restarts the current SND match.
+                </small>
+                <div class="mb-3">
+                    <button type="submit" class="btn btn-warning form-control" @onclick="resetSndSubmitted">Reset SND</button>
+                </div>
+            </div>
+}
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public PavlovRconConnection Connection { get; set; }
+
+    [Parameter]
+    [EditorRequired]
+    public ServerInfo ServerInfo { get; set; }
+
+    private async Task resetSndSubmitted()
+    {
+        try
+        {
+            if (await RconService.ResetSND(ApiKey.ApiKey, Connection.ServerId))
+            {
+                Toast.ShowSuccess("SND round has been reset");
+                await AuditService.Add(Connection.ServerId, $"Reset SND round");
+            }
+            else
+            {
+                Toast.ShowError("Server refused to reset SND round");
+            }
+        }
+        catch (Exception e)
+        {
+            Toast.ShowError(e.Message);
+        }
+    }
+}

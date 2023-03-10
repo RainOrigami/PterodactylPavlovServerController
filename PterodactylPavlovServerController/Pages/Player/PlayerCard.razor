@@ -139,12 +139,15 @@
                                         </div>
                                         <div class="col px-1">@playerDetail.Score</div>
                                     </div>
-                                    <div class="row gx-0">
-                                        <div class="col-auto px-1">
-                                            <i class="fa-solid fa-dollar-sign"></i>
+                                    @if (!LeagueMode)
+                                    {
+                                        <div class="row gx-0">
+                                            <div class="col-auto px-1">
+                                                <i class="fa-solid fa-dollar-sign"></i>
+                                            </div>
+                                            <div class="col px-1">@playerDetail.Cash</div>
                                         </div>
-                                        <div class="col px-1">@playerDetail.Cash</div>
-                                    </div>
+                                    }
                                     <div class="row gx-0">
                                         <div class="col-auto px-1">
                                             <i class="fa-solid fa-gun"></i>
@@ -365,6 +368,9 @@
     [Parameter]
     [EditorRequired]
     public ulong PlayerId { get; set; }
+
+    [Parameter]
+    public bool LeagueMode { get; set; } = false;
 
     private CountryModel? countryModel;
 

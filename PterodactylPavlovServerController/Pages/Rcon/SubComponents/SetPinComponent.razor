@@ -1,0 +1,77 @@
+﻿@using PavlovVR_Rcon.Models.Pavlov;
+@using PterodactylPavlovServerController.Models;
+@using PterodactylPavlovServerController.Services;
+@inject PavlovRconService RconService
+@inject IToastService Toast
+@inject ApiKeyService ApiKey
+@inject AuditService AuditService
+
+<div class="me-2" style="width: 425px; display: inline-block; vertical-align: top;">
+    <h3 class="mb-0">Set or remove pin</h3>
+    <small class="text-muted">
+        Immediately set or remove the pin password protection on the server.<br />
+        Set pins require any player to input the correct four-digit pin to join the server.<br />
+        Removed pins let players join without having to enter a pin.
+    </small>
+    <EditForm Model="@pin" OnValidSubmit="@pinSubmitted" class="mt-3">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label>Pin</label>
+            <InputText @bind-Value="pin.Pin" class="form-control" />
+        </div>
+        <div class="mb-3">
+            <button type="submit" class="btn btn-outline-success form-control" @onclick="@(() => pin.Set = true)">Set pin</button>
+        </div>
+        <div class="mb-3">
+            <button type="submit" class="btn btn-outline-danger form-control" @onclick="@(() => pin.Set = false)">Remove pin</button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public PavlovRconConnection Connection { get; set; }
+
+    [Parameter]
+    [EditorRequired]
+    public ServerInfo ServerInfo { get; set; }
+
+    private readonly SetPinModel pin = new();
+
+    private async Task pinSubmitted()
+    {
+        if (this.pin.Set!.Value && this.pin.Pin == null)
+        {
+            Toast.ShowError("You need to enter a pin to set");
+            return;
+        }
+
+        try
+        {
+            if (this.pin.Set!.Value)
+            {
+                if (!int.TryParse(this.pin.Pin, out int pin))
+                {
+                    Toast.ShowError("The server pin must be numeric");
+                    return;
+                }
+
+                await RconService.SetPin(ApiKey.ApiKey, Connection.ServerId, pin);
+                Toast.ShowSuccess("Pin has been set");
+                await AuditService.Add(Connection.ServerId, $"Pin set to {pin}");
+                return;
+            }
+
+            await RconService.SetPin(ApiKey.ApiKey, Connection.ServerId, null);
+            Toast.ShowSuccess("Pin has been removed");
+            await AuditService.Add(Connection.ServerId, $"Pin removed");
+        }
+        catch (Exception e)
+        {
+            Toast.ShowError(e.Message);
+        }
+    }
+}

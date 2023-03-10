@@ -5,6 +5,7 @@
 @using PavlovVR_Rcon.Models.Pavlov
 @using PterodactylPavlovServerController.Areas.Identity.Data
 @using PterodactylPavlovServerController.Contexts
+@using PterodactylPavlovServerController.Pages.Rcon.SubComponents
 @using PterodactylPavlovServerController.Services
 @using PterodactylPavlovServerController.Stores
 @using PterodactylPavlovServerDomain.Models
@@ -166,6 +167,12 @@
         </div>
     </div>
 
+    @if (leagueMode)
+    {
+        <ResetSNDComponent Connection="connection" ServerInfo="serverInfo" />
+        <SetPinComponent Connection="connection" ServerInfo="serverInfo" />
+    }
+
     <div class="row mt-3">
         <div class="col px-0">
             <div class="container px-0">
@@ -182,9 +189,12 @@
                     <li class="nav-item" role="presentation">
                         <a class="nav-link @(currentTab == "banned" ? "active" : "")" style="font-size: 2em;" href="#banned" @onclick="@(() => currentTab = "banned")" @onclick:preventDefault>Banned</a>
                     </li>
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link @(currentTab == "cheats" ? "active" : "")" style="font-size: 2em;" href="#cheats" @onclick="@(() => currentTab = "cheats")" @onclick:preventDefault>Cheats</a>
-                    </li>
+                    @if (!leagueMode)
+                    {
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link @(currentTab == "cheats" ? "active" : "")" style="font-size: 2em;" href="#cheats" @onclick="@(() => currentTab = "cheats")" @onclick:preventDefault>Cheats</a>
+                        </li>
+                    }
                     <li class="nav-item" role="presentation">
                         <a class="nav-link @(currentTab == "server" ? "active" : "")" style="font-size: 2em;" href="#server" @onclick="@(() => currentTab = "server")" @onclick:preventDefault>Server</a>
                     </li>
@@ -205,7 +215,7 @@
                         switch (currentTab)
                         {
                             case "players":
-                                <PlayerListComponent Connection="connection" ServerInfo="serverInfo" />
+                                <PlayerListComponent Connection="connection" ServerInfo="serverInfo" LeagueMode="leagueMode" />
                                 break;
                             case "maps":
                                 <MapListComponent Connection="connection" ServerInfo="serverInfo" />
@@ -220,7 +230,7 @@
                                 <CheatsComponent Connection="connection" ServerInfo="serverInfo" />
                                 break;
                             case "server":
-                                <ServerControlComponent Connection="connection" ServerInfo="serverInfo" />
+                                <ServerControlComponent Connection="connection" ServerInfo="serverInfo" LeagueMode="leagueMode" />
                                 break;
                             case "ttt":
                                 <TTTComponent Connection="connection" ServerInfo="serverInfo" />
@@ -247,6 +257,7 @@
 
     private int reservedSlotPin = 0;
     private int reservedSlotAmount = 0;
+    private bool leagueMode = false;
 
     [Parameter]
     [EditorRequired]
@@ -302,11 +313,24 @@
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
+        await updateLeagueMode();
         Rcon.OnServersUpdated += refresh;
+    }
+
+    private async Task updateLeagueMode()
+    {
+        PavlovServerContext pavlovServerContext = new(Configuration);
+        ServerSettings? leagueModeSetting = await pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == ServerId && s.SettingName == ServerSettings.SETTING_LEAGUE_MODE_ENABLED);
+        if (leagueModeSetting != null)
+        {
+            bool.TryParse(leagueModeSetting.SettingValue, out leagueMode);
+        }
     }
 
     private async void refresh()
     {
+        await updateLeagueMode();
+
         await InvokeAsync(StateHasChanged);
     }
 

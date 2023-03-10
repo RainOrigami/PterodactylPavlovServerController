@@ -42,7 +42,7 @@
                         <div class="row">
                             <div class="col px-0">
 
-                                <PlayerCard @key="playerId" PlayerId="@playerId" ServerId="@Connection.ServerId" />
+                                <PlayerCard @key="playerId" PlayerId="@playerId" ServerId="@Connection.ServerId" LeagueMode="LeagueMode" />
 
                             </div>
                         </div>
@@ -59,7 +59,7 @@
                         <div class="row">
                             <div class="col px-0">
 
-                                <PlayerCard @key="playerId" PlayerId="@playerId" ServerId="@Connection.ServerId" />
+                                <PlayerCard @key="playerId" PlayerId="@playerId" ServerId="@Connection.ServerId" LeagueMode="LeagueMode" />
 
                             </div>
                         </div>
@@ -76,7 +76,7 @@
             <div class="row">
                 <div class="col px-0">
 
-                    <PlayerCard @key="playerId" PlayerId="@playerId" ServerId="@Connection.ServerId" />
+                    <PlayerCard @key="playerId" PlayerId="@playerId" ServerId="@Connection.ServerId" LeagueMode="LeagueMode" />
 
                 </div>
             </div>
@@ -92,4 +92,8 @@
     [Parameter]
     [EditorRequired]
     public ServerInfo ServerInfo { get; set; }
+
+    [Parameter]
+    [EditorRequired]
+    public bool LeagueMode { get; set; }
 }
