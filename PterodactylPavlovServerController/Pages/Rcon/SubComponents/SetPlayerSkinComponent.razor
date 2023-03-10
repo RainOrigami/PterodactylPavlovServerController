@@ -1,0 +1,109 @@
+﻿@using Fluxor;
+@using PavlovVR_Rcon.Models.Pavlov;
+@using PterodactylPavlovServerController.Models;
+@using PterodactylPavlovServerController.Services;
+@using PterodactylPavlovServerController.Stores;
+@using Steam.Models.SteamCommunity;
+@inject PavlovRconService RconService
+@inject IToastService Toast
+@inject ApiKeyService ApiKey
+@inject AuditService AuditService
+@inject IDispatcher Dispatcher
+@inject IState<PlayersState> PlayersState
+
+<div class="me-2" style="width: 425px; display: inline-block; vertical-align: top;">
+    <h3 class="mb-0">Set player skin</h3>
+    <small class="text-muted">
+        Immediately applies the specified model to the player.
+    </small>
+    <EditForm Model="@playerSkin" OnValidSubmit="@setPlayerSkinSubmitted" class="mt-3">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <InputSelect @bind-Value="playerSkin.UniqueId" class="form-select">
+                <option selected disabled>Select a player</option>
+
+                @if (Connection.PlayerDetails != null)
+                {
+                    <option value="0">- Give to everybody -</option>
+
+                    foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in Connection.PlayerDetails)
+                    {
+                        string? playerName = connectionPlayerDetail.Value.PlayerName;
+                        if (PlayersState.Value.PlayerSummaries.TryGetValue(connectionPlayerDetail.Key, out PlayerSummaryModel? playerSummary))
+                        {
+                            playerName = playerSummary.Nickname;
+                        }
+                        <option value="@connectionPlayerDetail.Key">@playerName</option>
+                    }
+                }
+            </InputSelect>
+        </div>
+        <div class="mb-3">
+            <InputSelect @bind-Value="playerSkin.Skin" class="form-select">
+                <option selected disabled>Select a skin</option>
+                @foreach (Skin skin in Enum.GetValues(typeof(Skin)))
+                {
+                    <option value="@skin">@skin</option>
+                }
+            </InputSelect>
+        </div>
+        <div class="mb-3">
+            <button type="submit" class="btn btn-outline-success form-control">Set skin</button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public PavlovRconConnection Connection { get; set; }
+
+    [Parameter]
+    [EditorRequired]
+    public ServerInfo ServerInfo { get; set; }
+
+    private readonly SetPlayerSkinModel playerSkin = new();
+
+
+    private async Task setPlayerSkinSubmitted()
+    {
+        try
+        {
+            if (playerSkin.UniqueId!.Value == 0)
+            {
+                foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in Connection.PlayerDetails!)
+                {
+                    try
+                    {
+                        await RconService.SetSkin(ApiKey.ApiKey, Connection.ServerId, connectionPlayerDetail.Key, playerSkin.Skin!.Value.ToString());
+                    }
+                    catch (Exception e)
+                    {
+                        Toast.ShowError(e.Message);
+                    }
+                }
+
+                Toast.ShowSuccess("All player skins have been set", "Player cheat executed");
+                await AuditService.Add(Connection.ServerId, $"Set all players skin to {playerSkin.Skin!.Value}");
+                return;
+            }
+
+            if (await RconService.SetSkin(ApiKey.ApiKey, Connection.ServerId, playerSkin.UniqueId!.Value, playerSkin.Skin!.Value.ToString()))
+            {
+                Toast.ShowSuccess("Player skin has been set", "Player cheat executed");
+                await AuditService.Add(Connection.ServerId, $"Set player {playerSkin.UniqueId!.Value} skin to {playerSkin.Skin!.Value}");
+            }
+            else
+            {
+                Toast.ShowError("Server refused to set player skin", "Player cheat failed");
+            }
+        }
+        catch (Exception e)
+        {
+            Toast.ShowError(e.Message);
+        }
+    }
+
+}

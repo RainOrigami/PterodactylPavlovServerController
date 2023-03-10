@@ -1,0 +1,68 @@
+﻿@using PavlovVR_Rcon.Models.Pavlov;
+@using PterodactylPavlovServerController.Models;
+@using PterodactylPavlovServerController.Services;
+@inject PavlovRconService RconService
+@inject IToastService Toast
+@inject ApiKeyService ApiKey
+@inject AuditService AuditService
+
+<div class="me-2" style="width: 850px; display: inline-block; vertical-align: top;">
+    <h3 class="mb-0">Set limited ammo type</h3>
+    <small class="text-muted">
+        Immediately apply how ammo is handled on the server.<br />
+        <b>Unlimited:</b> Players carry unlimited ammo, no boxes<br />
+        <b>Limited Generic:</b> Players carry ammo boxes, one box for each weapon class (Pistol, Submachine gun, Rifles/MGs, Shotgun, Sniper)<br />
+        <b>Limited Specific:</b> Players carry ammo boxes, one box for each individual weapon<br />
+        <b>Limited Special:</b> All weapons except &quot;special&quot; weapons are unlimited, more clarification is needed<br />
+        <b>Boxless Mode:</b> No information available, clarification required!
+    </small>
+    <EditForm Model="@limitedAmmoType" OnValidSubmit="@setLimitedAmmoTypeSubmitted" class="mt-3">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <InputSelect @bind-Value="limitedAmmoType.AmmoType" class="form-select">
+                <option selected disabled>Select a type</option>
+                @foreach (AmmoType ammoType in Enum.GetValues(typeof(AmmoType)))
+                {
+                    <option value="@ammoType">@ammoType</option>
+                }
+            </InputSelect>
+        </div>
+        <div class="mb-3">
+            <button type="submit" class="btn btn-outline-success form-control">Set ammo type</button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public PavlovRconConnection Connection { get; set; }
+
+    [Parameter]
+    [EditorRequired]
+    public ServerInfo ServerInfo { get; set; }
+
+    private readonly SetLimitedAmmoTypeModel limitedAmmoType = new();
+
+    private async Task setLimitedAmmoTypeSubmitted()
+    {
+        try
+        {
+            if (await RconService.SetLimitedAmmoType(ApiKey.ApiKey, Connection.ServerId, (int)limitedAmmoType.AmmoType!.Value))
+            {
+                Toast.ShowSuccess("Ammo type has been set");
+                await AuditService.Add(Connection.ServerId, $"Ammo type set to {limitedAmmoType.AmmoType}");
+            }
+            else
+            {
+                Toast.ShowError("Server refused to set ammo type");
+            }
+        }
+        catch (Exception e)
+        {
+            Toast.ShowError(e.Message);
+        }
+    }
+}

@@ -1,0 +1,70 @@
+﻿@using PavlovVR_Rcon.Models.Pavlov;
+@using PterodactylPavlovServerController.Services;
+@inject PavlovRconService RconService
+@inject IToastService Toast
+@inject ApiKeyService ApiKey
+@inject AuditService AuditService
+
+<div class="me-2" style="width: 425px; display: inline-block; vertical-align: top;">
+    <h3 class="mb-0">Show name tags</h3>
+    <small class="text-muted">
+        Immediately enables or disables name tags above friendly players
+    </small>
+    <div class="my-3">
+        <button class="btn btn-outline-success form-control" @onclick="enableNametags">Enable</button>
+    </div>
+    <div class="my-3">
+        <button class="btn btn-outline-danger form-control" @onclick="disableNametags">Disable</button>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public PavlovRconConnection Connection { get; set; }
+
+    [Parameter]
+    [EditorRequired]
+    public ServerInfo ServerInfo { get; set; }
+
+
+    private async Task enableNametags()
+    {
+        try
+        {
+            if (await RconService.Shownametags(ApiKey.ApiKey, Connection.ServerId, true))
+            {
+                Toast.ShowSuccess("Nametags have been made visible");
+                await AuditService.Add(Connection.ServerId, $"Enabled nametags");
+            }
+            else
+            {
+                Toast.ShowError("Server refused make nametags visible");
+            }
+        }
+        catch (Exception e)
+        {
+            Toast.ShowError(e.Message);
+        }
+    }
+
+    private async Task disableNametags()
+    {
+        try
+        {
+            if (await RconService.Shownametags(ApiKey.ApiKey, Connection.ServerId, false))
+            {
+                Toast.ShowSuccess("Nametags have been made invisible");
+                await AuditService.Add(Connection.ServerId, $"Disabled nametags");
+            }
+            else
+            {
+                Toast.ShowError("Server refused make nametags invisible");
+            }
+        }
+        catch (Exception e)
+        {
+            Toast.ShowError(e.Message);
+        }
+    }
+}

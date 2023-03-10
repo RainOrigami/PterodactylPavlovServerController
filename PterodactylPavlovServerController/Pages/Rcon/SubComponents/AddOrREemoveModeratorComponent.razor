@@ -1,0 +1,96 @@
+﻿@using Fluxor;
+@using PavlovVR_Rcon.Models.Pavlov;
+@using PterodactylPavlovServerController.Models;
+@using PterodactylPavlovServerController.Services;
+@using PterodactylPavlovServerController.Stores;
+@using Steam.Models.SteamCommunity;
+@inject IDispatcher Dispatcher
+@inject PavlovRconService RconService
+@inject IToastService Toast
+@inject ApiKeyService ApiKey
+@inject IState<PlayersState> PlayersState
+@inject AuditService AuditService
+
+<div class="me-2" style="width: 425px; display: inline-block; vertical-align: top;">
+    <h3 class="mb-0">Add or remove mod</h3>
+    <small class="text-muted">
+        Add or remove a moderator. Moderators can not be vote-kicked.
+    </small>
+    <EditForm Model="@addOrRemoveMod" OnValidSubmit="@addOrRemoveModSubmitted" class="mt-3">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <InputSelect @bind-Value="addOrRemoveMod.UniqueId" class="form-select">
+                <option selected disabled>Select a player</option>
+
+                @if (Connection.PlayerDetails != null)
+                {
+                    foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in Connection.PlayerDetails)
+                    {
+                        string? playerName = connectionPlayerDetail.Value.PlayerName;
+                        if (PlayersState.Value.PlayerSummaries.TryGetValue(connectionPlayerDetail.Key, out PlayerSummaryModel? playerSummary))
+                        {
+                            playerName = playerSummary.Nickname;
+                        }
+                        <option value="@connectionPlayerDetail.Key">@playerName</option>
+                    }
+                }
+            </InputSelect>
+        </div>
+        <div class="mb-3">
+            <button type="submit" class="btn btn-outline-success form-control" @onclick="@(() => addOrRemoveMod.Add = true)">Add</button>
+        </div>
+        <div class="mb-3">
+            <button type="submit" class="btn btn-outline-danger form-control" @onclick="@(() => addOrRemoveMod.Add = false)">Remove</button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public PavlovRconConnection Connection { get; set; }
+
+    [Parameter]
+    [EditorRequired]
+    public ServerInfo ServerInfo { get; set; }
+
+    private readonly AddOrRemoveModModel addOrRemoveMod = new();
+
+    private async Task addOrRemoveModSubmitted()
+    {
+        try
+        {
+            if (addOrRemoveMod.Add!.Value)
+            {
+                if (await RconService.AddMod(ApiKey.ApiKey, Connection.ServerId, addOrRemoveMod.UniqueId!.Value))
+                {
+                    Toast.ShowSuccess("Player is now a moderator");
+                    await AuditService.Add(Connection.ServerId, $"Added moderator {addOrRemoveMod.UniqueId}");
+                }
+                else
+                {
+                    Toast.ShowError("Server refused to make player into a moderator");
+                }
+            }
+            else
+            {
+                if (await RconService.RemoveMod(ApiKey.ApiKey, Connection.ServerId, addOrRemoveMod.UniqueId!.Value))
+                {
+                    Toast.ShowSuccess("Player is no longer a moderator");
+                    await AuditService.Add(Connection.ServerId, $"Removed moderator {addOrRemoveMod.UniqueId}");
+                }
+                else
+                {
+                    Toast.ShowError("Server refused to revoke moderator from player");
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            Toast.ShowError(e.Message);
+        }
+    }
+
+}
