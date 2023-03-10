@@ -307,6 +307,8 @@
             int.TryParse(amount.SettingValue, out reservedSlotAmount);
         }
 
+        await updateLeagueMode();
+
         await base.OnParametersSetAsync();
     }
 
@@ -324,6 +326,10 @@
         if (leagueModeSetting != null)
         {
             bool.TryParse(leagueModeSetting.SettingValue, out leagueMode);
+        }
+        else
+        {
+            leagueMode = false;
         }
     }
 
