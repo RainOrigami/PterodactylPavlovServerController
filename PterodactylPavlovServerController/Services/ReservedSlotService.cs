@@ -24,6 +24,7 @@ public class ReservedSlotService
         this.configuration = configuration;
         this.connection.OnServerInfoUpdated += this.Connection_OnServerInfoUpdated;
         this.pavlovServerContext = new(configuration);
+        this.pavlovServerContext.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking;
     }
 
 
