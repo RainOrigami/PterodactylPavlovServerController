@@ -16,6 +16,7 @@ public class PavlovRconConnectionService : IDisposable
     private readonly Dictionary<string, List<string>> apiKeysToServerIds = new();
     private readonly ConcurrentDictionary<string, ReservedSlotService> reservedSlots = new();
     private readonly ConcurrentDictionary<string, WarmupRoundService> warmupRounds = new();
+    private readonly ConcurrentDictionary<string, PauseServerService> pauses = new();
     private readonly CancellationTokenSource updaterCancellationTokenSource = new();
 
     public PavlovRconConnectionService(PterodactylService pterodactylService, PavlovRconService pavlovRconService, SteamService steamService, IConfiguration configuration)
@@ -122,6 +123,8 @@ public class PavlovRconConnectionService : IDisposable
         this.reservedSlots.AddOrUpdate(server.ServerId, reservedSlotService, (k, v) => reservedSlotService);
         WarmupRoundService warmupRoundService = new(this.configuration["pterodactyl_apikey"]!, serverConnection, this.pavlovRconService, this.configuration);
         this.warmupRounds.AddOrUpdate(server.ServerId, warmupRoundService, (k, v) => warmupRoundService);
+        PauseServerService pauseServerService = new(this.configuration["pterodactyl_apikey"]!, serverConnection, this.pavlovRconService, this.configuration);
+        this.pauses.AddOrUpdate(server.ServerId, pauseServerService, (k, v) => pauseServerService);
     }
     public ReservedSlotService? GetReservedSlotService(string serverId) => this.reservedSlots[serverId];
 }
