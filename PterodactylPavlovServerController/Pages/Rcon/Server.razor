@@ -297,16 +297,7 @@
             await loadMaps(connection);
         }
 
-        PavlovServerContext pavlovServerContext = new(Configuration);
-        ServerSettings? pin = await pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == ServerId && s.SettingName == ServerSettings.SETTING_RESERVED_SLOT_PIN);
-        ServerSettings? amount = await pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == ServerId && s.SettingName == ServerSettings.SETTING_RESERVED_SLOT_AMOUNT);
-
-        if (amount != null && pin != null)
-        {
-            int.TryParse(pin.SettingValue, out reservedSlotPin);
-            int.TryParse(amount.SettingValue, out reservedSlotAmount);
-        }
-
+        await updateReservedSlots();
         await updateLeagueMode();
 
         await base.OnParametersSetAsync();
@@ -316,6 +307,7 @@
     {
         await base.OnInitializedAsync();
         await updateLeagueMode();
+        await updateReservedSlots();
         Rcon.OnServersUpdated += refresh;
     }
 
@@ -333,9 +325,23 @@
         }
     }
 
+    private async Task updateReservedSlots()
+    {
+        PavlovServerContext pavlovServerContext = new(Configuration);
+        ServerSettings? pin = await pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == ServerId && s.SettingName == ServerSettings.SETTING_RESERVED_SLOT_PIN);
+        ServerSettings? amount = await pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == ServerId && s.SettingName == ServerSettings.SETTING_RESERVED_SLOT_AMOUNT);
+
+        if (amount != null && pin != null)
+        {
+            int.TryParse(pin.SettingValue, out reservedSlotPin);
+            int.TryParse(amount.SettingValue, out reservedSlotAmount);
+        }
+    }
+
     private async void refresh()
     {
         await updateLeagueMode();
+        await updateReservedSlots();
 
         await InvokeAsync(StateHasChanged);
     }
