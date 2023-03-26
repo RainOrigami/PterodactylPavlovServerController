@@ -67,6 +67,7 @@ public class WarmupRoundService
         if (lastRoundState == "Started" && this.connection.ServerInfo.RoundState == "Ended" && isWarmupRound)
         {
             isWarmupRound = false;
+            await Task.Delay(8000);
             await this.pavlovRconService.ResetSND(apiKey, connection.ServerId);
         }
 
