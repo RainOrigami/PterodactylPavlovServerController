@@ -49,13 +49,17 @@ public class WarmupRoundService
             mapJustChanged = false;
             isWarmupRound = true;
 
-            List<Item> warmupItems = this.pavlovServerContext.WarmupItems.Where(w => w.ServerId == connection.ServerId).Select(w => w.Item).ToList();
-            if (warmupItems.Count > 0)
+            WarmupRoundLoadoutModel[] loadouts = this.pavlovServerContext.WarmupLoadouts.Where(l => l.ServerId == connection.ServerId).ToArray();
+            if (loadouts.Length > 0)
             {
+                WarmupRoundLoadoutModel loadout = loadouts[Random.Shared.Next(loadouts.Count())];
+
                 Player[] players = await this.pavlovRconService.GetActivePlayers(apiKey, connection.ServerId);
                 foreach (Player player in players.Where(p => p.UniqueId.HasValue))
                 {
-                    await this.pavlovRconService.GiveItem(apiKey, connection.ServerId, player.UniqueId!.Value, warmupItems[Random.Shared.Next(0, warmupItems.Count)].ToString());
+                    await this.pavlovRconService.GiveItem(apiKey, connection.ServerId, player.UniqueId!.Value, loadout.Gun.ToString());
+                    await this.pavlovRconService.GiveItem(apiKey, connection.ServerId, player.UniqueId!.Value, loadout.Item.ToString());
+                    await this.pavlovRconService.GiveItem(apiKey, connection.ServerId, player.UniqueId!.Value, loadout.Attachment.ToString());
                 }
             }
         }
