@@ -141,6 +141,38 @@
             </div>
         </EditForm>
     </div>
+
+    <div class="me-2" style="width: 425px; display: inline-block; vertical-align: top;">
+        <h3 class="mb-0">Kill skin</h3>
+        <small class="text-muted">
+            Sets a skin for the first player reaching the specified kill count
+        </small>
+        <EditForm Model="@killSkinModel" OnValidSubmit="@killSkinSubmitted" class="mt-3">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="mb-3">
+                <label>
+                    Enabled
+                    <InputCheckbox @bind-Value="killSkinModel.Enabled" class="form-check-inline" />
+                </label>
+            </div>
+            <div class="mb-3">
+                <label>Threshold</label>
+                <InputNumber @bind-Value="killSkinModel.Threshold" class="form-control" />
+            </div>
+            <InputSelect @bind-Value="killSkinModel.Skin" class="form-select mb-1">
+                <option selected disabled>Select a skin</option>
+                @foreach (Skin skin in Enum.GetValues(typeof(Skin)).OfType<Skin>().OrderBy(i => i.ToString()))
+                {
+                    <option value="@skin">@skin</option>
+                }
+            </InputSelect>
+            <div class="mb-3">
+                <button type="submit" class="btn btn-outline-success form-control">Save</button>
+            </div>
+        </EditForm>
+    </div>
 </div>
 
 @code {
@@ -159,6 +191,7 @@
     private readonly LeagueModeModel leagueModeModel = new();
     private readonly PauseServerModel pauseServerModel = new();
     private readonly SetWarmupRoundLoadoutModel setWarmupRoundLoadoutModel = new();
+    private readonly KillSkinModel killSkinModel = new();
 
     private WarmupRoundLoadoutModel[]? storedWarmupRoundLoadouts = null;
     private WarmupRoundLoadoutModel currentWarmupRoundLoadout = new();
@@ -412,5 +445,52 @@
 
         await AuditService.Add(Connection.ServerId, $"{(pauseServerModel.Enabled ? "Enabled" : "Disabled")} server pause");
         Toast.ShowSuccess($"Successfully {(pauseServerModel.Enabled ? "enabled" : "disabled")} server pause.");
+    }
+
+    private async Task killSkinSubmitted()
+    {
+        PavlovServerContext pavlovServerContext = new(Configuration);
+
+        ServerSettings? killSkinEnabledSetting = await pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == Connection.ServerId && s.SettingName == ServerSettings.SETTING_SKIN_ENABLED);
+        ServerSettings? killSkinThresholdSetting = await pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == Connection.ServerId && s.SettingName == ServerSettings.SETTING_SKIN_THRESHOLD);
+        ServerSettings? killSkinSkinSetting = await pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == Connection.ServerId && s.SettingName == ServerSettings.SETTING_SKIN_SKIN);
+
+        if (killSkinEnabledSetting == null)
+        {
+            killSkinEnabledSetting = new()
+                {
+                    ServerId = Connection.ServerId,
+                    SettingName = ServerSettings.SETTING_SKIN_ENABLED
+                };
+            await pavlovServerContext.Settings.AddAsync(killSkinEnabledSetting);
+        }
+        killSkinEnabledSetting.SettingValue = this.killSkinModel.Enabled.ToString();
+
+        if (killSkinThresholdSetting == null)
+        {
+            killSkinThresholdSetting = new()
+                {
+                    ServerId = Connection.ServerId,
+                    SettingName = ServerSettings.SETTING_SKIN_THRESHOLD
+                };
+            await pavlovServerContext.Settings.AddAsync(killSkinThresholdSetting);
+        }
+        killSkinThresholdSetting.SettingValue = this.killSkinModel.Threshold.ToString();
+
+        if (killSkinSkinSetting == null)
+        {
+            killSkinSkinSetting = new()
+                {
+                    ServerId = Connection.ServerId,
+                    SettingName = ServerSettings.SETTING_SKIN_SKIN
+                };
+            await pavlovServerContext.Settings.AddAsync(killSkinSkinSetting);
+        }
+        killSkinSkinSetting.SettingValue = this.killSkinModel.Skin!.Value.ToString();
+
+        await pavlovServerContext.SaveChangesAsync();
+
+        await AuditService.Add(Connection.ServerId, $"{(this.killSkinModel.Enabled ? "Enabled" : "Disabled")} kill skin.{(this.killSkinModel.Enabled ? $" Threshold {this.killSkinModel.Threshold}, Skin {this.killSkinModel.Skin}." : "")}");
+        Toast.ShowSuccess($"Successfully {(this.killSkinModel.Enabled ? "enabled" : "eisabled")} kill skin.");
     }
 }
