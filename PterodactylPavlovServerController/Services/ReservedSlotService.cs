@@ -48,27 +48,33 @@ public class ReservedSlotService
             return;
         }
 
-        if (currentPin.HasValue && currentPin.Value == 0)
+        try
         {
-            await pavlovRconService.SetPin(apiKey, serverId, null);
-            currentPin = null;
-        }
-
-        if (connection.ServerInfo!.MaximumPlayerCount() - connection.ServerInfo!.CurrentPlayerCount() <= reservedSlotAmount)
-        {
-            if (!currentPin.HasValue || currentPin.Value != reservedSlotPin)
-            {
-                await pavlovRconService.SetPin(apiKey, serverId, reservedSlotPin);
-                currentPin = reservedSlotPin;
-            }
-        }
-        else
-        {
-            if (currentPin.HasValue)
+            if (currentPin.HasValue && currentPin.Value == 0)
             {
                 await pavlovRconService.SetPin(apiKey, serverId, null);
                 currentPin = null;
             }
+
+            if (connection.ServerInfo!.MaximumPlayerCount() - connection.ServerInfo!.CurrentPlayerCount() <= reservedSlotAmount)
+            {
+                if (!currentPin.HasValue || currentPin.Value != reservedSlotPin)
+                {
+                    await pavlovRconService.SetPin(apiKey, serverId, reservedSlotPin);
+                    currentPin = reservedSlotPin;
+                }
+            }
+            else
+            {
+                if (currentPin.HasValue)
+                {
+                    await pavlovRconService.SetPin(apiKey, serverId, null);
+                    currentPin = null;
+                }
+            }
+        } catch (Exception ex)
+        {
+            Console.Error.WriteLine(ex.ToString());
         }
     }
 }
