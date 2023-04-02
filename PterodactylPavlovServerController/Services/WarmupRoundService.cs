@@ -17,6 +17,7 @@ public class WarmupRoundService
     private string? lastRoundState = null;
     private bool mapJustChanged = false;
     private bool isWarmupRound = false;
+    private bool isWarmupRoundEnding = false;
 
     public WarmupRoundService(string apiKey, PavlovRconConnection connection, PavlovRconService pavlovRconService, IConfiguration configuration)
     {
@@ -66,8 +67,14 @@ public class WarmupRoundService
 
         if (lastRoundState == "Started" && this.connection.ServerInfo.RoundState == "Ended" && isWarmupRound)
         {
+            isWarmupRoundEnding = true;
+        }
+
+        if (lastRoundState == "Ended" && this.connection.ServerInfo!.RoundState == "StandBy" && isWarmupRound && isWarmupRoundEnding)
+        {
+            isWarmupRoundEnding = false;
             isWarmupRound = false;
-            await Task.Delay(8000);
+            await Task.Delay(1000);
             await this.pavlovRconService.ResetSND(apiKey, connection.ServerId);
         }
 
