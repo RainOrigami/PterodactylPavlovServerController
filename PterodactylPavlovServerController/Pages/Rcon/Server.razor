@@ -335,6 +335,10 @@
         {
             int.TryParse(pin.SettingValue, out reservedSlotPin);
             int.TryParse(amount.SettingValue, out reservedSlotAmount);
+        } else
+        {
+            reservedSlotPin = 0;
+            reservedSlotAmount = 0;
         }
     }
 
