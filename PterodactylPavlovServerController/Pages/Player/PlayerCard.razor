@@ -21,6 +21,7 @@
 @inject IConfiguration Configuration
 @inject CountryService CountryService
 @inject AuditService AuditService
+@inject PterodactylService PterodactylService
 
 @{
     PavlovRconConnection? connection = null;
@@ -213,11 +214,11 @@
                                     @if (vac == 0 && game == 0 && daysSinceLastBan == -1)
                                     {
                                         @*<div class="row gx-0">
-                                            <div class="col-auto px-1">
-                                                <i class="fa-solid fa-shield-halved"></i>
-                                            </div>
-                                            <div class="col px-1">Clean record</div>
-                                        </div>*@
+                                <div class="col-auto px-1">
+                                <i class="fa-solid fa-shield-halved"></i>
+                                </div>
+                                <div class="col px-1">Clean record</div>
+                                </div>*@
                                     }
                                     else
                                     {
@@ -401,8 +402,11 @@
 
     private async Task confirmKick(bool confirmed)
     {
+        Console.WriteLine($"ConfirmKick with confirmed {confirmed}");
+
         if (!confirmed)
         {
+            Console.WriteLine("Cancelling");
             return;
         }
 
@@ -520,8 +524,11 @@
 
     private async Task kick()
     {
+        Console.WriteLine("Kicking...");
+
         if (ServerId == null)
         {
+            Console.WriteLine("No server id");
             Toast.ShowError("Can not kick player that is not associated with a server");
             return;
         }
@@ -529,24 +536,29 @@
         PavlovRconConnection? connection = Rcon.GetServer(ApiKey.ApiKey, ServerId);
         if (connection == null)
         {
+            Console.WriteLine("No connection");
             Toast.ShowError("Server must be online to kick a player");
             return;
         }
 
         try
         {
+            Console.WriteLine("Executing kick");
             if (await RconService.KickPlayer(ApiKey.ApiKey, ServerId, PlayerId, seperateConnection))
             {
+                Console.WriteLine("Kick success");
                 Toast.ShowWarning("Player has been kicked!");
                 await AuditService.Add(ServerId, $"Kicked player {PlayerId}");
             }
             else
             {
+                Console.WriteLine("Kick fail");
                 Toast.ShowError("Server refused to kick player");
             }
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"Kick error: {ex}");
             Toast.ShowError(ex.Message, "Error during kick");
         }
     }

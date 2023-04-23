@@ -29,6 +29,7 @@ public partial class Confirm
 
     protected async Task OnConfirmationChange(bool value)
     {
+        await Console.Out.WriteLineAsync($"Confirmation for {this.ConfirmationTitle} / {this.ConfirmationMessage} result {value}");
         //ShowConfirmation = false;
         await ConfirmationChanged.InvokeAsync(value);
     }
