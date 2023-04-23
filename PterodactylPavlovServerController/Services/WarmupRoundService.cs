@@ -55,13 +55,32 @@ public class WarmupRoundService
             {
                 WarmupRoundLoadoutModel loadout = loadouts[Random.Shared.Next(loadouts.Count())];
 
-                Player[] players = await this.pavlovRconService.GetActivePlayers(apiKey, connection.ServerId);
-                foreach (Player player in players.Where(p => p.UniqueId.HasValue))
+                await Task.Run(async () =>
                 {
-                    await this.pavlovRconService.GiveItem(apiKey, connection.ServerId, player.UniqueId!.Value, loadout.Gun.ToString());
-                    await this.pavlovRconService.GiveItem(apiKey, connection.ServerId, player.UniqueId!.Value, loadout.Item.ToString());
-                    await this.pavlovRconService.GiveItem(apiKey, connection.ServerId, player.UniqueId!.Value, loadout.Attachment.ToString());
-                }
+                    await Task.Delay(1000);
+                    Player[] players = await this.pavlovRconService.GetActivePlayers(apiKey, connection.ServerId);
+                    foreach (Player player in players.Where(p => p.UniqueId.HasValue))
+                    {
+                        try
+                        {
+                            await this.pavlovRconService.GiveItem(apiKey, connection.ServerId, player.UniqueId!.Value, loadout.Gun!.Value.ToString());
+                        }
+                        catch { }
+                        await Task.Delay(100);
+                        try
+                        {
+                            await this.pavlovRconService.GiveItem(apiKey, connection.ServerId, player.UniqueId!.Value, loadout.Item!.Value.ToString());
+                        }
+                        catch { }
+                        await Task.Delay(100);
+                        try
+                        {
+                            await this.pavlovRconService.GiveItem(apiKey, connection.ServerId, player.UniqueId!.Value, loadout.Attachment!.Value.ToString());
+                        }
+                        catch { }
+                        await Task.Delay(100);
+                    }
+                });
             }
         }
 
