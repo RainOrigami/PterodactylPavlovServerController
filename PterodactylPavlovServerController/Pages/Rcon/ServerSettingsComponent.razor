@@ -491,6 +491,6 @@
         await pavlovServerContext.SaveChangesAsync();
 
         await AuditService.Add(Connection.ServerId, $"{(this.killSkinModel.Enabled ? "Enabled" : "Disabled")} kill skin.{(this.killSkinModel.Enabled ? $" Threshold {this.killSkinModel.Threshold}, Skin {this.killSkinModel.Skin}." : "")}");
-        Toast.ShowSuccess($"Successfully {(this.killSkinModel.Enabled ? "enabled" : "eisabled")} kill skin.");
+        Toast.ShowSuccess($"Successfully {(this.killSkinModel.Enabled ? "enabled" : "disabled")} kill skin.");
     }
 }
