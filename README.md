@@ -39,7 +39,10 @@ Screenshot map rotation editor:
   Time-based bans and automatic unbanning  
   Audit log
 - **Pavlov server automation through RCON**  
-  Reserved slots functionality
+  Reserved slots functionality  
+  Kill skin (set player skin upon kill threshold, once per round)  
+  Pause SND (resets SND while no players are online)  
+  SND Warmup round with random loadouts
 - **Map rotation editor**  
   Change map rotation  
   Save multiple map rotation presets
