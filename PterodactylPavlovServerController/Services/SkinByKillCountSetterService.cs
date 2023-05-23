@@ -57,7 +57,7 @@ public class SkinByKillCountSetterService
         ServerSettings? setKillSkinSkinSetting = await this.pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == this.connection.ServerId && s.SettingName == ServerSettings.SETTING_SKIN_SKIN);
 
         if (setKillSkinThresholdSetting == null || !int.TryParse(setKillSkinThresholdSetting.SettingValue, out int setKillSkinThreshold) ||
-            setKillSkinSkinSetting == null || Enum.TryParse<Skin>(setKillSkinSkinSetting.SettingValue, out Skin skin))
+            setKillSkinSkinSetting == null || !Enum.TryParse<Skin>(setKillSkinSkinSetting.SettingValue, out Skin skin))
         {
             skinSet = true;
             return;
