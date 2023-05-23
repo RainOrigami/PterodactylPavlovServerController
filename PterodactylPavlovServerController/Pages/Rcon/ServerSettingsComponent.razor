@@ -302,6 +302,22 @@
         {
             pauseServerModel.Enabled = pauseServer;
         }
+
+        ServerSettings? killSkinEnabled = await pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == Connection.ServerId && s.SettingName == ServerSettings.SETTING_SKIN_ENABLED);
+        if (killSkinEnabled != null && bool.TryParse(killSkinEnabled.SettingValue, out bool killSkin))
+        {
+            killSkinModel.Enabled = killSkin;
+        }
+        ServerSettings? killSkinThreshold = await pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == Connection.ServerId && s.SettingName == ServerSettings.SETTING_SKIN_THRESHOLD);
+        if (killSkinThreshold != null && int.TryParse(killSkinThreshold.SettingValue, out int killSkinThresholdValue))
+        {
+            killSkinModel.Threshold = killSkinThresholdValue;
+        }
+        ServerSettings? killSkinSkin = await pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == Connection.ServerId && s.SettingName == ServerSettings.SETTING_SKIN_SKIN);
+        if (killSkinSkin != null && Enum.TryParse(killSkinSkin.SettingValue, out Skin killSkinSkinValue))
+        {
+            killSkinModel.Skin = killSkinSkinValue;
+        }
     }
 
     private async Task setWarmupRound()
