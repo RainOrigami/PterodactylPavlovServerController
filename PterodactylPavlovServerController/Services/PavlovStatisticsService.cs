@@ -233,16 +233,12 @@ public class PavlovStatisticsService : IDisposable
 
     private async Task<PterodactylServerModel[]> readStatsToDb()
     {
-        Console.WriteLine("Reading stats to DB");
         PterodactylServerModel[] pterodactylServerModels = this.pterodactylService.GetServers(this.configuration["pterodactyl_stats_apikey"]);
         foreach (PterodactylServerModel server in pterodactylServerModels)
         {
-            Console.WriteLine($"Reading stats for server {server.Name}");
             Setting? lastStat = this.statsContext.Settings.FirstOrDefault(s => s.Name == "Last Read Statistic" && s.ServerId == server.ServerId);
 
             DateTime lastReadStatistic = lastStat == null ? DateTimeOffset.FromUnixTimeSeconds(0).LocalDateTime : DateTimeOffset.FromUnixTimeSeconds(long.Parse(lastStat.Value)).LocalDateTime;
-
-            Console.WriteLine($"Last statistic: {lastReadStatistic}");
 
             PterodactylFile[] files = this.pterodactylService.GetFileList(this.configuration["pterodactyl_stats_apikey"], server.ServerId, "/Pavlov/Saved/Logs");
             List<string> filesToParse = new();
@@ -272,7 +268,6 @@ public class PavlovStatisticsService : IDisposable
 
             foreach (string fileName in filesToParse)
             {
-                Console.Write($"Reading file {fileName}...");
                 StatsReader statsReader = new(await this.pterodactylService.ReadFile(this.configuration["pterodactyl_stats_apikey"], server.ServerId, $"/Pavlov/Saved/Logs/{fileName}"));
                 bool startReading = false;
 
@@ -329,8 +324,6 @@ public class PavlovStatisticsService : IDisposable
                             break;
                     }
                 }
-
-                Console.WriteLine(" Done.");
             }
 
             if (lastStat == null)
@@ -346,13 +339,9 @@ public class PavlovStatisticsService : IDisposable
             {
                 lastStat.Value = latestStatistic.ToUnixTimeStamp().ToString();
             }
-
-            Console.WriteLine("Done with server.");
         }
 
-        Console.Write("Saving...");
         await this.statsContext.SaveChangesAsync();
-        Console.WriteLine(" Done!");
         return pterodactylServerModels;
     }
 
@@ -363,12 +352,8 @@ public class PavlovStatisticsService : IDisposable
             Directory.CreateDirectory("stats");
         }
 
-        Console.WriteLine("Generating stats files");
-
         foreach (PterodactylServerModel server in pterodactylServerModels)
         {
-            Console.WriteLine($"Generating stats for server {server.Name}");
-
             ComponentRenderer<StatsTemplate> templateRenderer = new ComponentRenderer<StatsTemplate>();
 
             templateRenderer.Set(m => m.ServerId, server.ServerId);
@@ -383,13 +368,11 @@ public class PavlovStatisticsService : IDisposable
 
             templateRenderer.Set(m => m.ServerStatsType, serverStatsType);
 
-            Console.WriteLine("Calculating stats...");
             CBaseStats[] allStats = this.statsCalculator.CalculateStats(server.ServerId);
 
             // EFP Player Cash
             if (serverStatsType == "EFP")
             {
-                Console.WriteLine("Getting EFP cash...");
                 List<CBaseStats> baseStats = allStats.ToList();
                 Regex cashFileRegex = new(@"^(?<UniqueId>\d+)\.txt$", RegexOptions.Compiled);
                 baseStats.AddRange(pterodactylService.FileList(this.configuration["pterodactyl_stats_apikey"], server.ServerId, "/Pavlov/Saved/Config/ModSave/").Select(p => cashFileRegex.Match(p)).Where(r => r.Success).Select(r => r.Groups["UniqueId"].Value).AsParallel().Select(async p =>
@@ -397,7 +380,6 @@ public class PavlovStatisticsService : IDisposable
                     int cash = 0;
                     try
                     {
-                        Console.WriteLine($"Cash of {p}...");
                         int.TryParse(await this.pterodactylService.ReadFile(this.configuration["pterodactyl_stats_apikey"], server.ServerId, $"/Pavlov/Saved/Config/ModSave/{p}.txt"), out cash);
                     }
                     catch (Exception ex)
@@ -432,7 +414,6 @@ public class PavlovStatisticsService : IDisposable
             // Map stats
             if (serverStatsType == "SND")
             {
-                Console.WriteLine("Generating map stats...");
                 List<(MapWorkshopModel? workshop, CMapStats mapStats, Dictionary<string, object> items)> mapStatistics = new();
                 foreach (CMapStats mapStats in getMaps(allStats, serverStatsType))
                 {
@@ -459,7 +440,6 @@ public class PavlovStatisticsService : IDisposable
             }
 
             // Gun stats
-            Console.WriteLine("Generating gun stats...");
             List<(CGunStats gunStats, Dictionary<string, object> items)> gunStatistics = new List<(CGunStats gunStats, Dictionary<string, object> items)>();
             foreach (CGunStats gunStats in getGuns(allStats, serverStatsType))
             {
@@ -468,7 +448,6 @@ public class PavlovStatisticsService : IDisposable
             templateRenderer.Set(m => m.GunStatistics, gunStatistics);
 
             // Player stats
-            Console.WriteLine("Generating player stats...");
             List<(PlayerSummaryModel summary, CPlayerStats playerStats, Dictionary<string, object> items)> playerStatistics = new List<(PlayerSummaryModel summary, CPlayerStats playerStats, Dictionary<string, object> items)>();
             int playerRank = 0;
             foreach (CPlayerStats playerStats in getPlayers(allStats, serverStatsType))
@@ -504,18 +483,12 @@ public class PavlovStatisticsService : IDisposable
             templateRenderer.Set(m => m.HonorableMentions, await getHonorableMentions(allStats, serverStatsType, server.ServerId));
             templateRenderer.Set(m => m.DishonorableMentions, await getDishonorableMentions(allStats, serverStatsType));
 
-            Console.WriteLine("Rendering...");
             await File.WriteAllTextAsync($"stats/{server.ServerId}.html", templateRenderer.Render());
-            Console.WriteLine("Done!");
         }
-
-        Console.WriteLine("Stats written");
     }
 
     private async Task<List<(string title, PlayerSummaryModel summary, Dictionary<string, object> items)>> getHonorableMentions(CBaseStats[] allStats, string serverStatsType, string serverId)
     {
-        Console.WriteLine("Generating honorable player stats...");
-
         CPlayerStats[] playerStats = allStats.OfType<CPlayerStats>().ToArray();
         List<(string title, PlayerSummaryModel summary, Dictionary<string, object> items)?> honorableMentions = new()
         {
@@ -554,8 +527,6 @@ public class PavlovStatisticsService : IDisposable
 
     private async Task<List<(string title, PlayerSummaryModel summary, Dictionary<string, object> items)>> getDishonorableMentions(CBaseStats[] allStats, string serverStatsType)
     {
-        Console.WriteLine("Generating dishonorable player stats...");
-
         CPlayerStats[] playerStats = allStats.OfType<CPlayerStats>().ToArray();
         List<(string title, PlayerSummaryModel summary, Dictionary<string, object> items)?> dishonorableMentions = new()
         {
@@ -605,8 +576,6 @@ public class PavlovStatisticsService : IDisposable
 
     private Dictionary<string, object> getServerCountStats(CBaseStats[] allStats, string serverStatsType)
     {
-        Console.WriteLine("Generating server count stats");
-
         Dictionary<string, object> serverCountStats = new();
 
         CServerStats serverStats = allStats.OfType<CServerStats>().First();
@@ -650,8 +619,6 @@ public class PavlovStatisticsService : IDisposable
 
     private Dictionary<string, object> getServerKillStats(CBaseStats[] allStats, string serverStatsType)
     {
-        Console.WriteLine("Generating server kill stats");
-
         Dictionary<string, object> serverKillStats = new();
 
         CServerStats serverStats = allStats.OfType<CServerStats>().First();
@@ -670,8 +637,6 @@ public class PavlovStatisticsService : IDisposable
 
     private Dictionary<string, object> getServerBombStats(CBaseStats[] allStats, string serverStatsType)
     {
-        Console.WriteLine("Generating server bomb stats");
-
         Dictionary<string, object> serverBombStats = new();
 
         CServerStats serverStats = allStats.OfType<CServerStats>().First();
@@ -693,8 +658,6 @@ public class PavlovStatisticsService : IDisposable
 
     private async Task<Dictionary<string, object>> getMapStats(CMapStats mapStats)
     {
-        Console.WriteLine($"Generating server map stats for {mapStats.MapId}");
-
         string? bestPlayerUsername = null;
         if (mapStats.BestPlayer != null)
         {
@@ -727,8 +690,6 @@ public class PavlovStatisticsService : IDisposable
 
     private async Task<Dictionary<string, object>> getGunStats(CGunStats gunStats, CBaseStats[] allStats, string serverStatsType)
     {
-        Console.WriteLine($"Generating server gun stats for {gunStats.Name}");
-
         CServerStats serverStats = allStats.OfType<CServerStats>().First();
 
         string gunName = $"{gunStats.Name}(?)";
@@ -764,8 +725,6 @@ public class PavlovStatisticsService : IDisposable
 
     private async Task<Dictionary<string, object>> getTeamStats(int teamId, CBaseStats[] allStats, string serverStatsType)
     {
-        Console.WriteLine($"Generating server team stats for {teamId}");
-
         CServerStats serverStats = allStats.OfType<CServerStats>().First();
         CTeamStats teamStats = allStats.OfType<CTeamStats>().First(t => t.TeamId == teamId);
 
@@ -828,8 +787,6 @@ public class PavlovStatisticsService : IDisposable
 
     private async Task<Dictionary<string, object>> getPlayerStats(CPlayerStats playerStats, CBaseStats[] allStats, string serverStatsType, string serverId)
     {
-        Console.WriteLine($"Generating server player stats for {playerStats.UniqueId}");
-
         CServerStats serverStats = allStats.OfType<CServerStats>().First();
         CPlayerStats[] allPlayerStats = allStats.OfType<CPlayerStats>().ToArray();
 
@@ -996,7 +953,6 @@ public class PavlovStatisticsService : IDisposable
         {
             if (lastGenerated < DateTime.Now.AddHours(-8))
             {
-                Console.WriteLine("Generating stats...");
                 Stopwatch sw = Stopwatch.StartNew();
                 try
                 {
