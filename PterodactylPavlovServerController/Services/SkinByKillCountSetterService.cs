@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using PavlovVR_Rcon.Models.Pavlov;
 using PterodactylPavlovServerController.Contexts;
+using PterodactylPavlovServerController.Models;
 using PterodactylPavlovServerDomain.Extensions;
 using PterodactylPavlovServerDomain.Models;
 
@@ -73,8 +74,8 @@ public class SkinByKillCountSetterService
         {
             try
             {
-                await this.pavlovRconService.SetSkin(this.apiKey, this.connection.ServerId, mostKills.UniqueId, skin.ToString());
                 skinSet = true;
+                await this.pavlovRconService.SetSkin(this.apiKey, this.connection.ServerId, mostKills.UniqueId, skin.ToString());
             }
             catch (Exception ex)
             {
