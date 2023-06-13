@@ -206,16 +206,16 @@ public class PavlovStatisticsService : IDisposable
     private readonly CancellationTokenSource statsCancellationTokenSource = new();
     private readonly StatsContext statsContext;
     private readonly SteamService steamService;
-    private readonly SteamWorkshopService steamWorkshopService;
+    private readonly IMapSourceService mapSourceService;
 
-    public PavlovStatisticsService(IConfiguration configuration, StatsContext statsContext, PterodactylService pterodactylService, SteamService steamService, StatsCalculator statsCalculator, SteamWorkshopService steamWorkshopService, PavlovServerService pavlovServerService, CountryService countryService)
+    public PavlovStatisticsService(IConfiguration configuration, StatsContext statsContext, PterodactylService pterodactylService, SteamService steamService, StatsCalculator statsCalculator, IMapSourceService mapSourceService, PavlovServerService pavlovServerService, CountryService countryService)
     {
         this.configuration = configuration;
         this.statsContext = statsContext;
         this.pterodactylService = pterodactylService;
         this.steamService = steamService;
         this.statsCalculator = statsCalculator;
-        this.steamWorkshopService = steamWorkshopService;
+        this.mapSourceService = mapSourceService;
         this.pavlovServerService = pavlovServerService;
         this.countryService = countryService;
         statsContext.Database.Migrate();
@@ -422,7 +422,7 @@ public class PavlovStatisticsService : IDisposable
                     {
                         try
                         {
-                            mapWorkshop = this.steamWorkshopService.GetMapDetail(long.Parse(mapStats.MapId.Substring(3)));
+                            mapWorkshop = this.mapSourceService.GetMapDetail(long.Parse(mapStats.MapId.Substring(3)));
                         }
                         catch (Exception e)
                         {
@@ -888,7 +888,7 @@ public class PavlovStatisticsService : IDisposable
             {
                 try
                 {
-                    bestMap = this.steamWorkshopService.GetMapDetail(long.Parse(playerStats.BestMap[3..]));
+                    bestMap = this.mapSourceService.GetMapDetail(long.Parse(playerStats.BestMap[3..]));
                 }
                 catch (Exception ex)
                 {

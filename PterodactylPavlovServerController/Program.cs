@@ -31,7 +31,7 @@ internal class Program
         builder.Services.AddSingleton<PavlovRconService>();
         builder.Services.AddSingleton<PterodactylService>();
         builder.Services.AddSingleton<PavlovServerService>();
-        builder.Services.AddSingleton<SteamWorkshopService>();
+        builder.Services.AddSingleton<IMapSourceService, ModIoService>();
         builder.Services.AddSingleton<SteamService>();
         builder.Services.AddSingleton<StatsContext>();
         builder.Services.AddSingleton<StatsCalculator>();

@@ -24,7 +24,6 @@
 @inject PavlovRconService RconService
 @inject IToastService Toast
 @inject PavlovServerContext PavlovServerContext
-@inject SteamWorkshopService SteamWorkshopService
 @inject ApiKeyService ApiKey
 @inject IConfiguration Configuration
 @inject PavlovRconConnectionService PavlovRconConnectionService
@@ -89,7 +88,7 @@
                 <div class="row g-0">
                     <div class="col-auto">
                         <a href="@serverMap.Url" class="text-decoration-none" target="_blank">
-                            <img class="card-img rounded-start" width="256" height="256" src="@(mapDetail == null ? "https://pavlov.bloodisgood.net/gunimages/unknown.png" : mapDetail.ImageURL + "/?imw=256&imh=256&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true")" alt="@serverInfo.MapLabel" />
+                            <img class="card-img rounded-start" width="256" height="256" src="@(mapDetail == null ? "https://pavlov.bloodisgood.net/gunimages/unknown.png" : mapDetail.ImageURL)" alt="@serverInfo.MapLabel" />
                         </a>
                     </div>
 

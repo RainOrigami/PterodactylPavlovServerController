@@ -53,11 +53,11 @@ public class MapsEffects
 {
     private readonly IState<MapsState> mapsState;
     private readonly PavlovServerService pavlovServerService;
-    private readonly SteamWorkshopService steamWorkshopService;
+    private readonly IMapSourceService mapSourceService;
 
-    public MapsEffects(SteamWorkshopService steamWorkshopService, PavlovServerService pavlovServerService, IState<MapsState> mapsState)
+    public MapsEffects(IMapSourceService mapSourceService, PavlovServerService pavlovServerService, IState<MapsState> mapsState)
     {
-        this.steamWorkshopService = steamWorkshopService;
+        this.mapSourceService = mapSourceService;
         this.pavlovServerService = pavlovServerService;
         this.mapsState = mapsState;
     }
@@ -72,7 +72,7 @@ public class MapsEffects
 
         try
         {
-            dispatcher.Dispatch(new MapsAddWorkshopAction(this.steamWorkshopService.GetMapDetail(mapsLoadWorkshopAction.MapId)));
+            dispatcher.Dispatch(new MapsAddWorkshopAction(this.mapSourceService.GetMapDetail(mapsLoadWorkshopAction.MapId)));
         }
         catch (Exception ex)
         {

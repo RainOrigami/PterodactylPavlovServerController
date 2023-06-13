@@ -6,7 +6,7 @@ using PterodactylPavlovServerDomain.Models;
 
 namespace PterodactylPavlovServerController.Services;
 
-public class SteamWorkshopService
+public class SteamWorkshopService : IMapSourceService
 {
     private readonly IConfiguration configuration;
     private readonly Dictionary<long, MapWorkshopModel> mapDetailCache;

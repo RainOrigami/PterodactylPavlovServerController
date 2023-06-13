@@ -9,7 +9,7 @@
 @inject PavlovRconService RconService
 @inject IToastService Toast
 @inject ApiKeyService ApiKey
-@inject SteamWorkshopService SteamWorkshopService
+@inject IMapSourceService MapSourceService
 @inject AuditService AuditService
 
 <div class="tab-pane container active px-0" id="maps">
@@ -33,7 +33,7 @@
 
             <div class="card bg-dark me-2 mb-2" style="display: inline-block; width: 256px;@(ServerInfo.MapLabel == mapRow.MapLabel ? " background-color: #7D7 !important; color: #444;" : "")">
                 <a href="#" @onclick="() => changeMap(mapRow)" @onclick:preventDefault class="text-decoration-none">
-                    <img class="card-img-top" src="@(mapRowDetail == null ? "https://pavlov.bloodisgood.net/gunimages/unknown.png" : mapRowDetail.ImageURL + "/?imw=256&imh=256&ima=fit&impolicy=Letterbox&imcolor=%23000000&letterbox=true")" alt="@mapRow.MapLabel" />
+                    <img class="card-img-top" src="@(mapRowDetail == null ? "https://pavlov.bloodisgood.net/gunimages/unknown.png" : mapRowDetail.ImageURL)" alt="@mapRow.MapLabel" />
                 </a>
                 <div class="card-body">
                     <a href="#" @onclick="() => changeMap(mapRow)" @onclick:preventDefault class="text-decoration-none">
@@ -68,7 +68,7 @@
         }
     }
 
-    <h3 class="mt-3">Enter a map name, workshop ID or workshop URL to change to</h3>
+    <h3 class="mt-3">Enter a map ID</h3>
     <EditForm Model="@mapChangeInput" OnValidSubmit="@mapChange">
         <DataAnnotationsValidator />
         <div class="container mb-5">
@@ -77,7 +77,7 @@
             </div>
             <div class="row">
                 <div class="col ps-0">
-                    <InputText @bind-Value="mapChangeInput.Map" class="form-control" placeholder="Map name / ID / URL" />
+                    <InputText @bind-Value="mapChangeInput.Map" class="form-control" placeholder="Map ID" />
                 </div>
                 <div class="col">
                     <InputSelect @bind-Value="mapChangeInput.GameMode" class="form-select">
@@ -149,9 +149,9 @@
             if (await RconService.SwitchMap(ApiKey.ApiKey, Connection.ServerId, mapChangeInput.MapLabel, mapChangeInput.GameMode.Value))
             {
                 string mapName = mapChangeInput.MapLabel;
-                if (mapChangeInput.IsWorkshopMap)
+                if (mapChangeInput.IsCustomMap)
                 {
-                    mapName = SteamWorkshopService.GetMapDetail(mapChangeInput.MapId!.Value).Name;
+                    mapName = MapSourceService.GetMapDetail(mapChangeInput.MapId!.Value).Name;
                 }
 
                 Toast.ShowSuccess($"Changing map to {mapName}");
