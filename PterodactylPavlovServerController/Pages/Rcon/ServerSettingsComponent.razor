@@ -173,6 +173,35 @@
             </div>
         </EditForm>
     </div>
+
+    <div class="me-2" style="width: 425px; display: inline-block; vertical-align: top;">
+        <h3 class="mb-0">Ping limiter</h3>
+        <small class="text-muted">
+            Automatically kicks players who exceed the specified average ping measured over the specified period of time
+        </small>
+        <EditForm Model="@pingLimiterModel" OnValidSubmit="@pingLimiterSubmitted" class="mt-3">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="mb-3">
+                <label>
+                    Enabled
+                    <InputCheckbox @bind-Value="pingLimiterModel.Enabled" class="form-check-inline" />
+                </label>
+            </div>
+            <div class="mb-3">
+                <label>Threshold</label>
+                <InputNumber @bind-Value="pingLimiterModel.Threshold" class="form-control" />
+            </div>
+            <div class="mb-3">
+                <label>Measure time in seconds</label>
+                <InputNumber @bind-Value="pingLimiterModel.MeasureTime" class="form-control" />
+            </div>
+            <div class="mb-3">
+                <button type="submit" class="btn btn-outline-success form-control">Save</button>
+            </div>
+        </EditForm>
+    </div>
 </div>
 
 @code {
@@ -187,6 +216,7 @@
     private string serverId = string.Empty;
 
     private readonly ReservedSlotsModel reservedSlots = new();
+    private readonly PingLimiterModel pingLimiterModel = new();
     private readonly WarmupRoundModel warmupRoundModel = new();
     private readonly LeagueModeModel leagueModeModel = new();
     private readonly PauseServerModel pauseServerModel = new();
@@ -317,6 +347,22 @@
         if (killSkinSkin != null && Enum.TryParse(killSkinSkin.SettingValue, out Skin killSkinSkinValue))
         {
             killSkinModel.Skin = killSkinSkinValue;
+        }
+
+        ServerSettings? pingLimitEnabled = await pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == Connection.ServerId && s.SettingName == ServerSettings.SETTING_PING_KICK_ENABLED);
+        if (pingLimitEnabled != null && bool.TryParse(pingLimitEnabled.SettingValue, out bool pingLimitEnabledValue))
+        {
+            pingLimiterModel.Enabled = pingLimitEnabledValue;
+        }
+        ServerSettings? pingLimitThreshold = await pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == Connection.ServerId && s.SettingName == ServerSettings.SETTING_PING_KICK_THRESHOLD);
+        if (pingLimitThreshold != null && int.TryParse(pingLimitThreshold.SettingValue, out int pingLimitThresholdValue))
+        {
+            pingLimiterModel.Threshold = pingLimitThresholdValue;
+        }
+        ServerSettings? pingLimitMeasureTime = await pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == Connection.ServerId && s.SettingName == ServerSettings.SETTING_PING_KICK_MEASURETIME);
+        if (pingLimitMeasureTime != null && int.TryParse(pingLimitMeasureTime.SettingValue, out int pingLimitMeasureTimeValue))
+        {
+            pingLimiterModel.MeasureTime = pingLimitMeasureTimeValue;
         }
     }
 
@@ -509,4 +555,51 @@
         await AuditService.Add(Connection.ServerId, $"{(this.killSkinModel.Enabled ? "Enabled" : "Disabled")} kill skin.{(this.killSkinModel.Enabled ? $" Threshold {this.killSkinModel.Threshold}, Skin {this.killSkinModel.Skin}." : "")}");
         Toast.ShowSuccess($"Successfully {(this.killSkinModel.Enabled ? "enabled" : "disabled")} kill skin.");
     }
-}
+
+    private async Task pingLimiterSubmitted()
+    {
+        PavlovServerContext pavlovServerContext = new(Configuration);
+
+        ServerSettings? pingLimiterEnabledSetting = await pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == Connection.ServerId && s.SettingName == ServerSettings.SETTING_PING_KICK_ENABLED);
+        ServerSettings? pingLimiterThresholdSetting = await pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == Connection.ServerId && s.SettingName == ServerSettings.SETTING_PING_KICK_THRESHOLD);
+        ServerSettings? pingLimiterMeasureTimeSetting = await pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == Connection.ServerId && s.SettingName == ServerSettings.SETTING_PING_KICK_MEASURETIME);
+
+        if (pingLimiterEnabledSetting == null)
+        {
+            pingLimiterEnabledSetting = new()
+                {
+                    ServerId = Connection.ServerId,
+                    SettingName = ServerSettings.SETTING_PING_KICK_ENABLED
+                };
+            await pavlovServerContext.Settings.AddAsync(pingLimiterEnabledSetting);
+        }
+        pingLimiterEnabledSetting.SettingValue = this.pingLimiterModel.Enabled.ToString();
+
+        if (pingLimiterThresholdSetting == null)
+        {
+            pingLimiterThresholdSetting = new()
+                {
+                    ServerId = Connection.ServerId,
+                    SettingName = ServerSettings.SETTING_PING_KICK_THRESHOLD
+                };
+            await pavlovServerContext.Settings.AddAsync(pingLimiterThresholdSetting);
+        }
+        pingLimiterThresholdSetting.SettingValue = this.pingLimiterModel.Threshold.ToString();
+
+        if (pingLimiterMeasureTimeSetting == null)
+        {
+            pingLimiterMeasureTimeSetting = new()
+                {
+                    ServerId = Connection.ServerId,
+                    SettingName = ServerSettings.SETTING_PING_KICK_MEASURETIME
+                };
+            await pavlovServerContext.Settings.AddAsync(pingLimiterMeasureTimeSetting);
+        }
+        pingLimiterMeasureTimeSetting.SettingValue = this.pingLimiterModel.MeasureTime.ToString();
+
+        await pavlovServerContext.SaveChangesAsync();
+
+        await AuditService.Add(Connection.ServerId, $"{(this.pingLimiterModel.Enabled ? "Enabled" : "Disabled")} ping limiter.{(this.pingLimiterModel.Enabled ? $" Threshold {this.pingLimiterModel.Threshold}, Measure Time {this.pingLimiterModel.MeasureTime}." : "")}");
+        Toast.ShowSuccess($"Successfully {(this.pingLimiterModel.Enabled ? "enabled" : "disabled")} ping limiter.");
+    }
+ }
