@@ -164,17 +164,17 @@ public class PavlovRconConnection : IDisposable
         }
 
         List<PlayerDetail> newPlayerDetails = new();
-        foreach (ulong playerId in PlayerListPlayers.Keys)
+
+        PlayerDetail[] playerDetails = await pavlovRconService.GetActivePlayerDetails(ApiKey, ServerId);
+        if (playerDetails == null)
+        {
+            throw new Exception("Failed to fetch player details");
+        }
+
+        foreach (PlayerDetail playerDetail in playerDetails)
         {
             try
             {
-                PlayerDetail playerDetail = await pavlovRconService.GetActivePlayerDetail(ApiKey, ServerId, playerId);
-
-                if (playerDetail == null)
-                {
-                    throw new Exception("Failed to fetch player details");
-                }
-
                 newPlayerDetails.Add(playerDetail);
                 OnPlayerDetailUpdated?.Invoke(ServerId, playerDetail);
             }
@@ -184,7 +184,7 @@ public class PavlovRconConnection : IDisposable
             }
         }
 
-        playerDetails = newPlayerDetails.ToDictionary(k => k.UniqueId, v => v);
+        this.playerDetails = newPlayerDetails.ToDictionary(k => k.UniqueId, v => v);
 
         await measurePlayerIncome(newPlayerDetails);
     }
