@@ -9,6 +9,9 @@ public class ServerSettings
     public const string SETTING_SKIN_ENABLED = "killskin.enabled";
     public const string SETTING_SKIN_THRESHOLD = "killskin.threshold";
     public const string SETTING_SKIN_SKIN = "killskin.skin";
+    public const string SETTING_PING_KICK_ENABLED = "pingkick.enabled";
+    public const string SETTING_PING_KICK_THRESHOLD = "pingkick.threshold";
+    public const string SETTING_PING_KICK_MEASURETIME = "pingkick.measuretime";
 
     public string ServerId { get; set; } = string.Empty;
     public string SettingName { get; set; } = string.Empty;

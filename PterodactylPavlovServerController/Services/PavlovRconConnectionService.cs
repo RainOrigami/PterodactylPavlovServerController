@@ -13,19 +13,22 @@ public class PavlovRconConnectionService : IDisposable
     private readonly PavlovRconService pavlovRconService;
     private readonly SteamService steamService;
     private readonly PterodactylService pterodactylService;
+    private readonly AuditService auditService;
     private readonly Dictionary<string, List<string>> apiKeysToServerIds = new();
     private readonly ConcurrentDictionary<string, ReservedSlotService> reservedSlots = new();
     private readonly ConcurrentDictionary<string, WarmupRoundService> warmupRounds = new();
     private readonly ConcurrentDictionary<string, PauseServerService> pauses = new();
     private readonly ConcurrentDictionary<string, SkinByKillCountSetterService> skins = new();
+    private readonly ConcurrentDictionary<string, PavlovPingLimiterService> pingLimiter = new();
     private readonly CancellationTokenSource updaterCancellationTokenSource = new();
 
-    public PavlovRconConnectionService(PterodactylService pterodactylService, PavlovRconService pavlovRconService, SteamService steamService, IConfiguration configuration)
+    public PavlovRconConnectionService(PterodactylService pterodactylService, PavlovRconService pavlovRconService, SteamService steamService, IServiceProvider serviceProvider, IConfiguration configuration)
     {
         this.pterodactylService = pterodactylService;
         this.pavlovRconService = pavlovRconService;
         this.steamService = steamService;
         this.configuration = configuration;
+        this.auditService = serviceProvider.CreateScope().ServiceProvider.GetRequiredService<AuditService>();
     }
 
     public bool Initialised { get; private set; }
@@ -128,6 +131,8 @@ public class PavlovRconConnectionService : IDisposable
         this.pauses.AddOrUpdate(server.ServerId, pauseServerService, (k, v) => pauseServerService);
         SkinByKillCountSetterService skinByKillCountSetterService = new(this.configuration["pterodactyl_apikey"]!, serverConnection, this.pavlovRconService, this.configuration);
         this.skins.AddOrUpdate(server.ServerId, skinByKillCountSetterService, (k, v) => skinByKillCountSetterService);
+        PavlovPingLimiterService pavlovPingLimiterService = new(this.configuration["pterodactyl_apikey"]!, serverConnection, this.pavlovRconService, this.auditService, this.configuration);
+        this.pingLimiter.AddOrUpdate(server.ServerId, pavlovPingLimiterService, (k, v) => pavlovPingLimiterService);
     }
     public ReservedSlotService? GetReservedSlotService(string serverId) => this.reservedSlots[serverId];
 }
