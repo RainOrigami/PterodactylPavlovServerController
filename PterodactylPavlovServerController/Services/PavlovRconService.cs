@@ -97,6 +97,11 @@ public class PavlovRconService
 
     }
 
+    public async Task<PlayerDetail[]> GetActivePlayerDetails(string apiKey, string serverId, bool separateConnection = false)
+    {
+        return await execute(async (rcon) => (await new InspectAllCommand().ExecuteCommand(rcon)).InspectList, apiKey, serverId, separateConnection);
+    }
+
     public async Task<ServerInfo> GetServerInfo(string apiKey, string serverId, bool separateConnection = false)
     {
         return await execute(async (rcon) => (await new ServerInfoCommand().ExecuteCommand(rcon)).ServerInfo, apiKey, serverId, separateConnection);

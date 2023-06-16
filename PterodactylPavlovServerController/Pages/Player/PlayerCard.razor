@@ -136,36 +136,47 @@
                                 {
                                     <div class="row gx-0">
                                         <div class="col-auto px-1">
-                                            <i class="fa-solid fa-star"></i>
-                                        </div>
-                                        <div class="col px-1">@playerDetail.Score</div>
-                                    </div>
-                                    @if (!LeagueMode)
-                                    {
-                                        <div class="row gx-0">
                                             <div class="col-auto px-1">
-                                                <i class="fa-solid fa-dollar-sign"></i>
+                                                <i class="fa-solid fa-stopwatch-20"></i>
                                             </div>
-                                            <div class="col px-1">@playerDetail.Cash</div>
+                                            <div class="col px-1">@Math.Round(playerDetail.Ping, 0)</div>
                                         </div>
-                                    }
-                                    <div class="row gx-0">
                                         <div class="col-auto px-1">
-                                            <i class="fa-solid fa-gun"></i>
+                                            <div class="col-auto px-1">
+                                                <i class="fa-solid fa-star"></i>
+                                            </div>
+                                            <div class="col px-1">@playerDetail.Score</div>
                                         </div>
-                                        <div class="col px-1">@playerDetail.Kills()</div>
+                                        <div class="col-auto px-1">
+                                            @if (!LeagueMode)
+                                            {
+                                                <div class="col-auto px-1">
+                                                    <i class="fa-solid fa-dollar-sign"></i>
+                                                </div>
+                                                <div class="col px-1">@playerDetail.Cash</div>
+                                            }
+                                        </div>
                                     </div>
+                                    
                                     <div class="row gx-0">
                                         <div class="col-auto px-1">
-                                            <i class="fa-solid fa-skull-crossbones"></i>
+                                            <div class="col-auto px-1">
+                                                <i class="fa-solid fa-gun"></i>
+                                            </div>
+                                            <div class="col px-1">@playerDetail.Kills()</div>
                                         </div>
-                                        <div class="col px-1">@playerDetail.Deaths()</div>
-                                    </div>
-                                    <div class="row gx-0">
                                         <div class="col-auto px-1">
+                                            <div class="col-auto px-1">
+                                                <i class="fa-solid fa-skull-crossbones"></i>
+                                            </div>
+                                            <div class="col px-1">@playerDetail.Deaths()</div>
+                                        </div>
+                                        <div class="col-auto px-1">
+                                            <div class="col-auto px-1">
                                             <i class="fa-solid fa-handshake-angle"></i>
+                                            </div>
+                                            <div class="col px-1">@playerDetail.Assists()</div>
                                         </div>
-                                        <div class="col px-1">@playerDetail.Assists()</div>
                                     </div>
                                 }
 
