@@ -20,15 +20,10 @@ public class AuditService
 
     public async Task Add(string server, string action)
     {
-        if (httpContextAccessor.HttpContext == null)
-        {
-            throw new Exception("Unable to audit action, HttpContext is not available");
-        }
-
         this.pavlovServerContext.AuditActions.Add(new AuditActionModel()
         {
             Server = server,
-            User = userManager.GetUserName(httpContextAccessor.HttpContext.User),
+            User = httpContextAccessor.HttpContext == null ? "-SYSTEM-" : (userManager.GetUserName(httpContextAccessor.HttpContext.User) ?? "-UNKNOWN-"),
             Time = DateTime.Now,
             Action = action
         });
