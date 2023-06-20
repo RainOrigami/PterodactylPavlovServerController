@@ -13,6 +13,8 @@ public class PauseServerService
     private readonly IConfiguration configuration;
     private readonly PavlovServerContext pavlovServerContext;
 
+    private bool isPaused = false;
+
     public PauseServerService(string apiKey, PavlovRconConnection connection, PavlovRconService pavlovRconService, IConfiguration configuration)
     {
         this.apiKey = apiKey;
@@ -33,9 +35,17 @@ public class PauseServerService
             return;
         }
 
-        if (connection.ServerInfo!.CurrentPlayerCount() == 0 && connection.ServerInfo!.GameMode == "SND" && connection.ServerInfo!.Round.HasValue && connection.ServerInfo!.Round.Value > 0)
+        if (connection.ServerInfo!.CurrentPlayerCount() < 1 && connection.ServerInfo!.GameMode.ToUpper() == "SND")
         {
-            await pavlovRconService.ResetSND(apiKey, serverId);
+            await Task.Delay(10);
+            isPaused = true;
+            await pavlovRconService.PauseMatch(apiKey, serverId, 3600);
+        }
+        else if (isPaused)
+        {
+            await Task.Delay(10);
+            await pavlovRconService.PauseMatch(apiKey, serverId, 0);
+            isPaused = false;
         }
     }
 }

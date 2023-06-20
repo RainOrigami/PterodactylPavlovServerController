@@ -103,7 +103,7 @@
     <div class="me-2" style="width: 425px; display: inline-block; vertical-align: top;">
         <h3 class="mb-0">Pause server when inactive</h3>
         <small class="text-muted">
-            Forces SND Resets when the server has zero players and is on an SND map, preventing rotation.
+            Pauses the match while the server has less than two players and is on an SND map, preventing rotation and winning rounds by default.
         </small>
         <EditForm Model="@pauseServerModel" OnValidSubmit="@pauseServerSubmitted" class="mt-3">
             <DataAnnotationsValidator />

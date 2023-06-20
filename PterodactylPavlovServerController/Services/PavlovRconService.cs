@@ -529,6 +529,23 @@ public class PavlovRconService
         }
     }
 
+    public async Task<bool> PauseMatch(string apiKey, string serverId, int amount, bool seperateConnection = false)
+    {
+        try
+        {
+            return await execute(async (rcon) => (await new PauseMatchCommand(amount).ExecuteCommand(rcon)).PauseMatch, apiKey, serverId, seperateConnection);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return false;
+            }
+
+            throw;
+        }
+    }
+
     public async Task<string> CustomCommand(string apiKey, string serverId, string customCommand, bool separateConnection = false)
     {
         string command;
