@@ -76,7 +76,11 @@ public class ModIoService : IMapSourceService
             Console.WriteLine(nameId ?? "NO NAME ID");
             Console.WriteLine(imageUrl ?? "NO IMAGE URL");
             Console.WriteLine(profileUrl ?? "NO PROFILE URL");
-            throw new ModIoException();
+            return new MapWorkshopModel()
+            {
+                Id = mapId,
+                Name = mapId.ToString()
+            };
         }
 
         return new MapWorkshopModel
