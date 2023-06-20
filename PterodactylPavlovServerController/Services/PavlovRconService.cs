@@ -495,6 +495,23 @@ public class PavlovRconService
         }
     }
 
+    public async Task<bool> GagPlayer(string apiKey, string serverId, ulong uniqueId, bool separateConnection = false)
+    {
+        try
+        {
+            return await execute(async (rcon) => (await new GagCommand(uniqueId).ExecuteCommand(rcon)).Gag, apiKey, serverId, separateConnection);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return false;
+            }
+
+            throw;
+        }
+    }
+
     public async Task<bool> SetCash(string apiKey, string serverId, ulong uniqueId, int amount, bool seperateConnection = false)
     {
         try
