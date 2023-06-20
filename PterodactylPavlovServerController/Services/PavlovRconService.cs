@@ -19,7 +19,7 @@ public class PavlovRconService
         this.configuration = configuration;
     }
 
-    private readonly Dictionary<string, bool> commandRuning = new();
+    private readonly Dictionary<string, bool> commandRunning = new();
 
     private async Task delay()
     {
@@ -31,17 +31,17 @@ public class PavlovRconService
         this.lastCommand = DateTime.Now;
     }
 
-    private async Task<T> execute<T>(Func<PavlovRcon, Task<T>> action, string apiKey, string serverId, bool separateConnectionion)
+    private async Task<T> execute<T>(Func<PavlovRcon, Task<T>> action, string apiKey, string serverId, bool separateConnection)
     {
-        lock (this.commandRuning)
+        lock (this.commandRunning)
         {
-            if (!this.commandRuning.ContainsKey(serverId))
+            if (!this.commandRunning.ContainsKey(serverId))
             {
-                this.commandRuning.Add(serverId, false);
+                this.commandRunning.Add(serverId, false);
             }
         }
 
-        while (!separateConnectionion && this.commandRuning[serverId])
+        while (!separateConnection && this.commandRunning[serverId])
         {
             Console.WriteLine($"Command running for server {serverId}, delaying");
             await Task.Delay(50);
@@ -49,17 +49,17 @@ public class PavlovRconService
 
         await this.delay();
 
-        if (!separateConnectionion)
+        if (!separateConnection)
         {
-            this.commandRuning[serverId] = true;
+            this.commandRunning[serverId] = true;
         }
 
         T result;
         try
         {
-            PavlovRcon rcon = await openConnection(apiKey, serverId, separateConnectionion);
+            PavlovRcon rcon = await openConnection(apiKey, serverId, separateConnection);
             result = await action(rcon);
-            if (separateConnectionion)
+            if (separateConnection)
             {
                 try
                 {
@@ -70,17 +70,17 @@ public class PavlovRconService
         }
         catch
         {
-            if (!separateConnectionion)
+            if (!separateConnection)
             {
-                this.commandRuning[serverId] = false;
+                this.commandRunning[serverId] = false;
             }
 
             throw;
         }
 
-        if (!separateConnectionion)
+        if (!separateConnection)
         {
-            this.commandRuning[serverId] = false;
+            this.commandRunning[serverId] = false;
         }
 
         return result;
