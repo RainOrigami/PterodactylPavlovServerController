@@ -68,19 +68,19 @@ public class WarmupRoundService
                             await this.pavlovRconService.GiveItem(apiKey, connection.ServerId, player.UniqueId!.Value, loadout.Gun!.Value.ToString());
                         }
                         catch { }
-                        await Task.Delay(100);
+                        await Task.Delay(50);
                         try
                         {
                             await this.pavlovRconService.GiveItem(apiKey, connection.ServerId, player.UniqueId!.Value, loadout.Item!.Value.ToString());
                         }
                         catch { }
-                        await Task.Delay(100);
+                        await Task.Delay(50);
                         try
                         {
                             await this.pavlovRconService.GiveItem(apiKey, connection.ServerId, player.UniqueId!.Value, loadout.Attachment!.Value.ToString());
                         }
                         catch { }
-                        await Task.Delay(100);
+                        await Task.Delay(50);
                     }
                 });
             }
