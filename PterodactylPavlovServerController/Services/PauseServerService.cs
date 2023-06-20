@@ -37,13 +37,13 @@ public class PauseServerService
 
         if (connection.ServerInfo!.CurrentPlayerCount() < 1 && connection.ServerInfo!.GameMode.ToUpper() == "SND")
         {
-            await Task.Delay(10);
+            await Task.Delay(50);
             isPaused = true;
             await pavlovRconService.PauseMatch(apiKey, serverId, 3600);
         }
         else if (isPaused)
         {
-            await Task.Delay(10);
+            await Task.Delay(50);
             await pavlovRconService.PauseMatch(apiKey, serverId, 0);
             isPaused = false;
         }
