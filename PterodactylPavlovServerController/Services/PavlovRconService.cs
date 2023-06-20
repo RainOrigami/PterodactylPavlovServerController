@@ -495,6 +495,23 @@ public class PavlovRconService
         }
     }
 
+    public async Task<bool> SetCash(string apiKey, string serverId, ulong uniqueId, int amount, bool seperateConnection = false)
+    {
+        try
+        {
+            return await execute(async (rcon) => (await new SetCashCommand(uniqueId, amount).ExecuteCommand(rcon)).SetCash, apiKey, serverId, seperateConnection);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return false;
+            }
+
+            throw;
+        }
+    }
+
     public async Task<string> CustomCommand(string apiKey, string serverId, string customCommand, bool separateConnection = false)
     {
         string command;
