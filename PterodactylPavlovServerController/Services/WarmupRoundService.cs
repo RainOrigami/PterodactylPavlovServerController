@@ -61,6 +61,8 @@ public class WarmupRoundService
                     Player[] players = await this.pavlovRconService.GetActivePlayers(apiKey, connection.ServerId);
                     foreach (Player player in players.Where(p => p.UniqueId.HasValue))
                     {
+                        await this.pavlovRconService.SetCash(apiKey, connection.ServerId, player.UniqueId!.Value, 0);
+                        await Task.Delay(50);
                         try
                         {
                             await this.pavlovRconService.GiveItem(apiKey, connection.ServerId, player.UniqueId!.Value, loadout.Gun!.Value.ToString());
