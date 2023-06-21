@@ -32,16 +32,22 @@ public class RotateMapsRotationService
             return;
         }
 
-        if (currentRotation.All(r => r.MapLabel.ToLower() != connection.ServerInfo!.MapLabel.ToLower() && r.GameMode.ToLower() != connection.ServerInfo!.GameMode.ToLower()))
+        if (!currentRotation.Any(r => r.MapLabel.ToLower() == connection.ServerInfo!.MapLabel.ToLower() && r.GameMode.ToLower() == connection.ServerInfo!.GameMode.ToLower()))
         {
             return;
         }
+
+        int iterations = 0;
 
         while (currentRotation[0].MapLabel.ToLower() != connection.ServerInfo!.MapLabel.ToLower() || currentRotation[0].GameMode.ToLower() != connection.ServerInfo!.GameMode.ToLower())
         {
             ServerMapModel old = currentRotation[0];
             currentRotation.RemoveAt(0);
             currentRotation.Add(old);
+            if (++iterations > currentRotation.Count + 2)
+            {
+                return;
+            }
         }
 
         await pavlovServerService.ApplyMapList(apiKey, serverId, currentRotation.ToArray());
