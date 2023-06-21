@@ -1,6 +1,6 @@
 # Pterodactyl Pavlov VR Server Controller
 
-ASP.net web API (.net 6) for controlling aspects of Pavlov VR servers in Pterodactyl
+ASP.net web API (.net 7) for controlling aspects of Pavlov VR servers in Pterodactyl
 
 This project is in ongoing development and WIP. Expect bugs. Only tested with SND and EFP servers so far!
 
