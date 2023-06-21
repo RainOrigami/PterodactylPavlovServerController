@@ -197,7 +197,7 @@
                     <li class="nav-item" role="presentation">
                         <a class="nav-link @(currentTab == "server" ? "active" : "")" style="font-size: 2em;" href="#server" @onclick="@(() => currentTab = "server")" @onclick:preventDefault>Server</a>
                     </li>
-                    @if (serverInfo.GameMode == GameMode.TTT.ToString())
+                    @if (serverInfo.GameMode.ToLower() == GameMode.TTT.ToString().ToLower())
                     {
                         <li class="nav-item" role="presentation">
                             <a class="nav-link @(currentTab == "ttt" ? "active" : "")" style="font-size: 2em;" href="#ttt" @onclick="@(() => currentTab = "ttt")" @onclick:preventDefault>TTT</a>

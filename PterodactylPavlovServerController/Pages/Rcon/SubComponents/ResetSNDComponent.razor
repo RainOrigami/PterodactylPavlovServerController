@@ -6,7 +6,7 @@
 @inject ApiKeyService ApiKey
 @inject AuditService AuditService
 
-@if (ServerInfo.GameMode == GameMode.SND.ToString())
+@if (ServerInfo.GameMode.ToLower() == GameMode.SND.ToString().ToLower())
 {
             <div class="me-2" style="width: 425px; display: inline-block; vertical-align: top;">
                 <h3 class="mb-0">Reset SND</h3>
