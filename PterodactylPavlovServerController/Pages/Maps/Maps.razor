@@ -187,10 +187,10 @@
         {
             rotationName = currentRotationModel.Name;
             currentRotation = currentRotationModel.MapsInRotation!.OrderBy(m => m.Order).Select(m => new ServerMapModel()
-            {
-                MapLabel = m.MapLabel,
-                GameMode = m.GameMode
-            }).ToArray();
+                {
+                    MapLabel = m.MapLabel,
+                    GameMode = m.GameMode,
+                    NameId = m.Map.NameId}).ToArray();
         }
 
         foreach (ServerMapModel serverMap in storedMapRotations.SelectMany(r => r.Maps).Union(currentRotation).Distinct())
