@@ -9,6 +9,7 @@ public class RotateMapsRotationService
     private readonly string apiKey;
     private readonly PavlovRconConnection connection;
     private readonly PavlovServerService pavlovServerService;
+    private string lastMap = string.Empty;
 
     public RotateMapsRotationService(string apiKey, PavlovRconConnection connection, PavlovServerService pavlovServerService)
     {
@@ -20,6 +21,13 @@ public class RotateMapsRotationService
 
     private async void Connection_OnServerInfoUpdated(string serverId)
     {
+        if (this.lastMap == this.connection.ServerInfo!.MapLabel)
+        {
+            return;
+        }
+
+        this.lastMap = this.connection.ServerInfo!.MapLabel;
+
         List<ServerMapModel> currentRotation = new(await pavlovServerService.GetCurrentMapRotation(apiKey, serverId));
 
         if (currentRotation.Count < 1)
