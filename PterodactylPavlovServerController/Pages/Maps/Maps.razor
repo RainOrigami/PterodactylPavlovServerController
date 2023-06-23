@@ -135,6 +135,18 @@
                             </EditForm>
                         </td>
                     </tr>
+                    <tr>
+                        <td colspan="3">
+                            <EditForm OnSubmit="@exportMaps" Model="@mapExport" style="width: 385px;">
+                                <button type="submit" class="btn btn-outline-warning form-control">Export map URLs</button>
+                                <div>
+                                    <pre>
+                                        @mapExport
+                                    </pre>
+                                </div>
+                            </EditForm>
+                        </td>
+                    </tr>
                 </tbody>
             </table>
             <input type="text" @bind-value="@rotationName" placeholder="Rotation name" style="width: 385px;" class="form-control" />
@@ -157,6 +169,7 @@
     private ServerMapModel[]? currentRotation = null;
     private MapRotationModel? currentRotationModel = null;
     private string rotationName = string.Empty;
+    private string mapExport = string.Empty;
 
     private readonly SetMapRotationModel setMapRotationModel = new();
     private readonly MapChangeInputModel addMapModel = new();
@@ -374,5 +387,16 @@
         this.currentRotation = Array.Empty<ServerMapModel>();
         this.currentRotationModel = null;
         this.rotationName = string.Empty;
+    }
+
+    public void exportMaps()
+    {
+        if (this.currentRotation == null || this.currentRotation.Length == 0)
+        {
+            Toast.ShowError("No maps to export");
+            return;
+        }
+
+        this.mapExport = string.Join(Environment.NewLine, currentRotation.Where(m => m.IsWorkshopMap).Select(m => m.Url));
     }
 }
