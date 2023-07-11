@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using PavlovVR_Rcon.Exceptions;
 using PavlovVR_Rcon.Models.Pavlov;
 using PterodactylPavlovServerController.Contexts;
 using PterodactylPavlovServerDomain.Models;
@@ -165,7 +166,16 @@ public class PavlovRconConnection : IDisposable
 
         List<PlayerDetail> newPlayerDetails = new();
 
-        PlayerDetail[] playerDetails = await pavlovRconService.GetActivePlayerDetails(ApiKey, ServerId);
+        PlayerDetail[] playerDetails;
+        try
+        {
+            playerDetails = await pavlovRconService.GetActivePlayerDetails(ApiKey, ServerId);
+        }
+        catch (CommandFailedException)
+        {
+            return;
+        }
+
         if (playerDetails == null)
         {
             throw new Exception("Failed to fetch player details");
