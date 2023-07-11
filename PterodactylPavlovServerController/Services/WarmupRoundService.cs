@@ -10,7 +10,6 @@ public class WarmupRoundService
     private readonly string apiKey;
     private readonly PavlovRconConnection connection;
     private readonly PavlovRconService pavlovRconService;
-    private readonly IConfiguration configuration;
     private readonly PavlovServerContext pavlovServerContext;
 
     private string? lastMap = null;
@@ -24,7 +23,6 @@ public class WarmupRoundService
         this.apiKey = apiKey;
         this.connection = connection;
         this.pavlovRconService = pavlovRconService;
-        this.configuration = configuration;
         this.pavlovServerContext = new(configuration);
 
         this.connection.OnServerInfoUpdated += this.Connection_OnServerInfoUpdated;
@@ -33,7 +31,7 @@ public class WarmupRoundService
     private async void Connection_OnServerInfoUpdated(string serverId)
     {
         ServerSettings? warmupEnabled = await this.pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == connection.ServerId && s.SettingName == ServerSettings.SETTING_WARMUP_ENABLED);
-        if (lastMap == null || lastRoundState == null || this.connection.ServerInfo!.GameMode != "SND" || warmupEnabled == null || !bool.TryParse(warmupEnabled.SettingValue, out bool isWarmupEnabled) || !isWarmupEnabled)
+        if (lastMap == null || lastRoundState == null || this.connection.ServerInfo!.GameMode.ToUpper() != "SND" || warmupEnabled == null || !bool.TryParse(warmupEnabled.SettingValue, out bool isWarmupEnabled) || !isWarmupEnabled)
         {
             lastMap = this.connection.ServerInfo!.MapLabel;
             lastRoundState = this.connection.ServerInfo.RoundState;
