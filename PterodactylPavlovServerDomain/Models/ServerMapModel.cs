@@ -18,7 +18,7 @@ public class ServerMapModel : IEqualityComparer<ServerMapModel>
     [NotMapped]
     public long WorkshopId => this.IsWorkshopMap ? long.Parse(this.MapLabel[3..]) : 0;
     [NotMapped]
-    public string Url => this.IsWorkshopMap ? $"https://mod.io/g/pavlov/m/{this.NameId}" : $"http://wiki.pavlov-vr.com/index.php?title=Default_Maps#{this.MapLabel}";
+    public string Url => this.IsWorkshopMap ? $"https://mod.io/g/pavlov/m/{this.NameId}" : $"http://pavlovwiki.com/index.php/Default_Maps#{this.MapLabel}";
 
     public ICollection<MapRotationModel> Rotations { get; set; }
     public List<MapInMapRotationModel> MapsInRotation { get; set; }

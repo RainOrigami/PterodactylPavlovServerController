@@ -887,13 +887,25 @@ public class PavlovStatisticsService : IDisposable
             MapWorkshopModel? bestMap = null;
             if (playerStats.BestMap != null)
             {
-                try
+                if (playerStats.BestMap.ToLower().StartsWith("ugc"))
                 {
-                    bestMap = this.mapSourceService.GetMapDetail(long.Parse(playerStats.BestMap[3..]));
+                    try
+                    {
+                        bestMap = this.mapSourceService.GetMapDetail(long.Parse(playerStats.BestMap[3..]));
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Could not get map detail for {playerStats.BestMap}: {ex.Message}");
+                    }
                 }
-                catch (Exception ex)
+                else
                 {
-                    Console.WriteLine($"Could not get map detail for {playerStats.BestMap}: {ex.Message}");
+                    bestMap = new()
+                    {
+                        Name = playerStats.BestMap,
+                        ImageURL = "https://pavlov.bloodisgood.net/gunimages/unknown.png",
+                        URL = "http://pavlovwiki.com/index.php/Default_Maps"
+                    };
                 }
             }
 
