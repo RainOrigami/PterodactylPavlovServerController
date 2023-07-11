@@ -503,7 +503,7 @@ public class PavlovStatisticsService : IDisposable
         {
             honorableMentions.Add(await createPlayerMentionStat(playerStats, "Most assists", "Assists", p => p.Assists, p => p.TotalScore, false, (v, p) => $"{Math.Round(v, 0)}"));
             honorableMentions.Add(await createPlayerMentionStat(playerStats, "Highest total score", "Score", p => p.TotalScore, p => p.Kills, false, (v, p) => $"{Math.Round(v, 0)}"));
-            honorableMentions.Add(await createPlayerMentionStat(playerStats, "Highest average score", "Score", p => p.AverageScore, p => p.TotalScore, false, (v, p) => $"{Math.Round(v, 0)}"));
+            honorableMentions.Add(await createPlayerMentionStat(playerStats, "Highest average score", "Score", p => p.RoundsPlayed < 5 ? 0 : p.AverageScore, p => p.TotalScore, false, (v, p) => $"{Math.Round(v, 0)}"));
             honorableMentions.Add(await createPlayerMentionStat(playerStats, "Most bomb plants", "Plants", p => p.BombsPlanted, p => p.TotalScore, false, (v, p) => $"{Math.Round(v, 0)}"));
             honorableMentions.Add(await createPlayerMentionStat(playerStats, "Most bomb defuses", "Defuses", p => p.BombsDefused, p => p.TotalScore, false, (v, p) => $"{Math.Round(v, 1)}"));
         }
