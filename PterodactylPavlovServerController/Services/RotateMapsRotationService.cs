@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using PterodactylPavlovServerController.Contexts;
+using PterodactylPavlovServerDomain.Extensions;
 using PterodactylPavlovServerDomain.Models;
 
 namespace PterodactylPavlovServerController.Services;
@@ -22,6 +23,11 @@ public class RotateMapsRotationService
     private async void Connection_OnServerInfoUpdated(string serverId)
     {
         if (this.lastMap == this.connection.ServerInfo!.MapLabel)
+        {
+            return;
+        }
+
+        if ((this.connection.PlayerListPlayers?.Count ?? 0) <= 2 || this.connection.ServerInfo!.RoundState != "Started")
         {
             return;
         }
