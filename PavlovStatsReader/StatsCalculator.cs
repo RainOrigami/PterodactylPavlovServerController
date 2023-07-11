@@ -115,7 +115,7 @@ public class StatsCalculator
                 TotalAssists = teamPlayerStatsStats.Where(p => p.StatType == "Assist").Sum(p => p.Amount),
                 TotalDeaths = teamPlayerStatsStats.Where(p => p.StatType == "Death").Sum(p => p.Amount),
                 TotalHeadshots = teamPlayerStatsStats.Where(p => p.StatType == "Headshot").Sum(p => p.Amount),
-                TotalTeamkills = statsContext.KillData.Where(p => p.KilledTeamID == p.KillerTeamID).Count(p => p.KillerTeamID == i),
+                TotalTeamkills = statsContext.KillData.Where(p => p.ServerId == serverId && p.KilledTeamID == p.KillerTeamID).Count(p => p.KillerTeamID == i),
                 TotalVictories = winCount,
                 BestPlayer = bestPlayer?.Player,
                 BestPlayerAverageScore = bestPlayer?.AvgScore ?? 0d,
@@ -180,7 +180,7 @@ public class StatsCalculator
                 int kills = playerGrouping.Sum(p => p.Stats.FirstOrDefault(s => s.StatType == "Kill")?.Amount ?? 0);
                 int deaths = playerGrouping.Sum(p => p.Stats.FirstOrDefault(s => s.StatType == "Death")?.Amount ?? 0);
                 int assists = playerGrouping.Sum(p => p.Stats.FirstOrDefault(s => s.StatType == "Assist")?.Amount ?? 0);
-                int teamKills = statsContext.KillData.Count(d => d.Killer == playerGrouping.Key && d.KillerTeamID == d.KilledTeamID);
+                int teamKills = statsContext.KillData.Count(d => d.ServerId == serverId && d.Killer == playerGrouping.Key && d.KillerTeamID == d.KilledTeamID);
                 int headshots = playerGrouping.Sum(p => p.Stats.FirstOrDefault(s => s.StatType == "Headshot")?.Amount ?? 0);
                 int bombsPlanted = playerGrouping.Sum(p => p.Stats.FirstOrDefault(s => s.StatType == "BombPlanted")?.Amount ?? 0);
                 int bombsDefused = playerGrouping.Sum(p => p.Stats.FirstOrDefault(s => s.StatType == "BombDefused")?.Amount ?? 0);
