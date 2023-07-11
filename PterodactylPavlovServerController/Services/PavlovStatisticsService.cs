@@ -496,6 +496,7 @@ public class PavlovStatisticsService : IDisposable
             await createPlayerMentionStat(playerStats, "Most kills", "Kills", p => p.Kills, p => p.TotalScore, false, (v,p) => $"{Math.Round(v, 0)}"),
             await createPlayerMentionStat(playerStats, "Most headshot kills", "HS kills", p => p.Headshots, p => p.Kills, false, (v,p) => $"{Math.Round(v, 0)}"),
             await createPlayerMentionStat(playerStats, "Highest HS-kill to kill ratio", "HSKR",  p => p.Kills > 10 ? (double)p.Headshots / p.Kills : 0, p => p.Kills, false, (v,p) => $"{Math.Round(v, 1):0.0}"),
+            await createPlayerMentionStat(playerStats, "Most chickens killed", "Dead birds",  p => p.ChickensKilled, p => p.Kills, false, (v,p) => $"{Math.Round(v, 0)}"),
         };
 
         if (serverStatsType == "SND")
@@ -867,7 +868,7 @@ public class PavlovStatisticsService : IDisposable
         }
         playerStatValues.Add("HS kills", new StatsOwnPercentageModel(playerStats.Headshots.ToString(), Math.Round(this.calculateSafePercent(playerStats.Headshots, playerStats.Kills), 1)));
         playerStatValues.Add("Suicides", playerStats.Suicides.ToString());
-
+        playerStatValues.Add("Chickens", playerStats.ChickensKilled.ToString());
         if (serverStatsType == "SND")
         {
             playerStatValues.Add("Avg. points", $"{Math.Round(playerStats.AverageScore, 0)}");

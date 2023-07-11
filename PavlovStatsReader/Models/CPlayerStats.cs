@@ -20,4 +20,5 @@ public class CPlayerStats : CBaseStats
     public string? BestMapGameMode { get; set; }
     public double BestMapAverageScore { get; set; }
     public int RoundsPlayed { get; set; }
+    public int ChickensKilled { get; set; }
 }
