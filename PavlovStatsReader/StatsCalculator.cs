@@ -313,14 +313,6 @@ public class StatsCalculator
 
     private int calculatePlayerScore(PlayerStats playerStats)
     {
-        Stats? kills = playerStats.Stats.FirstOrDefault(s => s.StatType == "Kill");
-        Stats? deaths = playerStats.Stats.FirstOrDefault(s => s.StatType == "Death");
-        Stats? assists = playerStats.Stats.FirstOrDefault(s => s.StatType == "Assist");
-        Stats? headshots = playerStats.Stats.FirstOrDefault(s => s.StatType == "Headshot");
-        Stats? teamkills = playerStats.Stats.FirstOrDefault(s => s.StatType == "TeamKill");
-        Stats? plants = playerStats.Stats.FirstOrDefault(s => s.StatType == "BombPlanted");
-        Stats? defuses = playerStats.Stats.FirstOrDefault(s => s.StatType == "BombDefused");
-
-        return (kills?.Amount ?? 0) * StatsCalculator.SCORE_WEIGHT_KILL + (deaths?.Amount ?? 0) * StatsCalculator.SCORE_WEIGHT_DEATH + (assists?.Amount ?? 0) * StatsCalculator.SCORE_WEIGHT_ASSIST + (headshots?.Amount ?? 0) * StatsCalculator.SCORE_WEIGHT_HEADSHOT + (teamkills?.Amount ?? 0) * StatsCalculator.SCORE_WEIGHT_TEAMKILL + (plants?.Amount ?? 0) * StatsCalculator.SCORE_WEIGHT_PLANT + (defuses?.Amount ?? 0) * StatsCalculator.SCORE_WEIGHT_DEFUSE;
+        return playerStats.Stats.FirstOrDefault(s => s.StatType == "Experience")?.Amount ?? 0;
     }
 }
