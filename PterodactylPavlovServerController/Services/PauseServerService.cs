@@ -35,7 +35,7 @@ public class PauseServerService
             return;
         }
 
-        if (connection.ServerInfo!.CurrentPlayerCount() < 1 && connection.ServerInfo!.GameMode.ToUpper() == "SND")
+        if ((connection.PlayerListPlayers?.Count ?? 0) < 2 && connection.ServerInfo!.GameMode.ToUpper() == "SND")
         {
             await Task.Delay(50);
             isPaused = true;
