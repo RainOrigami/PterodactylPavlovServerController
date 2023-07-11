@@ -48,7 +48,7 @@ public class StatsCalculator
         int totalKills = this.statsContext.KillData.Count(d => d.ServerId == serverId);
         int totalHeadshots = this.statsContext.KillData.Count(d => d.ServerId == serverId && d.Headshot);
         int totalAssists = this.statsContext.EndOfMapStats.Where(m => m.ServerId == serverId).SelectMany(m => m.PlayerStats).SelectMany(m => m.Stats).Where(m => m.StatType == "Assist").Sum(m => m.Amount);
-        int totalTeamkills = this.statsContext.EndOfMapStats.Where(m => m.ServerId == serverId).SelectMany(m => m.PlayerStats).SelectMany(m => m.Stats).Where(m => m.StatType == "TeamKill").Sum(m => m.Amount);
+        int totalTeamkills = this.statsContext.KillData.Where(m => m.ServerId == serverId).Count(m => m.KilledTeamID == m.KillerTeamID);
         int totalBombPlants = this.statsContext.BombData.Count(m => m.ServerId == serverId && m.BombInteraction == "BombPlanted");
         int totalBombDefuses = this.statsContext.BombData.Count(m => m.ServerId == serverId && m.BombInteraction == "BombDefused");
         int totalBombExplosions = this.statsContext.BombData.Count(m => m.ServerId == serverId && m.BombInteraction == "BombExploded");
@@ -115,7 +115,7 @@ public class StatsCalculator
                 TotalAssists = teamPlayerStatsStats.Where(p => p.StatType == "Assist").Sum(p => p.Amount),
                 TotalDeaths = teamPlayerStatsStats.Where(p => p.StatType == "Death").Sum(p => p.Amount),
                 TotalHeadshots = teamPlayerStatsStats.Where(p => p.StatType == "Headshot").Sum(p => p.Amount),
-                TotalTeamkills = teamPlayerStatsStats.Where(p => p.StatType == "TeamKill").Sum(p => p.Amount),
+                TotalTeamkills = statsContext.KillData.Where(p => p.KilledTeamID == p.KillerTeamID).Count(p => p.KillerTeamID == i),
                 TotalVictories = winCount,
                 BestPlayer = bestPlayer?.Player,
                 BestPlayerAverageScore = bestPlayer?.AvgScore ?? 0d,
@@ -180,7 +180,7 @@ public class StatsCalculator
                 int kills = playerGrouping.Sum(p => p.Stats.FirstOrDefault(s => s.StatType == "Kill")?.Amount ?? 0);
                 int deaths = playerGrouping.Sum(p => p.Stats.FirstOrDefault(s => s.StatType == "Death")?.Amount ?? 0);
                 int assists = playerGrouping.Sum(p => p.Stats.FirstOrDefault(s => s.StatType == "Assist")?.Amount ?? 0);
-                int teamKills = playerGrouping.Sum(p => p.Stats.FirstOrDefault(s => s.StatType == "TeamKill")?.Amount ?? 0);
+                int teamKills = statsContext.KillData.Count(d => d.Killer == playerGrouping.Key && d.KillerTeamID == d.KilledTeamID);
                 int headshots = playerGrouping.Sum(p => p.Stats.FirstOrDefault(s => s.StatType == "Headshot")?.Amount ?? 0);
                 int bombsPlanted = playerGrouping.Sum(p => p.Stats.FirstOrDefault(s => s.StatType == "BombPlanted")?.Amount ?? 0);
                 int bombsDefused = playerGrouping.Sum(p => p.Stats.FirstOrDefault(s => s.StatType == "BombDefused")?.Amount ?? 0);
@@ -234,7 +234,7 @@ public class StatsCalculator
                         BestMap = bestMap,
                         BestMapGameMode = bestMapGameMode,
                         BestMapAverageScore = bestMapAverageScore,
-                        RoundsPlayed = roundsPlayed
+                        RoundsPlayed = roundsPlayed,
                         ChickensKilled = chickensKilled,
                     });
                 }
