@@ -70,9 +70,9 @@
         <div class="card-group d-flex flex-wrap">
             @foreach ((MapWorkshopModel? workshopModel, CMapStats mapStats, Dictionary<string, object> items) in this.MapStatistics)
             {
-                string imageUrl = "";
+                string imageUrl = "https://pavlov.bloodisgood.net/gunimages/unknown.png";
                 string mapName = mapStats.MapId;
-                string mapUrl = $"http://wiki.pavlov-vr.com/index.php?title=Default_Maps#{mapStats.MapId}";
+                string mapUrl = $"http://pavlovwiki.com/index.php/Default_Maps#{mapStats.MapId}";
 
                 if (workshopModel != null)
                 {
@@ -155,17 +155,6 @@
     </p>
     @if (ServerStatsType == "SND")
     {
-        <h3 class="mt-3">Score</h3>
-        <p>
-            Score is calculated using the following formula:<br />
-            Kills * @(StatsCalculator.SCORE_WEIGHT_KILL) +<br />
-            Deaths * @(StatsCalculator.SCORE_WEIGHT_DEATH) +<br />
-            Assists * @(StatsCalculator.SCORE_WEIGHT_ASSIST) +<br />
-            Headshots * @(StatsCalculator.SCORE_WEIGHT_HEADSHOT) +<br />
-            Teamkills * @(StatsCalculator.SCORE_WEIGHT_TEAMKILL) +<br />
-            Bomb Plants * @(StatsCalculator.SCORE_WEIGHT_PLANT) +<br />
-            Bomb Defuses * @(StatsCalculator.SCORE_WEIGHT_DEFUSE)
-        </p>
         <h3>Some values don't seem to add up</h3>
         <p>You may notice that some values don't seem to add up, like Team Blue Kills + Team Red Kills is not equal to Total Kills. This is caused because some statistics have filters applied, like only counting matches with at least two players or with a combined Team Blue and Team Red score of at least 10 (draws and skipped maps). Prerounds often are omitted as well. Total kills however counts each single kill.</p>
     }
