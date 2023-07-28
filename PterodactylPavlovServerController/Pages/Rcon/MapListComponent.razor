@@ -31,7 +31,7 @@
                 MapsState.Value.MapDetails.TryGetValue(mapRow.WorkshopId, out mapRowDetail);
             }
 
-            <div class="card bg-dark me-2 mb-2" style="display: inline-block; width: 256px;@(ServerInfo.MapLabel == mapRow.MapLabel ? " background-color: #7D7 !important; color: #444;" : "")">
+            <div class="card bg-dark me-2 mb-2" style="display: inline-block; width: 256px;@(ServerInfo.MapLabel.ToLower() == mapRow.MapLabel.ToLower() ? " background-color: #7D7 !important; color: #444;" : "")">
                 <a href="#" @onclick="() => changeMap(mapRow)" @onclick:preventDefault class="text-decoration-none">
                     <img class="card-img-top" src="@(mapRowDetail == null ? "https://pavlov.bloodisgood.net/gunimages/unknown.png" : mapRowDetail.ImageURL)" alt="@mapRow.MapLabel" />
                 </a>
