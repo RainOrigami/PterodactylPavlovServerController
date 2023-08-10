@@ -17,6 +17,7 @@ public class WarmupRoundService
     private bool mapJustChanged = false;
     private bool isWarmupRound = false;
     private bool isWarmupRoundEnding = false;
+    private List<string> usedLoadouts = new();
 
     public WarmupRoundService(string apiKey, PavlovRconConnection connection, PavlovRconService pavlovRconService, IConfiguration configuration)
     {
@@ -48,37 +49,83 @@ public class WarmupRoundService
             mapJustChanged = false;
             isWarmupRound = true;
 
-            WarmupRoundLoadoutModel[] loadouts = this.pavlovServerContext.WarmupLoadouts.Where(l => l.ServerId == connection.ServerId).ToArray();
+            WarmupRoundLoadoutModel[] loadouts = this.pavlovServerContext.WarmupLoadouts.Where(l => l.ServerId == connection.ServerId && !usedLoadouts.Contains(l.Name)).ToArray();
+            if (loadouts.Length == 0)
+            {
+                usedLoadouts.Clear();
+                loadouts = this.pavlovServerContext.WarmupLoadouts.Where(l => l.ServerId == connection.ServerId).ToArray();
+            }
             if (loadouts.Length > 0)
             {
                 WarmupRoundLoadoutModel loadout = loadouts[Random.Shared.Next(loadouts.Count())];
+                usedLoadouts.Add(loadout.Name);
 
                 await Task.Run(async () =>
                 {
-                    await Task.Delay(1000);
-                    Player[] players = await this.pavlovRconService.GetActivePlayers(apiKey, connection.ServerId);
-                    foreach (Player player in players.Where(p => p.UniqueId.HasValue))
+                    List<ulong> playersToEquip = new();
+
+                    int waitForPlayersTimeout = 0;
+                    while (playersToEquip.Count == 0 && waitForPlayersTimeout < 16)
                     {
-                        await this.pavlovRconService.SetCash(apiKey, connection.ServerId, player.UniqueId!.Value, 0);
-                        await Task.Delay(50);
-                        try
+                        playersToEquip = (await this.pavlovRconService.GetActivePlayerDetails(apiKey, connection.ServerId))
+                    .Where(p => !p.Dead)
+                        .Select(p => p.UniqueId)
+                        .ToList();
+
+                        if (playersToEquip.Count == 0)
                         {
-                            await this.pavlovRconService.GiveItem(apiKey, connection.ServerId, player.UniqueId!.Value, loadout.Gun!.Value.ToString());
+                            await Task.Delay(250);
+                            waitForPlayersTimeout++;
                         }
-                        catch { }
-                        await Task.Delay(50);
-                        try
+                    }
+
+                    List<ulong> equippedPlayers = new();
+
+                    while (playersToEquip.Count > 0)
+                    {
+                        foreach (ulong uniqueId in playersToEquip)
                         {
-                            await this.pavlovRconService.GiveItem(apiKey, connection.ServerId, player.UniqueId!.Value, loadout.Item!.Value.ToString());
+                            await this.pavlovRconService.SetCash(apiKey, connection.ServerId, uniqueId, 0);
+                            await Task.Delay(25);
                         }
-                        catch { }
-                        await Task.Delay(50);
-                        try
+
+                        foreach (ulong uniqueId in playersToEquip)
                         {
-                            await this.pavlovRconService.GiveItem(apiKey, connection.ServerId, player.UniqueId!.Value, loadout.Attachment!.Value.ToString());
+                            try
+                            {
+                                await this.pavlovRconService.GiveItem(apiKey, connection.ServerId, uniqueId, loadout.Gun!.Value.ToString());
+                            }
+                            catch { }
+                            await Task.Delay(50);
+                            try
+                            {
+                                await this.pavlovRconService.GiveItem(apiKey, connection.ServerId, uniqueId, loadout.Item!.Value.ToString());
+                            }
+                            catch { }
+                            await Task.Delay(50);
+                            try
+                            {
+                                await this.pavlovRconService.GiveItem(apiKey, connection.ServerId, uniqueId, loadout.Attachment!.Value.ToString());
+                            }
+                            catch { }
+                            await Task.Delay(50);
+                            equippedPlayers.Add(uniqueId);
                         }
-                        catch { }
-                        await Task.Delay(50);
+
+                        waitForPlayersTimeout = 0;
+                        while (playersToEquip.Count == 0 && waitForPlayersTimeout < 16)
+                        {
+                            playersToEquip = (await this.pavlovRconService.GetActivePlayerDetails(apiKey, connection.ServerId))
+                            .Where(p => !p.Dead && !equippedPlayers.Contains(p.UniqueId))
+                            .Select(p => p.UniqueId)
+                            .ToList();
+
+                            if (playersToEquip.Count == 0)
+                            {
+                                await Task.Delay(250);
+                                waitForPlayersTimeout++;
+                            }
+                        }
                     }
                 });
             }
