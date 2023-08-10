@@ -102,6 +102,11 @@ public class PavlovRconService
         return await execute(async (rcon) => (await new InspectAllCommand().ExecuteCommand(rcon)).InspectList, apiKey, serverId, separateConnection);
     }
 
+    public async Task<bool> SetBalanceTableURL(string apiKey, string serverId, string balanceTableUrl, bool separateConnection = false)
+    {
+        return await execute(async (rcon) => (await new SetBalanceTableURLCommand(balanceTableUrl).ExecuteCommand(rcon)).SetBalanceTableURL, apiKey, serverId, separateConnection);
+    }
+
     public async Task<ServerInfo> GetServerInfo(string apiKey, string serverId, bool separateConnection = false)
     {
         return await execute(async (rcon) => (await new ServerInfoCommand().ExecuteCommand(rcon)).ServerInfo, apiKey, serverId, separateConnection);
