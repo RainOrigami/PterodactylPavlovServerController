@@ -7,4 +7,5 @@ public class CGunStats : CBaseStats
     public int Headshots { get; set; }
     public ulong? BestPlayer { get; set; }
     public int BestPlayerKills { get; set; }
+    public int TeamKills { get; set; }
 }

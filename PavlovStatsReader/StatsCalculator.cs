@@ -53,6 +53,8 @@ public class StatsCalculator
         int totalBombDefuses = this.statsContext.BombData.Count(m => m.ServerId == serverId && m.BombInteraction == "BombDefused");
         int totalBombExplosions = this.statsContext.BombData.Count(m => m.ServerId == serverId && m.BombInteraction == "BombExploded");
         int totalChickensKilled = this.statsContext.EndOfMapStats.Where(m => m.ServerId == serverId).SelectMany(m => m.PlayerStats).SelectMany(m => m.Stats).Where(m => m.StatType == "ChickenKilled").Sum(m => m.Amount);
+        int totalPoints = this.statsContext.EndOfMapStats.Where(m => m.ServerId == serverId).SelectMany(m => m.PlayerStats).SelectMany(m => m.Stats).Where(s => s.StatType == "Experience").Sum(m => m.Amount);
+        int totalRoundsPlayed = this.statsContext.EndOfMapStats.Where(m => m.ServerId == serverId).Sum(m => m.Team0Score + m.Team1Score);
 
         var mostKillsByGun = this.statsContext.KillData.Where(k => k.ServerId == serverId).GroupBy(k => k.KilledBy).Select(k => new
         {
@@ -75,6 +77,8 @@ public class StatsCalculator
             TotalUniqueMaps = uniqueMapCount,
             TotalUniquePlayers = uniquePlayerCount,
             TotalChickensKilled = totalChickensKilled,
+            TotalPoints = totalPoints,
+            TotalRoundsPlayed = totalRoundsPlayed,
         };
     }
 
@@ -140,6 +144,7 @@ public class StatsCalculator
 
                 int kills = gunStats.Count();
                 int headshots = gunStats.Count(g => g.Headshot);
+                int teamKills = gunStats.Count(g => g.KillerTeamID == g.KilledTeamID);
 
                 var mostKills = gunStats.GroupBy(g => g.Killer).Select(g => new
                 {
@@ -156,6 +161,7 @@ public class StatsCalculator
                         Headshots = headshots,
                         BestPlayer = mostKills?.Player,
                         BestPlayerKills = mostKills?.Count ?? 0,
+                        TeamKills = teamKills,
                     });
                 }
             }

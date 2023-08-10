@@ -586,12 +586,15 @@ public class PavlovStatisticsService : IDisposable
             serverCountStats.Add("Unique maps/modes", serverStats.TotalUniqueMaps.ToString());
             serverCountStats.Add("Total matches", serverStats.TotalMatchesPlayed.ToString());
             serverCountStats.Add("Unique players", serverStats.TotalUniquePlayers.ToString());
+            serverCountStats.Add("Total rounds", serverStats.TotalRoundsPlayed.ToString());
         }
         else if (serverStatsType == "EFP")
         {
             serverCountStats.Add("Total cash", $"${ToKMB(allStats.OfType<CEFPPlayerCashModel>().Sum(s => s.Cash))}");
             serverCountStats.Add("Unique players", allStats.OfType<CEFPPlayerCashModel>().Count().ToString());
         }
+
+        serverCountStats.Add("Total points", ToKMB(serverStats.TotalPoints));
 
         return serverCountStats;
     }
@@ -720,6 +723,7 @@ public class PavlovStatisticsService : IDisposable
         {
             gunStatValues.Add("Best player", new StatsLinkModel($"player-{gunStats.BestPlayer}", bestPlayerUsername ?? gunStats.BestPlayer.Value.ToString(), new StatsOwnPercentageModel($"{gunStats.BestPlayerKills} kills", Math.Round(this.calculateSafePercent(gunStats.BestPlayerKills, gunStats.Kills), 1))));
         }
+        gunStatValues.Add("Teamkills", new StatsOwnPercentageModel(gunStats.TeamKills.ToString(), Math.Round(this.calculateSafePercent(gunStats.TeamKills, gunStats.Kills), 1)));
 
         return gunStatValues;
     }

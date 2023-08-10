@@ -15,4 +15,6 @@ public class CServerStats : CBaseStats
     public string? MostPopularGun { get; set; }
     public int MostPopularGunKillCount { get; set; }
     public int TotalChickensKilled { get; set; }
+    public int TotalRoundsPlayed { get; set; }
+    public int TotalPoints { get; set; }
 }
