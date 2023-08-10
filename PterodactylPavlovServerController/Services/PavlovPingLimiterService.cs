@@ -14,6 +14,7 @@ public class PavlovPingLimiterService
     private readonly AuditService auditService;
 
     private readonly Dictionary<ulong, Queue<(DateTime Timestamp, int Ping)>> playerPingHistory = new();
+    private readonly Dictionary<ulong, DateTime> kickQueue = new();
 
     public PavlovPingLimiterService(string apiKey, PavlovRconConnection connection, PavlovRconService pavlovRconService, AuditService auditService, IConfiguration configuration)
     {
@@ -69,10 +70,19 @@ public class PavlovPingLimiterService
                 double averagePing = this.playerPingHistory[playerDetail.UniqueId].Average(p => p.Ping);
                 if (averagePing > pingKickThreshold)
                 {
+                    if (this.kickQueue.TryGetValue(playerDetail.UniqueId, out DateTime lastKickTime) && lastKickTime > DateTime.Now.AddSeconds(-pingKickMeasureTime))
+                    {
+                        continue;
+                    }
+
                     try
                     {
                         await auditService.Add(this.connection.ServerId, $"Kicked player {playerDetail.PlayerName} ({playerDetail.UniqueId}) for high ping ({averagePing} > {pingKickThreshold}) over {pingKickMeasureTime} seconds.");
                         await this.pavlovRconService.KickPlayer(this.apiKey, this.connection.ServerId, playerDetail.UniqueId);
+                        if (!this.kickQueue.ContainsKey(playerDetail.UniqueId))
+                        {
+                            this.kickQueue.Add(playerDetail.UniqueId, DateTime.Now);
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -85,6 +95,10 @@ public class PavlovPingLimiterService
         foreach (ulong uniqueId in this.playerPingHistory.Keys.ToList())
         {
             if (!this.connection.PlayerDetails.ContainsKey(uniqueId))
+            {
+                this.playerPingHistory.Remove(uniqueId);
+            }
+            if (this.playerPingHistory.ContainsKey(uniqueId))
             {
                 this.playerPingHistory.Remove(uniqueId);
             }
