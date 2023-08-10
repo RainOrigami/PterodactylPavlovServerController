@@ -2,6 +2,7 @@
 using PavlovVR_Rcon.Models.Pavlov;
 using PterodactylPavlovServerController.Contexts;
 using PterodactylPavlovServerDomain.Models;
+using System.Numerics;
 
 namespace PterodactylPavlovServerController.Services;
 
@@ -17,6 +18,8 @@ public class WarmupRoundService
     private bool mapJustChanged = false;
     private bool isWarmupRound = false;
     private bool isWarmupRoundEnding = false;
+    private bool isWarmupRoundStarted = false;
+
     private List<string> usedLoadouts = new();
 
     public WarmupRoundService(string apiKey, PavlovRconConnection connection, PavlovRconService pavlovRconService, IConfiguration configuration)
@@ -48,6 +51,8 @@ public class WarmupRoundService
         {
             mapJustChanged = false;
             isWarmupRound = true;
+
+            await this.pavlovRconService.SetBalanceTableURL(apiKey, connection.ServerId, "RainOrigami/PPSCBalancingTable/Warmup_NoTK");
 
             WarmupRoundLoadoutModel[] loadouts = this.pavlovServerContext.WarmupLoadouts.Where(l => l.ServerId == connection.ServerId && !usedLoadouts.Contains(l.Name)).ToArray();
             if (loadouts.Length == 0)
@@ -131,9 +136,27 @@ public class WarmupRoundService
             }
         }
 
+        if (lastRoundState == "StandBy" && this.connection.ServerInfo.RoundState == "Started" && isWarmupRound && !isWarmupRoundStarted)
+        {
+            isWarmupRoundStarted = true;
+
+#pragma warning disable CS4014
+            Task.Run(async () =>
+#pragma warning restore CS4014
+            {
+                await Task.Delay(4000);
+                if (this.isWarmupRound && this.connection.ServerInfo.RoundState == "Started" && isWarmupRoundStarted)
+                {
+                    await this.pavlovRconService.SetBalanceTableURL(apiKey, connection.ServerId, "RainOrigami/PPSCBalancingTable/Warmup_NoStarterPistol");
+                }
+            });
+        }
+
         if (lastRoundState == "Started" && this.connection.ServerInfo.RoundState == "Ended" && isWarmupRound)
         {
             isWarmupRoundEnding = true;
+            isWarmupRoundStarted = false;
+            await this.pavlovRconService.SetBalanceTableURL(apiKey, connection.ServerId, "vankruptgames/BalancingTable/Beta_5.1");
         }
 
         if (lastRoundState == "Ended" && this.connection.ServerInfo!.RoundState == "StandBy" && isWarmupRound && isWarmupRoundEnding)
