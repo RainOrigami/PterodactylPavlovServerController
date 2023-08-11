@@ -116,6 +116,7 @@ public class WarmupRoundService
                             await Task.Delay(50);
                             equippedPlayers.Add(uniqueId);
                         }
+                        playersToEquip.Clear();
 
                         waitForPlayersTimeout = 0;
                         while (playersToEquip.Count == 0 && waitForPlayersTimeout < 16)
