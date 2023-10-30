@@ -10,7 +10,7 @@ Screenshots RCON tool:
 ![image](https://user-images.githubusercontent.com/51454971/207735949-8b683379-bfce-4e0d-a8ba-a9e38a59b5ca.png)
 ![image](https://user-images.githubusercontent.com/51454971/207370777-2a82d388-e559-4b3f-bd51-60cf268e6f56.png)
 ![image](https://user-images.githubusercontent.com/51454971/207370942-1db451c3-c9ba-4c65-ac33-eb622347433b.png)
-![image](https://user-images.githubusercontent.com/51454971/207371400-bacc1678-c265-49dc-93d8-a50d97a7dacb.png)
+![image](https://github.com/RainOrigami/PterodactylPavlovServerController/assets/51454971/eaf8352d-51be-4745-b8c2-669c585c7883)
 
 Screenshot audit log:
 ![image](https://user-images.githubusercontent.com/51454971/207370120-c13f4af1-d1eb-46b7-92ea-b19e116fe4a7.png)
