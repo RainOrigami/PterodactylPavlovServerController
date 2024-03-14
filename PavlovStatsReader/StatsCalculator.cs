@@ -1,5 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using PavlovStatsReader.Models;
+using System.Diagnostics;
+using System.Linq;
 
 namespace PavlovStatsReader;
 
@@ -23,20 +25,103 @@ public class StatsCalculator
 
     public CBaseStats[] CalculateStats(string serverId)
     {
+        Console.WriteLine("Prefetching relevant data for stats calculation");
+
+        List<KillData> killData = new();
+        List<BombData> bombData = new();
+        List<RoundEnd> roundEnds = new();
+
+        Stopwatch sw = Stopwatch.StartNew();
+
+        DateTime? roundStartTime = null;
+        Console.WriteLine("Reading...");
+        RoundState[] roundStates = this.statsContext.RoundStates.Where(r => r.ServerId == serverId).ToArray();
+        Console.WriteLine("Sorting...");
+        roundStates = roundStates.OrderBy(r => r.LogEntryDate).ToArray();
+        Console.WriteLine("Reading kills...");
+        KillData[] baseKillData = this.statsContext.KillData.Where(k => k.ServerId == serverId).ToArray();
+        Console.WriteLine("Reading bombs...");
+        BombData[] baseBombData = this.statsContext.BombData.Where(b => b.ServerId == serverId).ToArray();
+        Console.WriteLine("Reading round ends...");
+        RoundEnd[] baseRoundEnds = this.statsContext.RoundEnds.Where(r => r.ServerId == serverId).ToArray();
+        Console.WriteLine($"Filtering sub stats for {roundStates.Length} round states");
+        int i = 0;
+        foreach (RoundState state in roundStates)
+        {
+            if (!roundStartTime.HasValue && state.State == "Started")
+            {
+                // Clean round start
+                roundStartTime = state.LogEntryDate;
+                continue;
+            }
+            else if (roundStartTime.HasValue && state.State == "Started")
+            {
+                // Dirty round start -> round was not ended properly, the server crashed, map got changed or SND reset
+                roundStartTime = state.LogEntryDate;
+                continue;
+            }
+            else if (roundStartTime.HasValue && state.State == "Ended")
+            {
+                // Clean round end
+                DateTime roundEndTime = state.LogEntryDate;
+
+                // Find all kills that happened between the start and end of the round
+                KillData[] roundKills = baseKillData.Where(k => k.LogEntryDate >= roundStartTime && k.LogEntryDate <= roundEndTime).ToArray();
+
+                // Find all bomb interactions that happened between the start and end of the round
+                BombData[] roundBombs = baseBombData.Where(b => b.LogEntryDate >= roundStartTime && b.LogEntryDate <= roundEndTime).ToArray();
+
+                // Find round end stat of the round
+                RoundEnd? roundEnd = baseRoundEnds.FirstOrDefault(m => m.LogEntryDate >= roundEndTime.AddSeconds(-2) && m.LogEntryDate <= roundEndTime.AddSeconds(2));
+
+                if (roundEnd == null)
+                {
+                    Console.WriteLine($"Round end not found for round starting at {roundStartTime} and ending at {roundEndTime}");
+                    // Round end not found, the server crashed, map got changed or SND reset
+                    roundStartTime = null;
+                    continue;
+                }
+
+                // Add the kills and bomb interactions to the list
+                killData.AddRange(roundKills);
+                bombData.AddRange(roundBombs);
+                roundEnds.Add(roundEnd);
+
+                roundStartTime = null;
+                continue;
+            }
+
+            i++;
+
+            if (i % 10000 == 0)
+            {
+                Console.WriteLine($"Processed {i} / {roundStates.Length} ({Math.Round((i / (double)roundStates.Length) * 100.0)}%)");
+            }
+        }
+
+        List<Stats> playerStats = this.statsContext.PlayerStats.Where(m => m.ServerId == serverId).SelectMany(m => m.Stats).ToList();
+
+        Console.WriteLine($"Prefetching took {sw.ElapsedMilliseconds}ms");
+        Console.WriteLine("Calculating stats");
+        sw.Restart();
+
         List<CBaseStats> allStats = new()
         {
-            this.CalculateServerStats(serverId),
+            this.CalculateServerStats(serverId, killData, bombData),
         };
 
         allStats.AddRange(this.CalculateMapStats(serverId));
-        allStats.AddRange(this.CalculateGunStats(serverId));
-        allStats.AddRange(this.CalculateTeamStatistics(serverId));
-        allStats.AddRange(this.CalculatePlayerStats(serverId));
+        allStats.AddRange(this.CalculateGunStats(serverId, killData));
+        allStats.AddRange(this.CalculateTeamStatistics(serverId, killData));
+        allStats.AddRange(this.CalculatePlayerStats(serverId, killData));
+
+        Console.WriteLine($"Calculation took {sw.ElapsedMilliseconds}ms");
+
         return allStats.ToArray();
     }
 
 
-    public CServerStats CalculateServerStats(string serverId)
+    public CServerStats CalculateServerStats(string serverId, List<KillData> killData, List<BombData> bombData)
     {
         int uniqueMapCount = this.statsContext.EndOfMapStats.Where(m => m.ServerId == serverId).GroupBy(m => new
         {
@@ -45,18 +130,18 @@ public class StatsCalculator
         }).Count();
         int uniquePlayerCount = this.statsContext.PlayerStats.Where(m => m.ServerId == serverId).GroupBy(m => m.UniqueId).Count();
         int totalMatches = this.statsContext.EndOfMapStats.Count(m => m.ServerId == serverId && m.PlayerCount >= 2 && m.Team0Score + m.Team1Score >= 10);
-        int totalKills = this.statsContext.KillData.Count(d => d.ServerId == serverId);
-        int totalHeadshots = this.statsContext.KillData.Count(d => d.ServerId == serverId && d.Headshot);
+        int totalKills = killData.Count();
+        int totalHeadshots = killData.Count(m => m.Headshot);
         int totalAssists = this.statsContext.EndOfMapStats.Where(m => m.ServerId == serverId).SelectMany(m => m.PlayerStats).SelectMany(m => m.Stats).Where(m => m.StatType == "Assist").Sum(m => m.Amount);
-        int totalTeamkills = this.statsContext.KillData.Where(m => m.ServerId == serverId).Count(m => m.KilledTeamID == m.KillerTeamID);
-        int totalBombPlants = this.statsContext.BombData.Count(m => m.ServerId == serverId && m.BombInteraction == "BombPlanted");
-        int totalBombDefuses = this.statsContext.BombData.Count(m => m.ServerId == serverId && m.BombInteraction == "BombDefused");
-        int totalBombExplosions = this.statsContext.BombData.Count(m => m.ServerId == serverId && m.BombInteraction == "BombExploded");
+        int totalTeamkills = killData.Count(m => m.KilledTeamID == m.KillerTeamID);
+        int totalBombPlants = bombData.Count(m => m.BombInteraction == "BombPlanted");
+        int totalBombDefuses = bombData.Count(m => m.BombInteraction == "BombDefused");
+        int totalBombExplosions = bombData.Count(m => m.BombInteraction == "BombExploded");
         int totalChickensKilled = this.statsContext.EndOfMapStats.Where(m => m.ServerId == serverId).SelectMany(m => m.PlayerStats).SelectMany(m => m.Stats).Where(m => m.StatType == "ChickenKilled").Sum(m => m.Amount);
         int totalPoints = this.statsContext.EndOfMapStats.Where(m => m.ServerId == serverId).SelectMany(m => m.PlayerStats).SelectMany(m => m.Stats).Where(s => s.StatType == "Experience").Sum(m => m.Amount);
         int totalRoundsPlayed = this.statsContext.EndOfMapStats.Where(m => m.ServerId == serverId).Sum(m => m.Team0Score + m.Team1Score);
 
-        var mostKillsByGun = this.statsContext.KillData.Where(k => k.ServerId == serverId).GroupBy(k => k.KilledBy).Select(k => new
+        var mostKillsByGun = killData.GroupBy(k => k.KilledBy).Select(k => new
         {
             Gun = k.Key,
             Count = k.Count(),
@@ -82,7 +167,7 @@ public class StatsCalculator
         };
     }
 
-    public CTeamStats[] CalculateTeamStatistics(string serverId)
+    public CTeamStats[] CalculateTeamStatistics(string serverId, List<KillData> killData)
     {
         List<CTeamStats> teamStats = new();
         for (int i = 0; i < 2; i++)
@@ -105,7 +190,7 @@ public class StatsCalculator
                 Player = g.Key,
                 AvgScore = g.Average(this.calculatePlayerScore),
             }).MaxBy(g => g.AvgScore);
-            var bestGun = this.statsContext.KillData.Where(m => m.ServerId == serverId && m.KillerTeamID == i).GroupBy(k => k.KilledBy).Select(g => new
+            var bestGun = killData.Where(m => m.KillerTeamID == i).GroupBy(k => k.KilledBy).Select(g => new
             {
                 Gun = g.Key,
                 Count = g.Count(),
@@ -115,11 +200,11 @@ public class StatsCalculator
             {
                 TeamId = i,
                 Name = i == 0 ? "Blue Team" : "Red Team",
-                TotalKills = teamPlayerStatsStats.Where(p => p.StatType == "Kill").Sum(p => p.Amount),
+                TotalKills = killData.Where(k => k.KillerTeamID == i).Count(),
                 TotalAssists = teamPlayerStatsStats.Where(p => p.StatType == "Assist").Sum(p => p.Amount),
-                TotalDeaths = teamPlayerStatsStats.Where(p => p.StatType == "Death").Sum(p => p.Amount),
-                TotalHeadshots = teamPlayerStatsStats.Where(p => p.StatType == "Headshot").Sum(p => p.Amount),
-                TotalTeamkills = statsContext.KillData.Where(p => p.ServerId == serverId && p.KilledTeamID == p.KillerTeamID).Count(p => p.KillerTeamID == i),
+                TotalDeaths = killData.Where(k => k.KilledTeamID == i).Count(),
+                TotalHeadshots = killData.Where(k => k.KillerTeamID == i).Count(k => k.Headshot),
+                TotalTeamkills = killData.Count(k => k.KillerTeamID == i && k.KilledTeamID == i),
                 TotalVictories = winCount,
                 BestPlayer = bestPlayer?.Player,
                 BestPlayerAverageScore = bestPlayer?.AvgScore ?? 0d,
@@ -131,16 +216,16 @@ public class StatsCalculator
         return teamStats.ToArray();
     }
 
-    public CGunStats[] CalculateGunStats(string serverId)
+    public CGunStats[] CalculateGunStats(string serverId, List<KillData> killData)
     {
         List<CGunStats> gunsStats = new();
 
-        string[] guns = this.statsContext.KillData.Where(m => m.ServerId == serverId).GroupBy(m => m.KilledBy).Select(m => m.Key).ToArray();
+        string[] guns = killData.GroupBy(m => m.KilledBy).Select(m => m.Key).ToArray();
         guns.AsParallel().ForAll(gunName =>
         {
             using (StatsContext statsContext = new(this.configuration))
             {
-                IQueryable<KillData> gunStats = statsContext.KillData.Where(m => m.ServerId == serverId && m.KilledBy == gunName);
+                List<KillData> gunStats = killData.Where(m => m.KilledBy == gunName).ToList();
 
                 int kills = gunStats.Count();
                 int headshots = gunStats.Count(g => g.Headshot);
@@ -170,7 +255,7 @@ public class StatsCalculator
         return gunsStats.ToArray();
     }
 
-    public CPlayerStats[] CalculatePlayerStats(string serverId)
+    public CPlayerStats[] CalculatePlayerStats(string serverId, List<KillData> killData)
     {
         Setting? serverStatMode = this.statsContext.Settings.FirstOrDefault(s => s.Name == "Stat Type" && s.ServerId == serverId);
         List<CPlayerStats> playerStats = new();
@@ -183,11 +268,11 @@ public class StatsCalculator
             {
                 using StatsContext statsContext = new(this.configuration);
                 IGrouping<ulong, PlayerStats> playerGrouping = statsContext.EndOfMapStats.Where(m => m.ServerId == serverId && m.PlayerCount >= 2 && m.Team0Score + m.Team1Score >= 10).SelectMany(m => m.PlayerStats).Where(p => p.UniqueId == pgrp.Key).AsEnumerable().GroupBy(p => p.UniqueId).First();
-                int kills = playerGrouping.Sum(p => p.Stats.FirstOrDefault(s => s.StatType == "Kill")?.Amount ?? 0);
-                int deaths = playerGrouping.Sum(p => p.Stats.FirstOrDefault(s => s.StatType == "Death")?.Amount ?? 0);
+                int kills = killData.Count(k => k.Killer == playerGrouping.Key);
+                int deaths = killData.Count(k => k.Killed == playerGrouping.Key);
                 int assists = playerGrouping.Sum(p => p.Stats.FirstOrDefault(s => s.StatType == "Assist")?.Amount ?? 0);
-                int teamKills = statsContext.KillData.Count(d => d.ServerId == serverId && d.Killer == playerGrouping.Key && d.KillerTeamID == d.KilledTeamID);
-                int headshots = playerGrouping.Sum(p => p.Stats.FirstOrDefault(s => s.StatType == "Headshot")?.Amount ?? 0);
+                int teamKills = killData.Count(k => k.Killer == playerGrouping.Key && k.KilledTeamID == k.KillerTeamID);
+                int headshots = killData.Count(k => k.Killer == playerGrouping.Key && k.Headshot);
                 int bombsPlanted = playerGrouping.Sum(p => p.Stats.FirstOrDefault(s => s.StatType == "BombPlanted")?.Amount ?? 0);
                 int bombsDefused = playerGrouping.Sum(p => p.Stats.FirstOrDefault(s => s.StatType == "BombDefused")?.Amount ?? 0);
                 int totalScore = playerGrouping.Sum(this.calculatePlayerScore);
@@ -195,9 +280,9 @@ public class StatsCalculator
                 int roundsPlayed = playerGrouping.Count();
                 int chickensKilled = playerGrouping.Sum(p => p.Stats.FirstOrDefault(s => s.StatType == "ChickenKilled")?.Amount ?? 0);
 
-                int suicides = statsContext.KillData.Count(k => k.Killer == playerGrouping.Key && (k.KilledBy == "None" || k.KilledBy == "killvolume"));
+                int suicides = killData.Count(k => k.Killer == playerGrouping.Key && k.Killed == playerGrouping.Key);
 
-                var playerKillsGroup = statsContext.KillData.Where(d => d.Killer == playerGrouping.Key).GroupBy(k => k.KilledBy).Select(g => new
+                var playerKillsGroup = killData.Where(d => d.Killer == playerGrouping.Key).GroupBy(k => k.KilledBy).Select(g => new
                 {
                     Gun = g.Key,
                     Count = g.Count(),
@@ -255,11 +340,11 @@ public class StatsCalculator
             {
                 //Console.WriteLine($"Generating stats for player {player} ({++current} / {players.Length})");
 
-                int kills = this.statsContext.KillData.Count(k => k.ServerId == serverId && k.Killer == player && k.Killed != player);
-                int deaths = this.statsContext.KillData.Count(k => k.ServerId == serverId && k.Killed == player);
-                int headshots = this.statsContext.KillData.Count(k => k.ServerId == serverId && k.Killer == player && k.Headshot && k.Killed != player);
-                int suicides = this.statsContext.KillData.Count(k => k.ServerId == serverId && k.Killer == player && k.Killed == player);
-                var playerKillsGroup = this.statsContext.KillData.Where(k => k.ServerId == serverId && k.Killer == player).GroupBy(k => k.KilledBy).Select(g => new { Gun = g.Key, Count = g.Count() }).OrderByDescending(g => g.Count).FirstOrDefault();
+                int kills = killData.Count(k => k.Killer == player);
+                int deaths = killData.Count(k => k.Killed == player);
+                int headshots = killData.Count(k => k.Killer == player && k.Headshot);
+                int suicides = killData.Count(k => k.Killer == player && k.Killed == player);
+                var playerKillsGroup = killData.Where(k => k.Killer == player).GroupBy(k => k.KilledBy).Select(g => new { Gun = g.Key, Count = g.Count() }).OrderByDescending(g => g.Count).FirstOrDefault();
                 string? mostKillsWith = playerKillsGroup?.Gun;
                 int mostKillsWithAmount = playerKillsGroup?.Count ?? 0;
 

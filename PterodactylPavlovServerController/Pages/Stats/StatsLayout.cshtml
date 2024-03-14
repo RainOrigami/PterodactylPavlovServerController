@@ -12,6 +12,11 @@
     <link href="css/site.css" rel="stylesheet" />
     <link href="PterodactylPavlovServerController.styles.css" rel="stylesheet" />
     <title>@ViewData["title"]</title>
+
+    <meta property="og:title" content="@ViewData["title"]">
+    <meta property="og:description" content="@ViewData["ogdescription"]">
+    <meta property="og:image" content="https://bloodisgood.net/wp-content/uploads/2022/10/image_2022-10-31_114051512.png">
+    <meta property="og:type" content="website">
 </head>
 <body style="height: 100%">
     @RenderBody()

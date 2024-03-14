@@ -7,6 +7,7 @@ namespace PterodactylPavlovServerController.Pages.Stats
 {
     public class StatsModel : PageModel
     {
+        public static readonly string ogdescriptionTag = "!!ogdescription!!: ";
         public string StatsContent = "";
 
         private static readonly Regex serverIdRegex = new Regex("^[a-z0-9]{8}$");
@@ -26,9 +27,13 @@ namespace PterodactylPavlovServerController.Pages.Stats
                 return this.LocalRedirect("/");
             }
 
-            ViewData["title"] = $"{await pavlovServerService.GetServerName(this.configuration["pterodactyl_stats_apikey"], server)} server stats";
-
             this.StatsContent = await System.IO.File.ReadAllTextAsync($"./stats/{server}.html");
+
+            ViewData["title"] = $"{await pavlovServerService.GetServerName(this.configuration["pterodactyl_stats_apikey"], server)} server stats";
+            int ogDescriptionStart = this.StatsContent.IndexOf(ogdescriptionTag) + ogdescriptionTag.Length;
+            ViewData["ogdescription"] = this.StatsContent[ogDescriptionStart..];
+
+            this.StatsContent = this.StatsContent[..(ogDescriptionStart - ogdescriptionTag.Length)];
 
             return this.Page();
         }

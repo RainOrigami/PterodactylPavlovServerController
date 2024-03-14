@@ -483,6 +483,8 @@ public class PavlovStatisticsService : IDisposable
             templateRenderer.Set(m => m.HonorableMentions, await getHonorableMentions(allStats, serverStatsType, server.ServerId));
             templateRenderer.Set(m => m.DishonorableMentions, await getDishonorableMentions(allStats, serverStatsType));
 
+            templateRenderer.Set(m => m.ogDescription, $"Total rounds: {allStats.OfType<CServerStats>().First().TotalRoundsPlayed}<br>&#10;Total kills: {allStats.OfType<CServerStats>().First().TotalKills}<br>&#10;Total bombs exploded: {allStats.OfType<CServerStats>().First().TotalBombExplosions}<br>&#10;Visit page for more detailed stats.");
+
             await File.WriteAllTextAsync($"stats/{server.ServerId}.html", templateRenderer.Render());
         }
     }

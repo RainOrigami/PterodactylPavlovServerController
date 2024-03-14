@@ -172,6 +172,8 @@
     </div>
 </footer>
 
+!!ogdescription!!: @((MarkupString)ogDescription)
+
 @code {
 
 
@@ -222,4 +224,8 @@
     [Parameter]
     [EditorRequired]
     public List<(string title, PlayerSummaryModel summary, Dictionary<string, object> items)> DishonorableMentions { get; set; } = new();
+
+    [Parameter]
+    [EditorRequired]
+    public string ogDescription { get; set; } = string.Empty;
 }
