@@ -50,8 +50,16 @@ public class PavlovPingLimiterService
             return;
         }
 
+        ServerSettings? pingExempteesSetting = await this.pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == this.connection.ServerId && s.SettingName == ServerSettings.SETTING_PING_EXEMPTEES);
+        List<ulong> exemptees = pingExempteesSetting?.SettingValue.Split(',').Select(s => ulong.TryParse(s, out ulong id) ? id : 0).ToList() ?? new();
+
         foreach (PlayerDetail playerDetail in this.connection.PlayerDetails.Values)
         {
+            if (exemptees.Contains(playerDetail.UniqueId))
+            {
+                continue;
+            }
+
             if (!this.playerPingHistory.ContainsKey(playerDetail.UniqueId))
             {
                 this.playerPingHistory.Add(playerDetail.UniqueId, new Queue<(DateTime, int)>());
@@ -77,7 +85,6 @@ public class PavlovPingLimiterService
 
                     try
                     {
-                        await auditService.Add(this.connection.ServerId, $"Kicked player {playerDetail.PlayerName} ({playerDetail.UniqueId}) for high ping ({averagePing} > {pingKickThreshold}) over {pingKickMeasureTime} seconds.");
                         await this.pavlovRconService.KickPlayer(this.apiKey, this.connection.ServerId, playerDetail.UniqueId);
                         if (!this.kickQueue.ContainsKey(playerDetail.UniqueId))
                         {
@@ -97,10 +104,11 @@ public class PavlovPingLimiterService
             if (!this.connection.PlayerDetails.ContainsKey(uniqueId))
             {
                 this.playerPingHistory.Remove(uniqueId);
-            }
-            if (this.playerPingHistory.ContainsKey(uniqueId))
-            {
-                this.playerPingHistory.Remove(uniqueId);
+
+                if (this.kickQueue.ContainsKey(uniqueId))
+                {
+                    this.playerPingHistory.Remove(uniqueId);
+                }
             }
         }
     }
