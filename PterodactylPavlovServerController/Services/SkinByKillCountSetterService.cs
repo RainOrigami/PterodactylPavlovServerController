@@ -17,6 +17,10 @@ public class SkinByKillCountSetterService
     private string currentMap = string.Empty;
     private bool skinSet = false;
 
+    private ulong skinTarget = 0;
+    private Skin skin = Skin.clown;
+    private int skinSetCount = 0;
+
     public SkinByKillCountSetterService(string apiKey, PavlovRconConnection connection, PavlovRconService pavlovRconService, IConfiguration configuration)
     {
         this.apiKey = apiKey;
@@ -33,6 +37,8 @@ public class SkinByKillCountSetterService
         if (this.connection.ServerInfo!.MapLabel != currentMap)
         {
             skinSet = false;
+            skinSetCount = 100;
+            skinTarget = 0;
             currentMap = this.connection.ServerInfo!.MapLabel;
             return;
         }
@@ -44,6 +50,16 @@ public class SkinByKillCountSetterService
 
         if (skinSet)
         {
+            if (skinTarget > 0 && skinSetCount < 10)
+            {
+                PlayerDetail? target = this.connection.PlayerDetails.Values.FirstOrDefault(d => d.UniqueId == skinTarget);
+                if (target != null && !target.Dead)
+                {
+                    await this.pavlovRconService.SetSkin(this.apiKey, this.connection.ServerId, skinTarget, skin.ToString());
+                    skinSetCount++;
+                }
+            }
+
             return;
         }
 
@@ -58,7 +74,7 @@ public class SkinByKillCountSetterService
         ServerSettings? setKillSkinSkinSetting = await this.pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == this.connection.ServerId && s.SettingName == ServerSettings.SETTING_SKIN_SKIN);
 
         if (setKillSkinThresholdSetting == null || !int.TryParse(setKillSkinThresholdSetting.SettingValue, out int setKillSkinThreshold) ||
-            setKillSkinSkinSetting == null || !Enum.TryParse<Skin>(setKillSkinSkinSetting.SettingValue, out Skin skin))
+            setKillSkinSkinSetting == null || !Enum.TryParse<Skin>(setKillSkinSkinSetting.SettingValue, out skin))
         {
             skinSet = true;
             return;
@@ -72,6 +88,9 @@ public class SkinByKillCountSetterService
 
         if (mostKills.Kills() >= setKillSkinThreshold)
         {
+            skinTarget = mostKills.UniqueId;
+            skinSetCount = 0;
+
             try
             {
                 skinSet = true;

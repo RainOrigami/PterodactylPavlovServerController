@@ -35,24 +35,38 @@ public class WarmupRoundService
     private async void Connection_OnServerInfoUpdated(string serverId)
     {
         ServerSettings? warmupEnabled = await this.pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == connection.ServerId && s.SettingName == ServerSettings.SETTING_WARMUP_ENABLED);
+        
+        //await Console.Out.WriteLineAsync($"Pre-states: GameMode: {this.connection.ServerInfo!.GameMode}, RoundState: {this.connection.ServerInfo.RoundState}, MapLabel: {this.connection.ServerInfo.MapLabel}, WarmupEnabled: {warmupEnabled?.SettingValue}, lastMap: {lastMap}, lastRoundState: {lastRoundState}, isWarmupRound: {isWarmupRound}, isWarmupRoundEnding: {isWarmupRoundEnding}, isWarmupRoundStarted: {isWarmupRoundStarted}, mapJustChanged: {mapJustChanged}");
+
         if (lastMap == null || lastRoundState == null || this.connection.ServerInfo!.GameMode.ToUpper() != "SND" || warmupEnabled == null || !bool.TryParse(warmupEnabled.SettingValue, out bool isWarmupEnabled) || !isWarmupEnabled)
         {
+            //await Console.Out.WriteLineAsync("Abort because ignored state");
+
             lastMap = this.connection.ServerInfo!.MapLabel;
             lastRoundState = this.connection.ServerInfo.RoundState;
             return;
         }
 
+        //await Console.Out.WriteLineAsync("Open state");
+
         if (this.connection.ServerInfo!.MapLabel != lastMap)
         {
             mapJustChanged = true;
+            await Console.Out.WriteLineAsync($"Map just changed! mapJustChanged: {mapJustChanged}");
         }
+
+        //await Console.Out.WriteLineAsync($"For safety: Team1Score: {this.connection.ServerInfo.Team1Score}, Team0Score: {this.connection.ServerInfo.Team0Score}");
 
         if (lastRoundState == "Ended" && this.connection.ServerInfo!.RoundState == "StandBy" && mapJustChanged && !isWarmupRound && /* for safety */ this.connection.ServerInfo.Team1Score == 0 && this.connection.ServerInfo.Team0Score == 0)
         {
+            await Console.Out.WriteLineAsync("Warmup round start");
+
             mapJustChanged = false;
             isWarmupRound = true;
 
-            await this.pavlovRconService.SetBalanceTableURL(apiKey, connection.ServerId, "RainOrigami/PPSCBalancingTable/Warmup_NoTK");
+            //await this.pavlovRconService.SetBalanceTableURL(apiKey, connection.ServerId, "vankruptgames/BalancingTable/Beta_5.1");
+            //await this.pavlovRconService.SetBalanceTableURL(apiKey, connection.ServerId, "RainOrigami/PPSCBalancingTable/Warmup_NoTK");
+            //await Console.Out.WriteLineAsync("Warmup_NoTK");
 
             WarmupRoundLoadoutModel[] loadouts = this.pavlovServerContext.WarmupLoadouts.Where(l => l.ServerId == connection.ServerId && !usedLoadouts.Contains(l.Name)).ToArray();
             if (loadouts.Length == 0)
@@ -135,10 +149,14 @@ public class WarmupRoundService
                     }
                 });
             }
+
+            await Console.Out.WriteLineAsync("Warmup round loadout set");
         }
 
         if (lastRoundState == "StandBy" && this.connection.ServerInfo.RoundState == "Started" && isWarmupRound && !isWarmupRoundStarted)
         {
+            await Console.Out.WriteLineAsync("Warmup round started");
+
             isWarmupRoundStarted = true;
 
 #pragma warning disable CS4014
@@ -148,20 +166,26 @@ public class WarmupRoundService
                 await Task.Delay(4000);
                 if (this.isWarmupRound && this.connection.ServerInfo.RoundState == "Started" && isWarmupRoundStarted)
                 {
-                    await this.pavlovRconService.SetBalanceTableURL(apiKey, connection.ServerId, "RainOrigami/PPSCBalancingTable/Warmup_NoStarterPistol");
+                    await Console.Out.WriteLineAsync("4-second delay NOP");
+                    //await Console.Out.WriteLineAsync("Warmup_NoStarterPistol");
+                    //await this.pavlovRconService.SetBalanceTableURL(apiKey, connection.ServerId, "RainOrigami/PPSCBalancingTable/Warmup_NoStarterPistol");
                 }
             });
         }
 
         if (lastRoundState == "Started" && this.connection.ServerInfo.RoundState == "Ended" && isWarmupRound)
         {
+            await Console.Out.WriteLineAsync("Warmup round ending");
             isWarmupRoundEnding = true;
             isWarmupRoundStarted = false;
-            await this.pavlovRconService.SetBalanceTableURL(apiKey, connection.ServerId, "vankruptgames/BalancingTable/Beta_5.1");
+            //await Console.Out.WriteLineAsync("Vankrupt default");
+            //await this.pavlovRconService.SetBalanceTableURL(apiKey, connection.ServerId, "vankruptgames/BalancingTable/Beta_5.1");
         }
 
         if (lastRoundState == "Ended" && this.connection.ServerInfo!.RoundState == "StandBy" && isWarmupRound && isWarmupRoundEnding)
         {
+            await Console.Out.WriteLineAsync("Warmup round ended, SND Reset");
+
             isWarmupRoundEnding = false;
             isWarmupRound = false;
             await Task.Delay(1000);

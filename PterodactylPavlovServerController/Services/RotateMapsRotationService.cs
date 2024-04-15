@@ -27,42 +27,51 @@ public class RotateMapsRotationService
             return;
         }
 
-        if ((this.connection.PlayerListPlayers?.Count ?? 0) <= 2 || this.connection.ServerInfo!.RoundState != "Started")
-        {
-            return;
-        }
+        await Console.Out.WriteLineAsync($"Map changed from {this.lastMap} to {this.connection.ServerInfo!.MapLabel}");
+
+        //if ((this.connection.PlayerListPlayers?.Count ?? 0) < 2 || this.connection.ServerInfo!.RoundState != "Started")
+        //{
+        //    return;
+        //}
 
         this.lastMap = this.connection.ServerInfo!.MapLabel;
 
         List<ServerMapModel> currentRotation = new(await pavlovServerService.GetCurrentMapRotation(apiKey, serverId));
+
+        await Console.Out.WriteLineAsync($"Current rotation: {string.Join(", ", currentRotation.Select(r => r.MapLabel))}");
 
         if (currentRotation.Count < 1)
         {
             return;
         }
 
-        if (currentRotation[0].MapLabel.ToLower() == connection.ServerInfo!.MapLabel.ToLower() && currentRotation[0].GameMode.ToLower() == connection.ServerInfo!.GameMode.ToLower())
+        if (currentRotation.Last().MapLabel.ToLower() == connection.ServerInfo!.MapLabel.ToLower() && (connection.ServerInfo!.GameMode.ToLower() == "custom" ? "custom" : currentRotation.Last().GameMode.ToLower()) == connection.ServerInfo!.GameMode.ToLower())
         {
+            await Console.Out.WriteLineAsync("Map is already at the end of the rotation");
             return;
         }
 
-        if (!currentRotation.Any(r => r.MapLabel.ToLower() == connection.ServerInfo!.MapLabel.ToLower() && r.GameMode.ToLower() == connection.ServerInfo!.GameMode.ToLower()))
+        if (!currentRotation.Any(r => r.MapLabel.ToLower() == connection.ServerInfo!.MapLabel.ToLower() && (connection.ServerInfo!.GameMode.ToLower() == "custom" ? "custom" : r.GameMode.ToLower()) == connection.ServerInfo!.GameMode.ToLower()))
         {
+            await Console.Out.WriteLineAsync("Map is not in the rotation");
             return;
         }
 
         int iterations = 0;
 
-        while (currentRotation[0].MapLabel.ToLower() != connection.ServerInfo!.MapLabel.ToLower() || currentRotation[0].GameMode.ToLower() != connection.ServerInfo!.GameMode.ToLower())
+        while (currentRotation.Last().MapLabel.ToLower() != connection.ServerInfo!.MapLabel.ToLower() || (connection.ServerInfo!.GameMode.ToLower() == "custom" ? "custom" : currentRotation.Last().GameMode.ToLower()) != connection.ServerInfo!.GameMode.ToLower())
         {
             ServerMapModel old = currentRotation[0];
             currentRotation.RemoveAt(0);
             currentRotation.Add(old);
+            await Console.Out.WriteLineAsync($"Moving {old.MapLabel} to the end of the rotation");
             if (++iterations > currentRotation.Count + 2)
             {
                 return;
             }
         }
+
+        await Console.Out.WriteLineAsync($"New rotation: {string.Join(", ", currentRotation.Select(r => r.MapLabel))}");
 
         await pavlovServerService.ApplyMapList(apiKey, serverId, currentRotation.ToArray());
     }

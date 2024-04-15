@@ -381,6 +381,23 @@ public class PavlovRconService
         }
     }
 
+    public async Task<bool> ClearEmptyVehicles(string apiKey, string serverId, bool seperateConnection = false)
+    {
+        try
+        {
+            return await execute(async (rcon) => (await new ClearEmptyVehiclesCommand().ExecuteCommand(rcon)).Successful, apiKey, serverId, seperateConnection);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return false;
+            }
+
+            throw;
+        }
+    }
+
     public async Task SetPin(string apiKey, string serverId, int? pin, bool separateConnection = false)
     {
         await execute(async (rcon) => await new SetPinCommand(pin).ExecuteCommand(rcon), apiKey, serverId, separateConnection);

@@ -1,0 +1,47 @@
+﻿@using PavlovVR_Rcon.Models.Pavlov;
+@using PterodactylPavlovServerController.Services;
+@using PterodactylPavlovServerController.Stores;
+@inject PavlovRconService RconService
+@inject IToastService Toast
+@inject ApiKeyService ApiKey
+@inject AuditService AuditService
+
+<div class="me-2" style="width: 425px; display: inline-block; vertical-align: top;">
+    <h3 class="mb-0">Clear empty vehicles</h3>
+    <small class="text-muted">
+        Removes vehicles that do not contain any players.
+    </small>
+    <div class="mb-3">
+        <button type="submit" class="btn btn-warning form-control" @onclick="clearEmptyVehicles">Clear empty vehicles</button>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public PavlovRconConnection Connection { get; set; }
+
+    [Parameter]
+    [EditorRequired]
+    public ServerInfo ServerInfo { get; set; }
+
+    private async Task clearEmptyVehicles()
+    {
+        try
+        {
+            if (await RconService.ClearEmptyVehicles(ApiKey.ApiKey, Connection.ServerId))
+            {
+                Toast.ShowSuccess("Empty vehicles have been removed");
+                await AuditService.Add(Connection.ServerId, $"Cleared empty vehicles");
+            }
+            else
+            {
+                Toast.ShowError("Server refused to clear empty vehicles");
+            }
+        }
+        catch (Exception e)
+        {
+            Toast.ShowError(e.Message);
+        }
+    }
+}
