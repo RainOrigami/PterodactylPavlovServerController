@@ -1,0 +1,92 @@
+﻿@using Fluxor;
+@using PavlovVR_Rcon.Models.Pavlov;
+@using PterodactylPavlovServerController.Models;
+@using PterodactylPavlovServerController.Services;
+@using PterodactylPavlovServerController.Stores;
+@using Steam.Models.SteamCommunity;
+@inject PavlovRconService RconService
+@inject IToastService Toast
+@inject ApiKeyService ApiKey
+@inject AuditService AuditService
+@inject IDispatcher Dispatcher
+@inject IState<PlayersState> PlayersState
+
+<div class="me-2" style="width: 425px; display: inline-block; vertical-align: top;">
+    <h3 class="mb-0">Buy Menu</h3>
+    <small class="text-muted">
+        Enables or disables the buy menu for the target player.
+    </small>
+    <EditForm Model="@buyMenu" OnValidSubmit="@buyMenuSubmitted" class="mt-3">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <InputSelect @bind-Value="buyMenu.UniqueId" class="form-select">
+                <option selected disabled>Select a player</option>
+
+                @if (Connection.PlayerDetails != null)
+                {
+                    <option value="0">- Everybody -</option>
+
+                    foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in Connection.PlayerDetails)
+                    {
+                        string? playerName = connectionPlayerDetail.Value.PlayerName;
+                        if (PlayersState.Value.PlayerSummaries.TryGetValue(connectionPlayerDetail.Key, out PlayerSummaryModel? playerSummary))
+                        {
+                            playerName = playerSummary.Nickname;
+                        }
+                        <option value="@connectionPlayerDetail.Key">@playerName</option>
+                    }
+                }
+            </InputSelect>
+        </div>
+        <div class="mb-3">
+            <button type="submit" class="btn btn-outline-success form-control" @onclick="@(() => buyMenu.Enable = true)">Enable</button>
+        </div>
+        <div class="mb-3">
+            <button type="submit" class="btn btn-outline-danger form-control" @onclick="@(() => buyMenu.Enable = false)">Disable</button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public PavlovRconConnection Connection { get; set; }
+
+    [Parameter]
+    [EditorRequired]
+    public ServerInfo ServerInfo { get; set; }
+
+    private readonly GenericPlayerEnableModel buyMenu = new();
+
+    private async Task buyMenuSubmitted()
+    {
+        try
+        {
+            if (buyMenu.UniqueId!.Value == 0)
+            {
+                try
+                {
+                    await RconService.EnableBuyMenu(ApiKey.ApiKey, Connection.ServerId, "All", buyMenu.Enable!.Value);
+                }
+                catch (Exception e)
+                {
+                    Toast.ShowError(e.Message);
+                }
+
+                Toast.ShowSuccess("All players buy menu updated", "Player cheat executed");
+                await AuditService.Add(Connection.ServerId, $"Updated buy menu for all players set to {buyMenu.Enable}");
+                return;
+            }
+
+            await RconService.EnableBuyMenu(ApiKey.ApiKey, Connection.ServerId, buyMenu.UniqueId!.Value, buyMenu.Enable!.Value);
+            Toast.ShowSuccess("Player buy menu updated", "Player cheat executed");
+            await AuditService.Add(Connection.ServerId, $"Updated buy menu for player {buyMenu.UniqueId!.Value} set to {buyMenu.Enable}");
+        }
+        catch (Exception e)
+        {
+            Toast.ShowError(e.Message);
+        }
+    }
+}

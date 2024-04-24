@@ -194,6 +194,12 @@
                             <a class="nav-link @(currentTab == "cheats" ? "active" : "")" style="font-size: 2em;" href="#cheats" @onclick="@(() => currentTab = "cheats")" @onclick:preventDefault>Cheats</a>
                         </li>
                     }
+                    @if (rconPlus)
+                    {
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link @(currentTab == "rconplus" ? "active" : "")" style="font-size: 2em;" href="#rconplus" @onclick="@(() => currentTab = "rconplus")" @onclick:preventDefault>Rcon Plus</a>
+                        </li>
+                    }
                     <li class="nav-item" role="presentation">
                         <a class="nav-link @(currentTab == "server" ? "active" : "")" style="font-size: 2em;" href="#server" @onclick="@(() => currentTab = "server")" @onclick:preventDefault>Server</a>
                     </li>
@@ -228,6 +234,9 @@
                             case "cheats":
                                 <CheatsComponent Connection="connection" ServerInfo="serverInfo" />
                                 break;
+                            case "rconplus":
+                                <RconPlusComponent Connection="connection" ServerInfo="serverInfo" />
+                                break;
                             case "server":
                                 <ServerControlComponent Connection="connection" ServerInfo="serverInfo" LeagueMode="leagueMode" />
                                 break;
@@ -257,6 +266,7 @@
     private int reservedSlotPin = 0;
     private int reservedSlotAmount = 0;
     private bool leagueMode = false;
+    private bool rconPlus = false;
 
     [Parameter]
     [EditorRequired]
@@ -307,7 +317,23 @@
         await base.OnInitializedAsync();
         await updateLeagueMode();
         await updateReservedSlots();
+        await updateRconPlus();
         Rcon.OnServersUpdated += refresh;
+    }
+
+    private async Task updateRconPlus()
+    {
+        PavlovServerContext pavlovServerContext = new(Configuration);
+        ServerSettings? rconPlusSetting = await pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == ServerId && s.SettingName == ServerSettings.SETTING_RCON_PLUS_ENABLED);
+
+        this.rconPlus = false;
+        if (rconPlusSetting != null)
+        {
+            if (bool.TryParse(rconPlusSetting.SettingValue, out bool rconPlusEnabled))
+            {
+                this.rconPlus = rconPlusEnabled;
+            }
+        }
     }
 
     private async Task updateLeagueMode()
@@ -334,7 +360,8 @@
         {
             int.TryParse(pin.SettingValue, out reservedSlotPin);
             int.TryParse(amount.SettingValue, out reservedSlotAmount);
-        } else
+        }
+        else
         {
             reservedSlotPin = 0;
             reservedSlotAmount = 0;

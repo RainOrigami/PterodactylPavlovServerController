@@ -3,6 +3,7 @@ using PavlovVR_Rcon.Exceptions;
 using PavlovVR_Rcon.Models.Commands;
 using PavlovVR_Rcon.Models.Pavlov;
 using PavlovVR_Rcon.Models.Replies;
+using PterodactylPavlovServerDomain.Rcon.Commands;
 
 namespace PterodactylPavlovServerController.Services;
 
@@ -31,7 +32,7 @@ public class PavlovRconService
         this.lastCommand = DateTime.Now;
     }
 
-    private async Task<T> execute<T>(Func<PavlovRcon, Task<T>> action, string apiKey, string serverId, bool separateConnection)
+    private async Task<T> execute<T>(Func<PavlovRcon, Task<T>> action, string apiKey, string serverId, bool separateConnection, bool awaitResponse = true)
     {
         lock (this.commandRunning)
         {
@@ -55,10 +56,21 @@ public class PavlovRconService
         }
 
         T result;
+        int commandTimeout = 2000;
+        PavlovRcon? rcon = null;
         try
         {
-            PavlovRcon rcon = await openConnection(apiKey, serverId, separateConnection);
+            rcon = await openConnection(apiKey, serverId, separateConnection);
+            commandTimeout = rcon.CommandTimeout;
+            if (!awaitResponse)
+            {
+                rcon.CommandTimeout = 5;
+            }
             result = await action(rcon);
+            if (!awaitResponse)
+            {
+                rcon.CommandTimeout = commandTimeout;
+            }
             if (separateConnection)
             {
                 try
@@ -68,8 +80,19 @@ public class PavlovRconService
                 catch { }
             }
         }
-        catch
+        catch (Exception ex)
         {
+            if (rcon != null)
+            {
+                rcon.CommandTimeout = commandTimeout;
+            }
+
+            if (!awaitResponse && ex.InnerException is CommandTimeoutException and not null)
+            {
+                // RCON Plus does not send a response but other errors must still be thrown
+                return default(T)!;
+            }
+
             if (!separateConnection)
             {
                 this.commandRunning[serverId] = false;
@@ -585,4 +608,567 @@ public class PavlovRconService
 
         return await execute(async (rcon) => await rcon.SendTextCommand(command, parameters), apiKey, serverId, separateConnection);
     }
+
+    #region Rcon Plus
+    public async Task GiveMenu(string apiKey, string serverId, string target)
+    {
+        try
+        {
+            await execute(async (rcon) => (await new GiveMenuCommand(target).ExecuteCommand(rcon)).Successful, apiKey, serverId, true, false);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task RemoveMenu(string apiKey, string serverId, string target)
+    {
+        try
+        {
+            await execute(async (rcon) => (await new RemoveMenuCommand(target).ExecuteCommand(rcon)).Successful, apiKey, serverId, true, false);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task Notify(string apiKey, string serverId, string target, string message, int? duration = null)
+    {
+        try
+        {
+            await execute(async (rcon) => (await new NotifyCommand(target, message, duration).ExecuteCommand(rcon)).Successful, apiKey, serverId, true, false);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task DropItems(string apiKey, string serverId, string target)
+    {
+        try
+        {
+            await execute(async (rcon) => (await new DropItemsCommand(target).ExecuteCommand(rcon)).Successful, apiKey, serverId, true, false);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task DisablePickup(string apiKey, string serverId, string target, bool enable)
+    {
+        try
+        {
+            await execute(async (rcon) => (await new DisablePickupCommand(target, enable).ExecuteCommand(rcon)).Successful, apiKey, serverId, true, false);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task MovementSpeed(string apiKey, string serverId, string target, float multiplier)
+    {
+        try
+        {
+            await execute(async (rcon) => (await new MovementSpeedCommand(target, multiplier).ExecuteCommand(rcon)).Successful, apiKey, serverId, true, false);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task CleanUp(string apiKey, string serverId, RconObjectType objectType)
+    {
+        try
+        {
+            await execute(async (rcon) => (await new CleanUpCommand(objectType).ExecuteCommand(rcon)).Successful, apiKey, serverId, true, false);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task Godmode(string apiKey, string serverId, string target, bool enable)
+    {
+        try
+        {
+            await execute(async (rcon) => (await new GodmodeCommand(target, enable).ExecuteCommand(rcon)).Successful, apiKey, serverId, true, false);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task Warp(string apiKey, string serverId, string player, ulong target)
+    {
+        try
+        {
+            await execute(async (rcon) => (await new WarpCommand(player, target).ExecuteCommand(rcon)).Successful, apiKey, serverId, true, false);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task AddBot(string apiKey, string serverId, int amount, int? team = null)
+    {
+        try
+        {
+            await execute(async (rcon) => (await new AddBotCommand(amount, team).ExecuteCommand(rcon)).Successful, apiKey, serverId, true, false);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task RemoveBot(string apiKey, string serverId, int amount, int? team = null)
+    {
+        try
+        {
+            await execute(async (rcon) => (await new RemoveBotCommand(amount, team).ExecuteCommand(rcon)).Successful, apiKey, serverId, true, false);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task Ignite(string apiKey, string serverId, string target)
+    {
+        try
+        {
+            await execute(async (rcon) => (await new IgniteCommand(target).ExecuteCommand(rcon)).Successful, apiKey, serverId, true, false);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task DisableItems(string apiKey, string serverId, string target, bool enable)
+    {
+        try
+        {
+            await execute(async (rcon) => (await new DisableItemsCommand(target, enable).ExecuteCommand(rcon)).Successful, apiKey, serverId, true, false);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task Detonate(string apiKey, string serverId, string target)
+    {
+        try
+        {
+            await execute(async (rcon) => (await new DetonateCommand(target).ExecuteCommand(rcon)).Successful, apiKey, serverId, true, false);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task GameSpeed(string apiKey, string serverId, float multiplier)
+    {
+        try
+        {
+            await execute(async (rcon) => (await new GameSpeedCommand(multiplier).ExecuteCommand(rcon)).Successful, apiKey, serverId, true, false);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task SetGravity(string apiKey, string serverId, float multiplier)
+    {
+        try
+        {
+            await execute(async (rcon) => (await new SetGravityCommand(multiplier).ExecuteCommand(rcon)).Successful, apiKey, serverId, true, false);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task EnableProne(string apiKey, string serverId, bool enable)
+    {
+        try
+        {
+            await execute(async (rcon) => (await new EnableProneCommand(enable).ExecuteCommand(rcon)).Successful, apiKey, serverId, true, false);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task FallDamage(string apiKey, string serverId, bool enable)
+    {
+        try
+        {
+            await execute(async (rcon) => (await new FallDamageCommand(enable).ExecuteCommand(rcon)).Successful, apiKey, serverId, true, false);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task EnableBuyMenu(string apiKey, string serverId, string target, bool enable)
+    {
+        try
+        {
+            await execute(async (rcon) => (await new EnableBuyMenuCommand(target, enable).ExecuteCommand(rcon)).Successful, apiKey, serverId, true, false);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task NoClip(string apiKey, string serverId, string target, bool enable)
+    {
+        try
+        {
+            await execute(async (rcon) => (await new NoClipCommand(target, enable).ExecuteCommand(rcon)).Successful, apiKey, serverId, true, false);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task Supply(string apiKey, string serverId, string target, string? itemId = null)
+    {
+        try
+        {
+            await execute(async (rcon) => (await new SupplyCommand(target, itemId).ExecuteCommand(rcon)).Successful, apiKey, serverId, true, false);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task Visibility(string apiKey, string serverId, string target, bool visible)
+    {
+        try
+        {
+            await execute(async (rcon) => (await new VisibilityCommand(target, visible).ExecuteCommand(rcon)).Successful, apiKey, serverId, true, false);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task Revive(string apiKey, string serverId, string target)
+    {
+        try
+        {
+            await execute(async (rcon) => (await new ReviveCommand(target).ExecuteCommand(rcon)).Successful, apiKey, serverId, true, false);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task DisableVoting(string apiKey, string serverId, bool enable)
+    {
+        try
+        {
+            await execute(async (rcon) => (await new DisableVotingCommand(enable).ExecuteCommand(rcon)).Successful, apiKey, serverId, true, false);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task AttachmentMode(string apiKey, string serverId, bool enable)
+    {
+        try
+        {
+            await execute(async (rcon) => (await new AttachmentModeCommand(enable).ExecuteCommand(rcon)).Successful, apiKey, serverId, true, false);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task UtilityTrails(string apiKey, string serverId, bool enable)
+    {
+        try
+        {
+            await execute(async (rcon) => (await new UtilityTrailsCommand(enable).ExecuteCommand(rcon)).Successful, apiKey, serverId, true, false);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task KillFeedback(string apiKey, string serverId, bool enable)
+    {
+        try
+        {
+            await execute(async (rcon) => (await new KillFeedbackCommand(enable).ExecuteCommand(rcon)).Successful, apiKey, serverId, true, false);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task SetTeamSkin(string apiKey, string serverId, int teamId, string? skinId = null)
+    {
+        try
+        {
+            await execute(async (rcon) => (await new SetTeamSkinCommand(teamId, skinId).ExecuteCommand(rcon)).Successful, apiKey, serverId, true, false);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task SpawnLootCrate(string apiKey, string serverId, int? crateId = null)
+    {
+        try
+        {
+            await execute(async (rcon) => (await new SpawnLootCrateCommand(crateId).ExecuteCommand(rcon)).Successful, apiKey, serverId, true, false);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task SpawnChickens(string apiKey, string serverId, int amount)
+    {
+        try
+        {
+            await execute(async (rcon) => (await new SpawnChickensCommand(amount).ExecuteCommand(rcon)).Successful, apiKey, serverId, true, false);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task SpawnZombies(string apiKey, string serverId, int amount)
+    {
+        try
+        {
+            await execute(async (rcon) => (await new SpawnZombiesCommand(amount).ExecuteCommand(rcon)).Successful, apiKey, serverId, true, false);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task RemoveZombies(string apiKey, string serverId)
+    {
+        try
+        {
+            await execute(async (rcon) => (await new RemoveZombiesCommand().ExecuteCommand(rcon)).Successful, apiKey, serverId, true, false);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task SetVitality(string apiKey, string serverId, string target, int? health = null, int? armor = null, int? helmet = null)
+    {
+        try
+        {
+            await execute(async (rcon) => (await new SetVitalityCommand(target, health, armor, helmet).ExecuteCommand(rcon)).Successful, apiKey, serverId, true, false);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return;
+            }
+
+            throw;
+        }
+    }
+    #endregion
 }

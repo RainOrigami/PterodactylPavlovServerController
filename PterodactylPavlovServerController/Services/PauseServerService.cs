@@ -10,7 +10,6 @@ public class PauseServerService
     private readonly string apiKey;
     private readonly PavlovRconConnection connection;
     private readonly PavlovRconService pavlovRconService;
-    private readonly IConfiguration configuration;
     private readonly PavlovServerContext pavlovServerContext;
 
     private bool isPaused = false;
@@ -20,7 +19,6 @@ public class PauseServerService
         this.apiKey = apiKey;
         this.connection = connection;
         this.pavlovRconService = pavlovRconService;
-        this.configuration = configuration;
         this.connection.OnServerInfoUpdated += this.Connection_OnServerInfoUpdated;
         this.pavlovServerContext = new(configuration);
         this.pavlovServerContext.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking;

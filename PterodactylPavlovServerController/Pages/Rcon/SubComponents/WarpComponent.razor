@@ -1,0 +1,109 @@
+﻿@using Fluxor;
+@using PavlovVR_Rcon.Models.Pavlov;
+@using PterodactylPavlovServerController.Models;
+@using PterodactylPavlovServerController.Services;
+@using PterodactylPavlovServerController.Stores;
+@using Steam.Models.SteamCommunity;
+@inject PavlovRconService RconService
+@inject IToastService Toast
+@inject ApiKeyService ApiKey
+@inject AuditService AuditService
+@inject IDispatcher Dispatcher
+@inject IState<PlayersState> PlayersState
+
+<div class="me-2" style="width: 425px; display: inline-block; vertical-align: top;">
+    <h3 class="mb-0">Warp</h3>
+    <small class="text-muted">
+        Teleports one player to another target player.
+    </small>
+    <EditForm Model="@warp" OnValidSubmit="@warpSubmitted" class="mt-3">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <InputSelect @bind-Value="warp.SourceId" class="form-select">
+                <option selected disabled>Select a player to teleport</option>
+                <option value="0">- Everybody -</option>
+                @if (Connection.PlayerDetails != null)
+                {
+                    foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in Connection.PlayerDetails)
+                    {
+                        string? playerName = connectionPlayerDetail.Value.PlayerName;
+                        if (PlayersState.Value.PlayerSummaries.TryGetValue(connectionPlayerDetail.Key, out PlayerSummaryModel? playerSummary))
+                        {
+                            playerName = playerSummary.Nickname;
+                        }
+                        <option value="@connectionPlayerDetail.Key">@playerName</option>
+                    }
+                }
+            </InputSelect>
+        </div>
+        <div class="mb-3">
+            <InputSelect @bind-Value="warp.TargetId" class="form-select">
+                <option selected disabled>Select a target to teleport to</option>
+
+                @if (Connection.PlayerDetails != null)
+                {
+                    foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in Connection.PlayerDetails)
+                    {
+                        string? playerName = connectionPlayerDetail.Value.PlayerName;
+                        if (PlayersState.Value.PlayerSummaries.TryGetValue(connectionPlayerDetail.Key, out PlayerSummaryModel? playerSummary))
+                        {
+                            playerName = playerSummary.Nickname;
+                        }
+                        <option value="@connectionPlayerDetail.Key">@playerName</option>
+                    }
+                }
+            </InputSelect>
+        </div>
+        <div class="mb-3">
+            <button type="submit" class="btn btn-outline-danger form-control">Warp</button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public PavlovRconConnection Connection { get; set; }
+
+    [Parameter]
+    [EditorRequired]
+    public ServerInfo ServerInfo { get; set; }
+
+    private readonly WarpModel warp = new();
+
+    private async Task warpSubmitted()
+    {
+        try
+        {
+            if (warp.SourceId!.Value == 0)
+            {
+                foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in Connection.PlayerDetails!)
+                {
+                    try
+                    {
+                        await RconService.Warp(ApiKey.ApiKey, Connection.ServerId, warp.SourceId!.Value, warp.TargetId!.Value);
+                    }
+                    catch (Exception e)
+                    {
+                        Toast.ShowError(e.Message);
+                    }
+                }
+
+                Toast.ShowSuccess("Player has been warped", "Player warped");
+                await AuditService.Add(Connection.ServerId, $"Warped player {warp.SourceId!.Value} to {warp.TargetId!.Value}");
+                return;
+            }
+
+            await RconService.Warp(ApiKey.ApiKey, Connection.ServerId, warp.SourceId!.Value, warp.TargetId!.Value);
+
+            Toast.ShowSuccess("Player has been warped", "Player warped");
+            await AuditService.Add(Connection.ServerId, $"Warped player {warp.SourceId!.Value} to {warp.TargetId!.Value}");
+        }
+        catch (Exception e)
+        {
+            Toast.ShowError(e.Message);
+        }
+    }
+}

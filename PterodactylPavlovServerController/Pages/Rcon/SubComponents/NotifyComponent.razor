@@ -1,0 +1,100 @@
+﻿@using Fluxor;
+@using PavlovVR_Rcon.Models.Pavlov;
+@using PterodactylPavlovServerController.Models;
+@using PterodactylPavlovServerController.Services;
+@using PterodactylPavlovServerController.Stores;
+@using Steam.Models.SteamCommunity;
+@inject PavlovRconService RconService
+@inject IToastService Toast
+@inject ApiKeyService ApiKey
+@inject AuditService AuditService
+@inject IDispatcher Dispatcher
+@inject IState<PlayersState> PlayersState
+
+<div class="me-2" style="width: 425px; display: inline-block; vertical-align: top;">
+    <h3 class="mb-0">Notify player</h3>
+    <small class="text-muted">
+        Send a message to a player.
+    </small>
+    <EditForm Model="@notify" OnValidSubmit="@notifySubmitted" class="mt-3">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <InputSelect @bind-Value="notify.UniqueId" class="form-select">
+                <option selected disabled>Select a player</option>
+
+                @if (Connection.PlayerDetails != null)
+                {
+                    <option value="0">- Notify everybody -</option>
+
+                    foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in Connection.PlayerDetails)
+                    {
+                        string? playerName = connectionPlayerDetail.Value.PlayerName;
+                        if (PlayersState.Value.PlayerSummaries.TryGetValue(connectionPlayerDetail.Key, out PlayerSummaryModel? playerSummary))
+                        {
+                            playerName = playerSummary.Nickname;
+                        }
+                        <option value="@connectionPlayerDetail.Key">@playerName</option>
+                    }
+                }
+            </InputSelect>
+        </div>
+        <div class="mb-3">
+            <label>Message</label>
+            <InputText @bind-Value="notify.Message" class="form-control" />
+        </div>
+        <div class="mb-3">
+            <label>Duration in seconds to display</label><br />
+            <small class="text-muted">
+                Leave empty for default duration.
+            </small>
+            <InputNumber @bind-Value="notify.Duration" class="form-control" />
+        </div>
+        <div class="mb-3">
+            <button type="submit" class="btn btn-outline-success form-control">Notify</button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public PavlovRconConnection Connection { get; set; }
+
+    [Parameter]
+    [EditorRequired]
+    public ServerInfo ServerInfo { get; set; }
+
+    private readonly NotifyModel notify = new();
+
+    private async Task notifySubmitted()
+    {
+        try
+        {
+            if (notify.UniqueId!.Value == 0)
+            {
+                try
+                {
+                    await RconService.Notify(ApiKey.ApiKey, Connection.ServerId, "All", notify.Message!, notify.Duration);
+                }
+                catch (Exception e)
+                {
+                    Toast.ShowError(e.Message);
+                }
+
+                Toast.ShowSuccess("All players have been notified", "Player cheat executed");
+                await AuditService.Add(Connection.ServerId, $"Notified all players for {notify.Duration} seconds with message: {notify.Message!}");
+                return;
+            }
+
+            await RconService.Notify(ApiKey.ApiKey, Connection.ServerId, notify.UniqueId!.Value.ToString(), notify.Message!);
+            Toast.ShowSuccess("Player has been notified", "Player cheat executed");
+            await AuditService.Add(Connection.ServerId, $"Notified player for {notify.Duration} seconds {notify.UniqueId!.Value} with message: {notify.Message!}");
+        }
+        catch (Exception e)
+        {
+            Toast.ShowError(e.Message);
+        }
+    }
+}

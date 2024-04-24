@@ -1,0 +1,84 @@
+﻿@using Fluxor;
+@using PavlovVR_Rcon.Models.Pavlov;
+@using PterodactylPavlovServerController.Models;
+@using PterodactylPavlovServerController.Services;
+@using PterodactylPavlovServerController.Stores;
+@using Steam.Models.SteamCommunity;
+@inject PavlovRconService RconService
+@inject IToastService Toast
+@inject ApiKeyService ApiKey
+@inject AuditService AuditService
+@inject IDispatcher Dispatcher
+@inject IState<PlayersState> PlayersState
+
+<div class="me-2" style="width: 425px; display: inline-block; vertical-align: top;">
+    <h3 class="mb-0">Add or remove bot</h3>
+    <small class="text-muted">
+        Adds or removes the amount of bots you specify to the selected team.<br />
+        Removing 0 bots will remove all bots from the team.
+    </small>
+    <EditForm Model="@bot" OnValidSubmit="@botSubmitted" class="mt-3">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+        <div class="mb-3">
+            <InputSelect @bind-Value="bot.TeamId" class="form-select">
+                <option selected disabled>Select a team</option>
+                <option value="0">Blue team</option>
+                <option value="1">Red team</option>
+                <option value="-1">Both teams</option>
+            </InputSelect>
+        </div>
+        <div class="mb-3">
+            <label>Amount</label>
+            <InputNumber @bind-Value="bot.Amount" class="form-control" />
+        </div>
+        <div class="mb-3">
+            <button type="submit" class="btn btn-outline-success form-control" @onclick="@(() => bot.Add = true)">Add</button>
+        </div>
+        <div class="mb-3">
+            <button type="submit" class="btn btn-outline-danger form-control" @onclick="@(() => bot.Add = false)">Remove</button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public PavlovRconConnection Connection { get; set; }
+
+    [Parameter]
+    [EditorRequired]
+    public ServerInfo ServerInfo { get; set; }
+
+    private readonly BotModel bot = new();
+
+    private async Task botSubmitted()
+    {
+        try
+        {
+            for (int i = 0; i < 2; i++)
+            {
+                if (bot.TeamId!.Value != -1 && bot.TeamId!.Value != i)
+                {
+                    continue;
+                }
+
+                if (bot.Add!.Value)
+                {
+                    await RconService.AddBot(ApiKey.ApiKey, Connection.ServerId, bot.Amount!.Value, i);
+                }
+                else
+                {
+                    await RconService.RemoveBot(ApiKey.ApiKey, Connection.ServerId, bot.Amount!.Value, i);
+                }
+            }
+
+            Toast.ShowSuccess($"Bots have been {(bot.Add!.Value ? "added" : "removed")}", "Bots updated");
+            await AuditService.Add(Connection.ServerId, $"{(bot.Add!.Value ? "Added" : "Removed")} {bot.Amount!.Value} bots to team {bot.TeamId!.Value}");
+        }
+        catch (Exception e)
+        {
+            Toast.ShowError(e.Message);
+        }
+    }
+}

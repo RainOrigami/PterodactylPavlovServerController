@@ -13,6 +13,11 @@ public class ServerSettings
     public const string SETTING_PING_KICK_THRESHOLD = "pingkick.threshold";
     public const string SETTING_PING_KICK_MEASURETIME = "pingkick.measuretime";
     public const string SETTING_PING_EXEMPTEES = "pingkick.exemptees";
+    public const string SETTING_RCON_PLUS_ENABLED = "rconplus.enabled";
+    public const string SETTING_MOTD_ENABLED = "motd.enabled";
+    public const string SETTING_MOTD_MESSAGE = "motd.message";
+    public const string SETTING_HALF_TIME_ANNOUNCEMENT_ENABLED = "halftimemsg.enabled";
+    public const string SETTING_HALF_TIME_ANNOUNCEMENT_MESSAGE = "halftimemsg.message";
 
     public string ServerId { get; set; } = string.Empty;
     public string SettingName { get; set; } = string.Empty;

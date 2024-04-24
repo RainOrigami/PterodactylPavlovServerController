@@ -19,4 +19,8 @@
     <ProjectReference Include="..\..\SteamWebAPI2\src\SteamWebAPI2\SteamWebAPI2.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Rcon\Replies\" />
+  </ItemGroup>
+
 </Project>

@@ -1,0 +1,89 @@
+﻿@using Fluxor;
+@using PavlovVR_Rcon.Models.Pavlov;
+@using PterodactylPavlovServerController.Models;
+@using PterodactylPavlovServerController.Services;
+@using PterodactylPavlovServerController.Stores;
+@using Steam.Models.SteamCommunity;
+@inject PavlovRconService RconService
+@inject IToastService Toast
+@inject ApiKeyService ApiKey
+@inject AuditService AuditService
+@inject IDispatcher Dispatcher
+@inject IState<PlayersState> PlayersState
+
+<div class="me-2" style="width: 425px; display: inline-block; vertical-align: top;">
+    <h3 class="mb-0">Drop items</h3>
+    <small class="text-muted">
+        Forces the player to drop all the items they are holding.
+    </small>
+    <EditForm Model="@playerId" OnValidSubmit="@dropSubmitted" class="mt-3">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <InputSelect @bind-Value="playerId.UniqueId" class="form-select">
+                <option selected disabled>Select a player</option>
+
+                @if (Connection.PlayerDetails != null)
+                {
+                    <option value="0">- Everybody -</option>
+
+                    foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in Connection.PlayerDetails)
+                    {
+                        string? playerName = connectionPlayerDetail.Value.PlayerName;
+                        if (PlayersState.Value.PlayerSummaries.TryGetValue(connectionPlayerDetail.Key, out PlayerSummaryModel? playerSummary))
+                        {
+                            playerName = playerSummary.Nickname;
+                        }
+                        <option value="@connectionPlayerDetail.Key">@playerName</option>
+                    }
+                }
+            </InputSelect>
+        </div>
+        <div class="mb-3">
+            <button type="submit" class="btn btn-outline-success form-control">Drop</button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public PavlovRconConnection Connection { get; set; }
+
+    [Parameter]
+    [EditorRequired]
+    public ServerInfo ServerInfo { get; set; }
+
+    private readonly GenericPlayerIdModel playerId = new();
+
+    private async Task dropSubmitted()
+    {
+        try
+        {
+            if (playerId.UniqueId!.Value == 0)
+            {
+                try
+                {
+                    await RconService.DropItems(ApiKey.ApiKey, Connection.ServerId, "All");
+                }
+                catch (Exception e)
+                {
+                    Toast.ShowError(e.Message);
+                }
+
+                Toast.ShowSuccess("All players dropped their items", "Player cheat executed");
+                await AuditService.Add(Connection.ServerId, $"Dropped items for all players");
+                return;
+            }
+
+            await RconService.DropItems(ApiKey.ApiKey, Connection.ServerId, playerId.UniqueId!.Value.ToString());
+            Toast.ShowSuccess("Player dropped their items", "Player cheat executed");
+            await AuditService.Add(Connection.ServerId, $"Dropped items for player {playerId.UniqueId!.Value}");
+        }
+        catch (Exception e)
+        {
+            Toast.ShowError(e.Message);
+        }
+    }
+}

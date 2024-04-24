@@ -22,6 +22,7 @@ public class PavlovRconConnectionService : IDisposable
     private readonly ConcurrentDictionary<string, SkinByKillCountSetterService> skins = new();
     private readonly ConcurrentDictionary<string, PavlovPingLimiterService> pingLimiter = new();
     private readonly ConcurrentDictionary<string, RotateMapsRotationService> mapsRotation = new();
+    private readonly ConcurrentDictionary<string, MOTDService> motdServices = new();
     private readonly CancellationTokenSource updaterCancellationTokenSource = new();
 
     public PavlovRconConnectionService(PterodactylService pterodactylService, PavlovRconService pavlovRconService, SteamService steamService, IServiceProvider serviceProvider, IConfiguration configuration, PavlovServerService pavlovServerService)
@@ -138,6 +139,8 @@ public class PavlovRconConnectionService : IDisposable
         this.pingLimiter.AddOrUpdate(server.ServerId, pavlovPingLimiterService, (k, v) => pavlovPingLimiterService);
         RotateMapsRotationService rotateMapsRotationService = new(this.configuration["pterodactyl_apikey"]!, serverConnection, this.pavlovServerService);
         this.mapsRotation.AddOrUpdate(server.ServerId, rotateMapsRotationService, (k, v) => rotateMapsRotationService);
+        MOTDService motdService = new(this.configuration["pterodactyl_apikey"]!, serverConnection, this.pavlovRconService, this.configuration);
+        this.motdServices.AddOrUpdate(server.ServerId, motdService, (k, v) => motdService);
     }
     public ReservedSlotService? GetReservedSlotService(string serverId) => this.reservedSlots[serverId];
 }

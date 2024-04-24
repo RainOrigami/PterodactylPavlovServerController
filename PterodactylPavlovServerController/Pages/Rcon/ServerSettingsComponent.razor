@@ -202,6 +202,56 @@
             </div>
         </EditForm>
     </div>
+
+    <div class="me-2" style="width: 425px; display: inline-block; vertical-align: top;">
+        <h3 class="mb-0">MOTD</h3>
+        <small class="text-muted">
+            Displays a message to a player for 20 seconds when they join the server
+        </small>
+        <EditForm Model="@motdModel" OnValidSubmit="@motdSubmitted" class="mt-3">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="mb-3">
+                <label>
+                    Enabled
+                    <InputCheckbox @bind-Value="motdModel.Enabled" class="form-check-inline" />
+                </label>
+            </div>
+            <div class="mb-3">
+                <label>Message</label>
+                <InputTextArea @bind-Value="motdModel.Message" class="form-control" />
+            </div>
+            <div class="mb-3">
+                <button type="submit" class="btn btn-outline-success form-control">Save</button>
+            </div>
+        </EditForm>
+    </div>
+
+    <div class="me-2" style="width: 425px; display: inline-block; vertical-align: top;">
+        <h3 class="mb-0">Half time announcement</h3>
+        <small class="text-muted">
+            Displays a message to all players for 10 seconds when the teams switch sides in SND
+        </small>
+        <EditForm Model="@halfTimeAnnouncementModel" OnValidSubmit="@halfTimeAnnouncementSubmitted" class="mt-3">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="mb-3">
+                <label>
+                    Enabled
+                    <InputCheckbox @bind-Value="halfTimeAnnouncementModel.Enabled" class="form-check-inline" />
+                </label>
+            </div>
+            <div class="mb-3">
+                <label>Message</label>
+                <InputTextArea @bind-Value="halfTimeAnnouncementModel.Message" class="form-control" />
+            </div>
+            <div class="mb-3">
+                <button type="submit" class="btn btn-outline-success form-control">Save</button>
+            </div>
+        </EditForm>
+    </div>
 </div>
 
 @code {
@@ -222,6 +272,8 @@
     private readonly PauseServerModel pauseServerModel = new();
     private readonly SetWarmupRoundLoadoutModel setWarmupRoundLoadoutModel = new();
     private readonly KillSkinModel killSkinModel = new();
+    private readonly MOTDModel motdModel = new();
+    private readonly MOTDModel halfTimeAnnouncementModel = new();
 
     private WarmupRoundLoadoutModel[]? storedWarmupRoundLoadouts = null;
     private WarmupRoundLoadoutModel currentWarmupRoundLoadout = new();
@@ -363,6 +415,26 @@
         if (pingLimitMeasureTime != null && int.TryParse(pingLimitMeasureTime.SettingValue, out int pingLimitMeasureTimeValue))
         {
             pingLimiterModel.MeasureTime = pingLimitMeasureTimeValue;
+        }
+        ServerSettings? motdEnabled = await pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == Connection.ServerId && s.SettingName == ServerSettings.SETTING_MOTD_ENABLED);
+        if (motdEnabled != null && bool.TryParse(motdEnabled.SettingValue, out bool motdEnabledValue))
+        {
+            motdModel.Enabled = motdEnabledValue;
+        }
+        ServerSettings? motdMessage = await pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == Connection.ServerId && s.SettingName == ServerSettings.SETTING_MOTD_MESSAGE);
+        if (motdMessage != null)
+        {
+            motdModel.Message = motdMessage.SettingValue;
+        }
+        ServerSettings? halfTimeAnnouncementEnabled = await pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == Connection.ServerId && s.SettingName == ServerSettings.SETTING_HALF_TIME_ANNOUNCEMENT_ENABLED);
+        if (halfTimeAnnouncementEnabled != null && bool.TryParse(halfTimeAnnouncementEnabled.SettingValue, out bool halfTimeAnnouncementEnabledValue))
+        {
+            halfTimeAnnouncementModel.Enabled = halfTimeAnnouncementEnabledValue;
+        }
+        ServerSettings? halfTimeAnnouncementMessage = await pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == Connection.ServerId && s.SettingName == ServerSettings.SETTING_HALF_TIME_ANNOUNCEMENT_MESSAGE);
+        if (halfTimeAnnouncementMessage != null)
+        {
+            halfTimeAnnouncementModel.Message = halfTimeAnnouncementMessage.SettingValue;
         }
     }
 
@@ -602,4 +674,74 @@
         await AuditService.Add(Connection.ServerId, $"{(this.pingLimiterModel.Enabled ? "Enabled" : "Disabled")} ping limiter.{(this.pingLimiterModel.Enabled ? $" Threshold {this.pingLimiterModel.Threshold}, Measure Time {this.pingLimiterModel.MeasureTime}." : "")}");
         Toast.ShowSuccess($"Successfully {(this.pingLimiterModel.Enabled ? "enabled" : "disabled")} ping limiter.");
     }
- }
+
+    private async Task motdSubmitted()
+    {
+        PavlovServerContext pavlovServerContext = new(Configuration);
+
+        ServerSettings? motdEnabledSetting = await pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == Connection.ServerId && s.SettingName == ServerSettings.SETTING_MOTD_ENABLED);
+        ServerSettings? motdMessageSetting = await pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == Connection.ServerId && s.SettingName == ServerSettings.SETTING_MOTD_MESSAGE);
+
+        if (motdEnabledSetting == null)
+        {
+            motdEnabledSetting = new()
+                {
+                    ServerId = Connection.ServerId,
+                    SettingName = ServerSettings.SETTING_MOTD_ENABLED
+                };
+            await pavlovServerContext.Settings.AddAsync(motdEnabledSetting);
+        }
+        motdEnabledSetting.SettingValue = this.motdModel.Enabled.ToString();
+
+        if (motdMessageSetting == null)
+        {
+            motdMessageSetting = new()
+                {
+                    ServerId = Connection.ServerId,
+                    SettingName = ServerSettings.SETTING_MOTD_MESSAGE
+                };
+            await pavlovServerContext.Settings.AddAsync(motdMessageSetting);
+        }
+        motdMessageSetting.SettingValue = this.motdModel.Message ?? string.Empty;
+
+        await pavlovServerContext.SaveChangesAsync();
+
+        await AuditService.Add(Connection.ServerId, $"{(this.motdModel.Enabled ? "Enabled" : "Disabled")} MOTD.{(this.motdModel.Enabled ? $" Message {this.motdModel.Message}." : "")}");
+        Toast.ShowSuccess($"Successfully {(this.motdModel.Enabled ? "enabled" : "disabled")} MOTD.");
+    }
+
+    private async Task halfTimeAnnouncementSubmitted()
+    {
+        PavlovServerContext pavlovServerContext = new(Configuration);
+
+        ServerSettings? halfTimeAnnouncementEnabledSetting = await pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == Connection.ServerId && s.SettingName == ServerSettings.SETTING_HALF_TIME_ANNOUNCEMENT_ENABLED);
+        ServerSettings? halfTimeAnnouncementMessageSetting = await pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == Connection.ServerId && s.SettingName == ServerSettings.SETTING_HALF_TIME_ANNOUNCEMENT_MESSAGE);
+
+        if (halfTimeAnnouncementEnabledSetting == null)
+        {
+            halfTimeAnnouncementEnabledSetting = new()
+                {
+                    ServerId = Connection.ServerId,
+                    SettingName = ServerSettings.SETTING_HALF_TIME_ANNOUNCEMENT_ENABLED
+                };
+            await pavlovServerContext.Settings.AddAsync(halfTimeAnnouncementEnabledSetting);
+        }
+        halfTimeAnnouncementEnabledSetting.SettingValue = this.halfTimeAnnouncementModel.Enabled.ToString();
+
+        if (halfTimeAnnouncementMessageSetting == null)
+        {
+            halfTimeAnnouncementMessageSetting = new()
+                {
+                    ServerId = Connection.ServerId,
+                    SettingName = ServerSettings.SETTING_HALF_TIME_ANNOUNCEMENT_MESSAGE
+                };
+            await pavlovServerContext.Settings.AddAsync(halfTimeAnnouncementMessageSetting);
+        }
+        halfTimeAnnouncementMessageSetting.SettingValue = this.halfTimeAnnouncementModel.Message ?? string.Empty;
+
+        await pavlovServerContext.SaveChangesAsync();
+
+        await AuditService.Add(Connection.ServerId, $"{(this.halfTimeAnnouncementModel.Enabled ? "Enabled" : "Disabled")} half time announcement.{(this.halfTimeAnnouncementModel.Enabled ? $" Message {this.halfTimeAnnouncementModel.Message}." : "")}");
+        Toast.ShowSuccess($"Successfully {(this.halfTimeAnnouncementModel.Enabled ? "enabled" : "disabled")} half time announcement.");
+    }
+}

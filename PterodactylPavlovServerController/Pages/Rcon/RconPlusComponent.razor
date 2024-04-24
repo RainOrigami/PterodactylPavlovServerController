@@ -1,0 +1,53 @@
+﻿@using Fluxor;
+@using PavlovVR_Rcon.Models.Pavlov;
+@using PterodactylPavlovServerController.Models;
+@using PterodactylPavlovServerController.Pages.Rcon.SubComponents
+@using PterodactylPavlovServerController.Services;
+@using PterodactylPavlovServerController.Stores;
+@using Steam.Models.SteamCommunity;
+@inject IDispatcher Dispatcher
+@inject IState<PlayersState> PlayersState
+@inject PavlovRconService RconService
+@inject IToastService Toast
+@inject ApiKeyService ApiKey
+@inject AuditService AuditService
+
+<div class="tab-pane container active px-0" id="rconplus">
+    <RconPlusMenu Connection="Connection" ServerInfo="ServerInfo" />
+    <NotifyComponent Connection="Connection" ServerInfo="ServerInfo" />
+    <DropItemsComponent Connection="Connection" ServerInfo="ServerInfo" />
+    <DisablePickupComponent Connection="Connection" ServerInfo="ServerInfo" />
+    <MovementSpeedComponent Connection="Connection" ServerInfo="ServerInfo" />
+    <CleanUpComponent Connection="Connection" ServerInfo="ServerInfo" />
+    <GodmodeComponent Connection="Connection" ServerInfo="ServerInfo" />
+    <WarpComponent Connection="Connection" ServerInfo="ServerInfo" />
+    <BotComponent Connection="Connection" ServerInfo="ServerInfo" />
+    <IgniteComponent Connection="Connection" ServerInfo="ServerInfo" />
+    <DisableItemsComponent Connection="Connection" ServerInfo="ServerInfo" />
+    <DetonateComponent Connection="Connection" ServerInfo="ServerInfo" />
+    <GameSpeedComponent Connection="Connection" ServerInfo="ServerInfo" />
+    <SetGravityComponent Connection="Connection" ServerInfo="ServerInfo" />
+    <EnableProneComponent Connection="Connection" ServerInfo="ServerInfo" />
+    <FallDamageComponent Connection="Connection" ServerInfo="ServerInfo" />
+    <EnableBuyMenuComponent Connection="Connection" ServerInfo="ServerInfo" />
+    <NoClipComponent Connection="Connection" ServerInfo="ServerInfo" />
+    <SupplyComponent Connection="Connection" ServerInfo="ServerInfo" />
+    <VisibilityComponent Connection="Connection" ServerInfo="ServerInfo" />
+    <ReviveComponent Connection="Connection" ServerInfo="ServerInfo" />
+    <DisableVotingComponent Connection="Connection" ServerInfo="ServerInfo" />
+    <AttachmentModeComponent Connection="Connection" ServerInfo="ServerInfo" />
+    <UtilityTrailsComponent Connection="Connection" ServerInfo="ServerInfo" />
+    <KillFeedbackComponent Connection="Connection" ServerInfo="ServerInfo" />
+    <SetTeamSkinComponent Connection="Connection" ServerInfo="ServerInfo" />
+    <SetVitalityComponent Connection="Connection" ServerInfo="ServerInfo" />
+</div>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public PavlovRconConnection Connection { get; set; }
+
+    [Parameter]
+    [EditorRequired]
+    public ServerInfo ServerInfo { get; set; }
+}
