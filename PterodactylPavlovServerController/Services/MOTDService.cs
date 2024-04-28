@@ -11,7 +11,7 @@ public class MOTDService
     private readonly PavlovRconService pavlovRconService;
     private readonly PavlovServerContext pavlovServerContext;
 
-    private List<ulong> onlinePlayers = new();
+    private ulong[] onlinePlayers = Array.Empty<ulong>();
 
     public MOTDService(string apiKey, PavlovRconConnection connection, PavlovRconService pavlovRconService, IConfiguration configuration)
     {
@@ -25,7 +25,7 @@ public class MOTDService
 
     private void Connection_OnServerInfoUpdated(string serverId)
     {
-        if (this.onlinePlayers.Count == 0)
+        if ((this.connection.PlayerListPlayers?.Count ?? 0) == 0)
         {
             return;
         }
@@ -44,6 +44,6 @@ public class MOTDService
             _ = this.pavlovRconService.Notify(this.apiKey, serverId, newPlayer.ToString(), motdMessageSetting.SettingValue, 20);
         }
 
-        this.onlinePlayers = players;
+        this.onlinePlayers = players.ToArray();
     }
 }
