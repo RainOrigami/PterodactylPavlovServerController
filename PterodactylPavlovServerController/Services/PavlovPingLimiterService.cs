@@ -85,11 +85,17 @@ public class PavlovPingLimiterService
 
                     try
                     {
-                        await this.pavlovRconService.KickPlayer(this.apiKey, this.connection.ServerId, playerDetail.UniqueId);
                         if (!this.kickQueue.ContainsKey(playerDetail.UniqueId))
                         {
                             this.kickQueue.Add(playerDetail.UniqueId, DateTime.Now);
                         }
+                        _ = Task.Run(async () =>
+                        {
+                            await this.pavlovRconService.Notify(this.apiKey, this.connection.ServerId, playerDetail.UniqueId.ToString(), $"YOUR PING IS TOO HIGH! Ping average: {averagePing}ms. Max allowed: {pingKickThreshold}ms.", 5);
+                            await Task.Delay(5000);
+                            await this.pavlovRconService.KickPlayer(this.apiKey, this.connection.ServerId, playerDetail.UniqueId);
+
+                        });
                     }
                     catch (Exception ex)
                     {

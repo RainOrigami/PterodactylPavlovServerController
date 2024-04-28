@@ -21,6 +21,7 @@ public class WarmupRoundService
         new NewtonlauncherLoadout(),
         new Speedy50CalLoadout(),
         new KnifeOnlyLoadout(),
+        new JohnWickLoadout()
     };
 
     private string? lastMap = null;
@@ -136,7 +137,7 @@ public class WarmupRoundService
                     }
 
                     await Task.Delay(15);
-                    await this.pavlovRconService.Notify(apiKey, connection.ServerId, "All", "- WARMUP ROUND - have fun :)", 10);
+                    await this.pavlovRconService.Notify(apiKey, connection.ServerId, "All", $"- WARMUP ROUND - CURRENT LOADOUT: {currentLoadout.Name}", 10);
 
                     playersToEquip.Clear();
                 });

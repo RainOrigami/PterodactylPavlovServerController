@@ -79,16 +79,13 @@
         {
             if (warp.SourceId!.Value == 0)
             {
-                foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in Connection.PlayerDetails!)
+                try
                 {
-                    try
-                    {
-                        await RconService.Warp(ApiKey.ApiKey, Connection.ServerId, warp.SourceId!.Value, warp.TargetId!.Value);
-                    }
-                    catch (Exception e)
-                    {
-                        Toast.ShowError(e.Message);
-                    }
+                    await RconService.Warp(ApiKey.ApiKey, Connection.ServerId, "All", warp.TargetId!.Value);
+                }
+                catch (Exception e)
+                {
+                    Toast.ShowError(e.Message);
                 }
 
                 Toast.ShowSuccess("Player has been warped", "Player warped");
@@ -96,7 +93,7 @@
                 return;
             }
 
-            await RconService.Warp(ApiKey.ApiKey, Connection.ServerId, warp.SourceId!.Value, warp.TargetId!.Value);
+            await RconService.Warp(ApiKey.ApiKey, Connection.ServerId, warp.SourceId!.Value.ToString(), warp.TargetId!.Value);
 
             Toast.ShowSuccess("Player has been warped", "Player warped");
             await AuditService.Add(Connection.ServerId, $"Warped player {warp.SourceId!.Value} to {warp.TargetId!.Value}");

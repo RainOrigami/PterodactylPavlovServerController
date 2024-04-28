@@ -75,6 +75,7 @@ public class PavlovRconService
             {
                 try
                 {
+                    await Console.Out.WriteLineAsync("Disconnecting separate connection");
                     await rcon.SendTextCommand("Disconnect");
                 }
                 catch { }
@@ -241,6 +242,23 @@ public class PavlovRconService
     }
 
     public async Task<bool> GiveItem(string apiKey, string serverId, ulong uniqueId, string item, bool separateConnection = false)
+    {
+        try
+        {
+            return await execute(async (rcon) => (await new GiveItemCommand(uniqueId, item).ExecuteCommand(rcon)).GiveItem, apiKey, serverId, separateConnection);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return false;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task<bool> GiveItem(string apiKey, string serverId, ulong uniqueId, Item item, bool separateConnection = false)
     {
         try
         {
@@ -644,17 +662,18 @@ public class PavlovRconService
         }
     }
 
-    public async Task Notify(string apiKey, string serverId, string target, string message, int? duration = null)
+    public Task Notify(string apiKey, string serverId, string target, string message, int? duration = null)
     {
         try
         {
-            await execute(async (rcon) => (await new NotifyCommand(target, message, duration).ExecuteCommand(rcon)).Successful, apiKey, serverId, true, false);
+            _ = execute(async (rcon) => (await new NotifyCommand(target, message, duration).ExecuteCommand(rcon)).Successful, apiKey, serverId, true, false);
+            return Task.CompletedTask;
         }
         catch (CommandFailedException ex)
         {
             if (ex.InnerException == null)
             {
-                return;
+                return Task.CompletedTask;
             }
 
             throw;

@@ -18,4 +18,9 @@ public class KnifeOnlyLoadout : BaseLoadout
 
     public override async Task EnablePlayers(PavlovRconService rconService, string apiKey, string serverId) => await rconService.Supply(apiKey, serverId, "All", Item.Knife.ToString());
     public override async Task DisablePlayers(PavlovRconService rconService, string apiKey, string serverId) => await rconService.Supply(apiKey, serverId, "All");
+
+    public KnifeOnlyLoadout()
+    {
+        this.Name = "Knife Only";
+    }
 }

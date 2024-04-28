@@ -2,6 +2,7 @@
 
 public abstract class BaseLoadout
 {
+    public string Name { get; protected set; } = "Undefined";
     public abstract Task EnableRound(PavlovRconService rconService, string apiKey, string serverId);
     public abstract Task DisableRound(PavlovRconService rconService, string apiKey, string serverId);
     public abstract Task EnablePlayers(PavlovRconService rconService, string apiKey, string serverId);

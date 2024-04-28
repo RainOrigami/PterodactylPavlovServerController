@@ -24,4 +24,9 @@ public class GrenadeOnlyLoadout : BaseLoadout
     {
         await rconService.Supply(apiKey, serverId, "All");
     }
+
+    public GrenadeOnlyLoadout()
+    {
+        this.Name = "Grenade Only";
+    }
 }

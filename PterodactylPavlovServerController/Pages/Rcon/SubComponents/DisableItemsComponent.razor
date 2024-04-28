@@ -66,16 +66,13 @@
         {
             if (items.UniqueId!.Value == 0)
             {
-                foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in Connection.PlayerDetails!)
+                try
                 {
-                    try
-                    {
-                        await RconService.DisableItems(ApiKey.ApiKey, Connection.ServerId, items.UniqueId!.Value, items.Enable!.Value);
-                    }
-                    catch (Exception e)
-                    {
-                        Toast.ShowError(e.Message);
-                    }
+                    await RconService.DisableItems(ApiKey.ApiKey, Connection.ServerId, "All", items.Enable!.Value);
+                }
+                catch (Exception e)
+                {
+                    Toast.ShowError(e.Message);
                 }
 
                 Toast.ShowSuccess($"All players had their items {(items.Enable!.Value ? "enabled" : "disabled")}", "Player cheat executed");
@@ -83,7 +80,7 @@
                 return;
             }
 
-            await RconService.DisableItems(ApiKey.ApiKey, Connection.ServerId, items.UniqueId!.Value, items.Enable!.Value);
+            await RconService.DisableItems(ApiKey.ApiKey, Connection.ServerId, items.UniqueId!.Value.ToString(), items.Enable!.Value);
             Toast.ShowSuccess($"Player had their items {(items.Enable!.Value ? "enabled" : "disabled")}", "Player cheat executed");
             await AuditService.Add(Connection.ServerId, $"{(items.Enable!.Value ? "Enabled" : "Disabled")} items for player {items.UniqueId!.Value}");
         }

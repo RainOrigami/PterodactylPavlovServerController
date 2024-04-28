@@ -25,4 +25,12 @@ public class NewtonlauncherLoadout : BaseLoadout
         await Task.Delay(15);
         await rconService.FallDamage(apiKey, serverId, true);
     }
+
+    public override Task EnablePlayers(PavlovRconService rconService, string apiKey, string serverId) => Task.CompletedTask;
+    public override Task DisablePlayers(PavlovRconService rconService, string apiKey, string serverId) => Task.CompletedTask;
+
+    public NewtonlauncherLoadout()
+    {
+        this.Name = "Force gun with low gravity";
+    }
 }

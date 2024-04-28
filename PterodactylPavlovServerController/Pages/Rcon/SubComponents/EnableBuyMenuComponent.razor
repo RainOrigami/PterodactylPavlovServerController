@@ -80,7 +80,7 @@
                 return;
             }
 
-            await RconService.EnableBuyMenu(ApiKey.ApiKey, Connection.ServerId, buyMenu.UniqueId!.Value, buyMenu.Enable!.Value);
+            await RconService.EnableBuyMenu(ApiKey.ApiKey, Connection.ServerId, buyMenu.UniqueId!.Value.ToString(), buyMenu.Enable!.Value);
             Toast.ShowSuccess("Player buy menu updated", "Player cheat executed");
             await AuditService.Add(Connection.ServerId, $"Updated buy menu for player {buyMenu.UniqueId!.Value} set to {buyMenu.Enable}");
         }

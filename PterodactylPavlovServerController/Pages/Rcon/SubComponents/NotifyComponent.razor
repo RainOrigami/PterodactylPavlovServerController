@@ -88,7 +88,7 @@
                 return;
             }
 
-            await RconService.Notify(ApiKey.ApiKey, Connection.ServerId, notify.UniqueId!.Value.ToString(), notify.Message!);
+            await RconService.Notify(ApiKey.ApiKey, Connection.ServerId, notify.UniqueId!.Value.ToString(), notify.Message!, notify.Duration);
             Toast.ShowSuccess("Player has been notified", "Player cheat executed");
             await AuditService.Add(Connection.ServerId, $"Notified player for {notify.Duration} seconds {notify.UniqueId!.Value} with message: {notify.Message!}");
         }

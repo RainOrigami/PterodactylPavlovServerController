@@ -45,8 +45,11 @@
                 <option selected disabled>Select a vehicle</option>
                 @foreach (Vehicle vehicle in Enum.GetValues(typeof(Vehicle)))
                 {
-                    <option value="@vehicle">@vehicle</option>
+                    <option value="@vehicle.ToString()">@vehicle</option>
                 }
+                <option value="ah6">AH6 Littlebird (Weaponized)</option>
+                <option value="mh6">MH6 Littlebird (Transport)</option>
+                <option value="mh6_night">MH6 Littlebird (Night)</option>
             </InputSelect>
         </div>
         <div class="mb-3">
@@ -77,7 +80,7 @@
                 {
                     try
                     {
-                        await RconService.GiveVehicle(ApiKey.ApiKey, Connection.ServerId, connectionPlayerDetail.Key, giveVehicle.Vehicle!.Value.ToString());
+                        await RconService.GiveVehicle(ApiKey.ApiKey, Connection.ServerId, connectionPlayerDetail.Key, giveVehicle.Vehicle!);
                     }
                     catch (Exception e)
                     {
@@ -85,15 +88,15 @@
                     }
                 }
 
-                await AuditService.Add(Connection.ServerId, $"Gave all players vehicle {giveVehicle.Vehicle!.Value}");
+                await AuditService.Add(Connection.ServerId, $"Gave all players vehicle {giveVehicle.Vehicle!}");
                 Toast.ShowSuccess("All players received vehicle", "Player cheat executed");
                 return;
             }
 
-            if (await RconService.GiveVehicle(ApiKey.ApiKey, Connection.ServerId, giveVehicle.UniqueId!.Value, giveVehicle.Vehicle!.Value.ToString()))
+            if (await RconService.GiveVehicle(ApiKey.ApiKey, Connection.ServerId, giveVehicle.UniqueId!.Value, giveVehicle.Vehicle!))
             {
                 Toast.ShowSuccess("Player received vehicle", "Player cheat executed");
-                await AuditService.Add(Connection.ServerId, $"Gave player {giveVehicle.UniqueId!.Value} vehicle {giveVehicle.Vehicle!.Value}");
+                await AuditService.Add(Connection.ServerId, $"Gave player {giveVehicle.UniqueId!.Value} vehicle {giveVehicle.Vehicle!}");
             }
             else
             {

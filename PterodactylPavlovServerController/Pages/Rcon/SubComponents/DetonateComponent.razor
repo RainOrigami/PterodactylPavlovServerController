@@ -63,16 +63,13 @@
         {
             if (playerId.UniqueId!.Value == 0)
             {
-                foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in Connection.PlayerDetails!)
+                try
                 {
-                    try
-                    {
-                        await RconService.Detonate(ApiKey.ApiKey, Connection.ServerId, connectionPlayerDetail.Key);
-                    }
-                    catch (Exception e)
-                    {
-                        Toast.ShowError(e.Message);
-                    }
+                    await RconService.Detonate(ApiKey.ApiKey, Connection.ServerId, "All");
+                }
+                catch (Exception e)
+                {
+                    Toast.ShowError(e.Message);
                 }
 
                 Toast.ShowSuccess("All players detonated", "Player cheat executed");
@@ -80,7 +77,7 @@
                 return;
             }
 
-            await RconService.Detonate(ApiKey.ApiKey, Connection.ServerId, playerId.UniqueId!.Value);
+            await RconService.Detonate(ApiKey.ApiKey, Connection.ServerId, playerId.UniqueId!.Value.ToString());
             Toast.ShowSuccess("Player detonated", "Player cheat executed");
             await AuditService.Add(Connection.ServerId, $"Detonated player {playerId.UniqueId!.Value}");
         }

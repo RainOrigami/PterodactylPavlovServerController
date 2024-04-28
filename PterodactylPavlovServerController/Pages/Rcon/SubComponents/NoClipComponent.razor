@@ -66,16 +66,13 @@
         {
             if (noclip.UniqueId!.Value == 0)
             {
-                foreach (KeyValuePair<ulong, PlayerDetail> connectionPlayerDetail in Connection.PlayerDetails!)
+                try
                 {
-                    try
-                    {
-                        await RconService.DisableItems(ApiKey.ApiKey, Connection.ServerId, connectionPlayerDetail.Key, noclip.Enable!.Value);
-                    }
-                    catch (Exception e)
-                    {
-                        Toast.ShowError(e.Message);
-                    }
+                    await RconService.DisableItems(ApiKey.ApiKey, Connection.ServerId, "All", noclip.Enable!.Value);
+                }
+                catch (Exception e)
+                {
+                    Toast.ShowError(e.Message);
                 }
 
                 Toast.ShowSuccess($"All players had noclip {(noclip.Enable!.Value ? "enabled" : "disabled")}", "Player cheat executed");
@@ -83,7 +80,7 @@
                 return;
             }
 
-            await RconService.DisableItems(ApiKey.ApiKey, Connection.ServerId, noclip.UniqueId!.Value, noclip.Enable!.Value);
+            await RconService.DisableItems(ApiKey.ApiKey, Connection.ServerId, noclip.UniqueId!.Value.ToString(), noclip.Enable!.Value);
             Toast.ShowSuccess($"Player had their noclip {(noclip.Enable!.Value ? "enabled" : "disabled")}", "Player cheat executed");
             await AuditService.Add(Connection.ServerId, $"{(noclip.Enable!.Value ? "Enabled" : "Disabled")} noclip for player {noclip.UniqueId!.Value}");
 

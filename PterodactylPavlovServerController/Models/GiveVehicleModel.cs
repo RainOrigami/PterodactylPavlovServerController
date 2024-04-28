@@ -9,5 +9,5 @@ public class GiveVehicleModel
     public ulong? UniqueId { get; set; }
 
     [Required]
-    public Vehicle? Vehicle { get; set; }
+    public string? Vehicle { get; set; }
 }

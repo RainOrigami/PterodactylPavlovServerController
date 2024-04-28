@@ -14,29 +14,34 @@ public class NotifyCommand : BaseCommand<BaseReply>
         this.duration = duration;
     }
 
-    public override Task<BaseReply> ExecuteCommand(PavlovRcon connection)
+    public override async Task<BaseReply> ExecuteCommand(PavlovRcon connection, bool readReply = true)
     {
         if (!this.duration.HasValue)
         {
-            return base.ExecuteCommand(connection);
+            await base.ExecuteCommand(connection);
+            return new BaseReply() { Command = this.Command, Successful = true };
         }
 
-        Task.Run(async () =>
-        {
-            DateTime displayUntil = DateTime.Now.AddSeconds(this.duration.Value);
-            while (DateTime.Now < displayUntil)
-            {
-                try
-                {
-                    await base.ExecuteCommand(connection);
-                }
-                finally
-                {
-                    await Task.Delay(1000);
-                }
-            }
-        });
 
-        return Task.FromResult(new BaseReply() { Command = this.Command, Successful = true });
+        DateTime displayUntil = DateTime.Now.AddSeconds(this.duration.Value);
+        while (DateTime.Now < displayUntil)
+        {
+            await Console.Out.WriteLineAsync("Sending notify...");
+            try
+            {
+                await base.ExecuteCommand(connection, false);
+            }
+            catch (Exception ex)
+            {
+                await Console.Out.WriteLineAsync(ex.ToString());
+            }
+            finally
+            {
+                await Task.Delay(1000);
+            }
+        }
+        await Console.Out.WriteLineAsync("No more notify");
+
+        return new BaseReply() { Command = this.Command, Successful = true };
     }
 }
