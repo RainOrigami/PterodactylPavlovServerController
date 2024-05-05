@@ -105,6 +105,19 @@ public class PterodactylService
         return content;
     }
 
+    public async Task<byte[]> ReadFileUnsafe(string apiKey, string serverId, string path)
+    {
+        string downloadUrl = this.DownloadFileUrl(apiKey, serverId, path);
+        using HttpClient httpClient = new();
+        HttpResponseMessage httpResponse = await httpClient.GetAsync(downloadUrl);
+        if (!httpResponse.IsSuccessStatusCode)
+        {
+            throw new Exception($"Could not download file: {httpResponse.StatusCode}: {httpResponse.Content}");
+        }
+
+        return await httpResponse.Content.ReadAsByteArrayAsync();
+    }
+
     public string DownloadFileUrl(string apiKey, string serverId, string path)
     {
         RestResponse readFileResponse = this.executeRestRequest(apiKey, $"client/servers/{serverId}/files/download?file={path}");
