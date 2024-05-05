@@ -5,12 +5,12 @@
         @if (LinkURL != null)
         {
             <a href="@LinkURL" target="@(OpenInBlank ? "_blank" : "_self")">
-                <img class="card-img-top" src="@ImageURL" width="@cardWidth" height="@cardWidth" loading="lazy" />
+                <img class="card-img-top" src="@ImageURL" width="@cardWidth" height="@ImageHeight" loading="lazy" />
             </a>
         }
         else
         {
-            <img class="card-img-top" src="@ImageURL" width="@cardWidth" height="@cardWidth" loading="lazy" />
+            <img class="card-img-top" src="@ImageURL" width="@cardWidth" height="@ImageHeight" loading="lazy" />
         }
 
         <div class="card-body px-0">
@@ -105,4 +105,7 @@
     [Parameter]
     [EditorRequired]
     public Dictionary<string, object> Items { get; set; } = new();
+
+    [Parameter]
+    public int ImageHeight { get; set; } = cardWidth;
 }
