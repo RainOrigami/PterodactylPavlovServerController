@@ -205,13 +205,15 @@ public class PavlovStatisticsService : IDisposable
 
     private readonly CancellationTokenSource statsCancellationTokenSource = new();
     private readonly StatsContext statsContext;
+    private readonly PavlovServerContext pavlovServerContext;
     private readonly SteamService steamService;
     private readonly IMapSourceService mapSourceService;
 
-    public PavlovStatisticsService(IConfiguration configuration, StatsContext statsContext, PterodactylService pterodactylService, SteamService steamService, StatsCalculator statsCalculator, IMapSourceService mapSourceService, PavlovServerService pavlovServerService, CountryService countryService)
+    public PavlovStatisticsService(IConfiguration configuration, StatsContext statsContext, PavlovServerContext pavlovServerContext, PterodactylService pterodactylService, SteamService steamService, StatsCalculator statsCalculator, IMapSourceService mapSourceService, PavlovServerService pavlovServerService, CountryService countryService)
     {
         this.configuration = configuration;
         this.statsContext = statsContext;
+        this.pavlovServerContext = pavlovServerContext;
         this.pterodactylService = pterodactylService;
         this.steamService = steamService;
         this.statsCalculator = statsCalculator;
@@ -368,7 +370,9 @@ public class PavlovStatisticsService : IDisposable
 
             templateRenderer.Set(m => m.ServerStatsType, serverStatsType);
 
-            CBaseStats[] allStats = this.statsCalculator.CalculateStats(server.ServerId);
+            ulong[] relevantPlayers = this.pavlovServerContext.Players.Where(p => p.ServerId == server.ServerId && p.LastSeen >= DateTime.Now.AddMonths(-3)).Select(p => p.UniqueId).ToArray();
+
+            CBaseStats[] allStats = this.statsCalculator.CalculateStats(server.ServerId, relevantPlayers);
 
             // EFP Player Cash
             if (serverStatsType == "EFP")
@@ -450,7 +454,7 @@ public class PavlovStatisticsService : IDisposable
             // Player stats
             List<(PlayerSummaryModel summary, CPlayerStats playerStats, Dictionary<string, object> items)> playerStatistics = new List<(PlayerSummaryModel summary, CPlayerStats playerStats, Dictionary<string, object> items)>();
             int playerRank = 0;
-            foreach (CPlayerStats playerStats in getPlayers(allStats, serverStatsType))
+            foreach (CPlayerStats playerStats in getPlayers(allStats, serverStatsType).Where(p => relevantPlayers.Contains(p.UniqueId)))
             {
                 PlayerSummaryModel playerSummary;
                 try
@@ -480,8 +484,8 @@ public class PavlovStatisticsService : IDisposable
             }
             templateRenderer.Set(m => m.PlayerStatistics, playerStatistics);
 
-            templateRenderer.Set(m => m.HonorableMentions, await getHonorableMentions(allStats, serverStatsType, server.ServerId));
-            templateRenderer.Set(m => m.DishonorableMentions, await getDishonorableMentions(allStats, serverStatsType));
+            templateRenderer.Set(m => m.HonorableMentions, await getHonorableMentions(allStats, serverStatsType, server.ServerId, relevantPlayers));
+            templateRenderer.Set(m => m.DishonorableMentions, await getDishonorableMentions(allStats, serverStatsType, relevantPlayers));
 
             templateRenderer.Set(m => m.ogDescription, $"Total rounds: {allStats.OfType<CServerStats>().First().TotalRoundsPlayed}<br>&#10;Total kills: {allStats.OfType<CServerStats>().First().TotalKills}<br>&#10;Total bombs exploded: {allStats.OfType<CServerStats>().First().TotalBombExplosions}<br>&#10;Visit page for more detailed stats.");
 
@@ -489,9 +493,9 @@ public class PavlovStatisticsService : IDisposable
         }
     }
 
-    private async Task<List<(string title, PlayerSummaryModel summary, Dictionary<string, object> items)>> getHonorableMentions(CBaseStats[] allStats, string serverStatsType, string serverId)
+    private async Task<List<(string title, PlayerSummaryModel summary, Dictionary<string, object> items)>> getHonorableMentions(CBaseStats[] allStats, string serverStatsType, string serverId, ulong[] relevantPlayers)
     {
-        CPlayerStats[] playerStats = allStats.OfType<CPlayerStats>().ToArray();
+        CPlayerStats[] playerStats = allStats.OfType<CPlayerStats>().Where(p => relevantPlayers.Contains(p.UniqueId)).ToArray();
         List<(string title, PlayerSummaryModel summary, Dictionary<string, object> items)?> honorableMentions = new()
         {
             await createPlayerMentionStat(playerStats, "Highest K/D ratio", "K/D ratio", p => p.Kills > 10 ? (double)p.Kills / (p.Deaths == 0 ? 1 : p.Deaths) : 0, p => p.Kills, false, (v,p) => $"{Math.Round(v, 1):0.0}"),
@@ -528,9 +532,9 @@ public class PavlovStatisticsService : IDisposable
         return honorableMentions.Where(s => s.HasValue).Select(s => s!.Value).ToList();
     }
 
-    private async Task<List<(string title, PlayerSummaryModel summary, Dictionary<string, object> items)>> getDishonorableMentions(CBaseStats[] allStats, string serverStatsType)
+    private async Task<List<(string title, PlayerSummaryModel summary, Dictionary<string, object> items)>> getDishonorableMentions(CBaseStats[] allStats, string serverStatsType, ulong[] relevantPlayers)
     {
-        CPlayerStats[] playerStats = allStats.OfType<CPlayerStats>().ToArray();
+        CPlayerStats[] playerStats = allStats.OfType<CPlayerStats>().Where(p => relevantPlayers.Contains(p.UniqueId)).ToArray();
         List<(string title, PlayerSummaryModel summary, Dictionary<string, object> items)?> dishonorableMentions = new()
         {
             await createPlayerMentionStat(playerStats, "Most deaths", "Deaths",p => p.Deaths, p => p.TotalScore, false, (v,p) => $"{Math.Round(v, 0)}"),

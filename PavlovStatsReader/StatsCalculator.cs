@@ -23,7 +23,7 @@ public class StatsCalculator
         this.configuration = configuration;
     }
 
-    public CBaseStats[] CalculateStats(string serverId)
+    public CBaseStats[] CalculateStats(string serverId, ulong[] relevantPlayers)
     {
         Console.WriteLine("Prefetching relevant data for stats calculation");
 
@@ -110,10 +110,10 @@ public class StatsCalculator
             this.CalculateServerStats(serverId, killData, bombData),
         };
 
-        allStats.AddRange(this.CalculateMapStats(serverId));
-        allStats.AddRange(this.CalculateGunStats(serverId, killData));
-        allStats.AddRange(this.CalculateTeamStatistics(serverId, killData));
-        allStats.AddRange(this.CalculatePlayerStats(serverId, killData));
+        allStats.AddRange(this.CalculateMapStats(serverId, relevantPlayers));
+        allStats.AddRange(this.CalculateGunStats(serverId, relevantPlayers, killData));
+        allStats.AddRange(this.CalculateTeamStatistics(serverId, relevantPlayers, killData));
+        allStats.AddRange(this.CalculatePlayerStats(serverId, relevantPlayers, killData));
 
         Console.WriteLine($"Calculation took {sw.ElapsedMilliseconds}ms");
 
@@ -167,7 +167,7 @@ public class StatsCalculator
         };
     }
 
-    public CTeamStats[] CalculateTeamStatistics(string serverId, List<KillData> killData)
+    public CTeamStats[] CalculateTeamStatistics(string serverId, ulong[] relevantPlayers, List<KillData> killData)
     {
         List<CTeamStats> teamStats = new();
         for (int i = 0; i < 2; i++)
@@ -185,7 +185,7 @@ public class StatsCalculator
                 winCount = this.statsContext.EndOfMapStats.Where(m => m.ServerId == serverId && m.PlayerCount >= 2 && m.Team0Score + m.Team1Score >= 10).Count(m => m.Team1Score > m.Team0Score);
             }
 
-            var bestPlayer = teamPlayerStats.AsEnumerable().GroupBy(t => t.UniqueId).Select(g => new
+            var bestPlayer = teamPlayerStats.AsEnumerable().Where(t => relevantPlayers.Contains(t.UniqueId)).GroupBy(t => t.UniqueId).Select(g => new
             {
                 Player = g.Key,
                 AvgScore = g.Average(this.calculatePlayerScore),
@@ -216,7 +216,7 @@ public class StatsCalculator
         return teamStats.ToArray();
     }
 
-    public CGunStats[] CalculateGunStats(string serverId, List<KillData> killData)
+    public CGunStats[] CalculateGunStats(string serverId, ulong[] relevantPlayers, List<KillData> killData)
     {
         List<CGunStats> gunsStats = new();
 
@@ -231,7 +231,7 @@ public class StatsCalculator
                 int headshots = gunStats.Count(g => g.Headshot);
                 int teamKills = gunStats.Count(g => g.KillerTeamID == g.KilledTeamID);
 
-                var mostKills = gunStats.GroupBy(g => g.Killer).Select(g => new
+                var mostKills = gunStats.GroupBy(g => g.Killer).Where(g => relevantPlayers.Contains(g.Key)).Select(g => new
                 {
                     Player = g.Key,
                     Count = g.Count(),
@@ -255,14 +255,14 @@ public class StatsCalculator
         return gunsStats.ToArray();
     }
 
-    public CPlayerStats[] CalculatePlayerStats(string serverId, List<KillData> killData)
+    public CPlayerStats[] CalculatePlayerStats(string serverId, ulong[] relevantPlayers, List<KillData> killData)
     {
         Setting? serverStatMode = this.statsContext.Settings.FirstOrDefault(s => s.Name == "Stat Type" && s.ServerId == serverId);
         List<CPlayerStats> playerStats = new();
 
         if (serverStatMode?.Value == "SND")
         {
-            PlayerStats[] pstats = this.statsContext.EndOfMapStats.Where(m => m.ServerId == serverId && m.PlayerCount >= 2 && m.Team0Score + m.Team1Score >= 10).SelectMany(m => m.PlayerStats).ToArray();
+            PlayerStats[] pstats = this.statsContext.EndOfMapStats.Where(m => m.ServerId == serverId && m.PlayerCount >= 2 && m.Team0Score + m.Team1Score >= 10).SelectMany(m => m.PlayerStats).Where(p => relevantPlayers.Contains(p.UniqueId)).ToArray();
 
             pstats.GroupBy(p => p.UniqueId).AsParallel().ForAll(pgrp =>
             {
@@ -333,7 +333,7 @@ public class StatsCalculator
         }
         else
         {
-            ulong[] players = this.statsContext.KillData.Where(k => k.ServerId == serverId).Select(k => k.Killer).Distinct().ToArray().Union(this.statsContext.KillData.Where(k => k.ServerId == serverId).Select(k => k.Killed).Distinct().ToArray()).Distinct().ToArray();
+            ulong[] players = this.statsContext.KillData.Where(k => k.ServerId == serverId).Select(k => k.Killer).Distinct().ToArray().Union(this.statsContext.KillData.Where(k => k.ServerId == serverId).Select(k => k.Killed).Distinct().ToArray()).Distinct().Where(p => relevantPlayers.Contains(p)).ToArray();
 
             //int current = 0;
             foreach (ulong player in players)
@@ -364,7 +364,7 @@ public class StatsCalculator
         return playerStats.ToArray();
     }
 
-    public CMapStats[] CalculateMapStats(string serverId)
+    public CMapStats[] CalculateMapStats(string serverId, ulong[] relevantPlayers)
     {
         EndOfMapStats[] eoms = this.statsContext.EndOfMapStats.Where(m => m.ServerId == serverId).ToArray();
 
@@ -375,7 +375,7 @@ public class StatsCalculator
             using StatsContext statsContext = new(this.configuration);
             IGrouping<(string mapLabel, string gameMode), EndOfMapStats> mapGrouping = statsContext.EndOfMapStats.Where(m => m.ServerId == serverId && m.PlayerCount >= 2 && m.Team0Score + m.Team1Score >= 10 && m.MapLabel == mgrp.Key.mapLabel && m.GameMode.ToLower() == mgrp.Key.gameMode.ToLower()).ToArray().GroupBy(m => (mapLabel: m.MapLabel, gameMode: m.GameMode)).First();
             int[] totalScore = mapGrouping.Select(e => e.Team0Score + e.Team1Score).ToArray();
-            IGrouping<ulong, (PlayerStats player, int score)>[] playerStats = mapGrouping.SelectMany(e => e.PlayerStats).Select(e => (player: e, score: this.calculatePlayerScore(e))).GroupBy(p => p.player.UniqueId).ToArray();
+            IGrouping<ulong, (PlayerStats player, int score)>[] playerStats = mapGrouping.SelectMany(e => e.PlayerStats).Where(p => relevantPlayers.Contains(p.UniqueId)).Select(e => (player: e, score: this.calculatePlayerScore(e))).GroupBy(p => p.player.UniqueId).ToArray();
 
             IGrouping<ulong, (PlayerStats player, int score)>? bestPlayerGrouping = playerStats.MaxBy(g => g.Average(p => p.score));
             ulong? bestPlayer = bestPlayerGrouping?.Key;

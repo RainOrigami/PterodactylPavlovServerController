@@ -1,4 +1,4 @@
-@using PavlovStatsReader;
+﻿@using PavlovStatsReader;
 @using PavlovStatsReader.Models;
 @using PterodactylPavlovServerController.Models;
 @using PterodactylPavlovServerController.Services;
@@ -165,6 +165,7 @@
     {
         <h3>Some values don't seem to add up</h3>
         <p>You may notice that some values don't seem to add up, like Team Blue Kills + Team Red Kills is not equal to Total Kills. This is caused because some statistics have filters applied, like only counting matches with at least two players or with a combined Team Blue and Team Red score of at least 10 (draws and skipped maps). Prerounds often are omitted as well. Total kills however counts each single kill.</p>
+        <p>Players who haven't been on the server for more than three months are not considered for being mentioned however their stats will still count towards the totals.</p>
     }
 </div>
 
