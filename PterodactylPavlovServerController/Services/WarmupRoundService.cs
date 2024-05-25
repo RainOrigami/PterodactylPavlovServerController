@@ -21,7 +21,13 @@ public class WarmupRoundService
         new NewtonlauncherLoadout(),
         new Speedy50CalLoadout(),
         new KnifeOnlyLoadout(),
-        new JohnWickLoadout()
+        new JohnWickLoadout(),
+        new BallisticShieldLoadout(),
+        new FlaregunLoadout(),
+        new GoldenGunLoadout(),
+        new M1GarandLoadout(),
+        new RPGLoadout(),
+        new TranquillizerLoadout(),
     };
 
     private string? lastMap = null;
@@ -67,6 +73,11 @@ public class WarmupRoundService
             await Console.Out.WriteLineAsync($"Map just changed! mapJustChanged: {mapJustChanged}");
         }
 
+        if (this.connection.PlayerListPlayers?.Count == 0)
+        {
+            return;
+        }
+
         //await Console.Out.WriteLineAsync($"For safety: Team1Score: {this.connection.ServerInfo.Team1Score}, Team0Score: {this.connection.ServerInfo.Team0Score}");
 
         if (lastRoundState == "Ended" && this.connection.ServerInfo!.RoundState == "StandBy" && mapJustChanged && !isWarmupRound && /* for safety */ this.connection.ServerInfo.Team1Score == 0 && this.connection.ServerInfo.Team0Score == 0)
@@ -98,14 +109,23 @@ public class WarmupRoundService
                     int waitForPlayersTimeout = 0;
                     while (playersToEquip.Count == 0 && waitForPlayersTimeout < 16)
                     {
-                        PlayerDetail[] players = await this.pavlovRconService.GetActivePlayerDetails(apiKey, connection.ServerId);
-                        playersToEquip = players
-                            .Where(p => !p.Dead)
-                            .Select(p => p.UniqueId)
-                            .ToList();
-
-                        if (players.Any(p => p.Dead))
+                        try
                         {
+                            PlayerDetail[] players = await this.pavlovRconService.GetActivePlayerDetails(apiKey, connection.ServerId);
+                            playersToEquip = players
+                                .Where(p => !p.Dead)
+                                .Select(p => p.UniqueId)
+                                .ToList();
+
+                            if (players.Any(p => p.Dead))
+                            {
+                                await Task.Delay(250);
+                                waitForPlayersTimeout++;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            await Console.Out.WriteLineAsync($"Error while waiting for players to spawn: {ex.Message}");
                             await Task.Delay(250);
                             waitForPlayersTimeout++;
                         }

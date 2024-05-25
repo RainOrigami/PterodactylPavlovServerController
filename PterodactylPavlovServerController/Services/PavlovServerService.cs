@@ -50,4 +50,10 @@ public class PavlovServerService
             };
         }).ToArray();
     }
+
+    public async Task Restart(string apiKey, string serverId)
+    {
+        this.pterodactylService.RestartServer(apiKey, serverId);
+        await Task.CompletedTask;
+    }
 }

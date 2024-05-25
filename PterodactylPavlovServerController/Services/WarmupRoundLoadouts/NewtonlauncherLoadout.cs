@@ -8,6 +8,10 @@ public class NewtonlauncherLoadout : BaseLoadout
     public override async Task EnablePlayer(PavlovRconService rconService, string apiKey, string serverId, ulong playerId)
     {
         await rconService.GiveItem(apiKey, serverId, playerId, Item.newtonlauncher.ToString());
+        await Task.Delay(15);
+        await rconService.GiveItem(apiKey, serverId, playerId, Item.Painkillers);
+        await Task.Delay(15);
+        await rconService.GiveItem(apiKey, serverId, playerId, Item.Painkillers);
     }
     public override Task DisablePlayer(PavlovRconService rconService, string apiKey, string serverId, ulong playerId)
     {

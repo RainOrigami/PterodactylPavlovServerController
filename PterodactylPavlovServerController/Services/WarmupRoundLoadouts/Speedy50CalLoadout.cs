@@ -31,6 +31,6 @@ public class Speedy50CalLoadout : BaseLoadout
 
     public Speedy50CalLoadout()
     {
-        this.Name = ".50 cal on crack";
+        this.Name = ".50 on crack";
     }
 }

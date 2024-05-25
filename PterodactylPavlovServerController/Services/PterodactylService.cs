@@ -2,6 +2,7 @@
 using PterodactylPavlovServerController.Exceptions;
 using PterodactylPavlovServerDomain.Models;
 using RestSharp;
+using System.IO;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -196,5 +197,14 @@ public class PterodactylService
         return JsonConvert.DeserializeObject<PterodactylFile[]>(new JsonArray(JsonDocument.Parse(this.executeRestRequest(apiKey, $"client/servers/{serverId}/files/list?directory={directory}").Content!).RootElement.GetProperty("data").EnumerateArray().Where(o => o.GetProperty("object").GetString() == "file_object" && o.GetProperty("attributes").GetProperty("is_file").GetBoolean()).ToArray().Select(e => JsonNode.Parse(e.GetProperty("attributes").ToString())!).ToArray()).ToString())!;
     }
 
+    public void RestartServer(string apiKey, string serverId)
+    {
+        RestRequest restartRequest = new($"client/servers/{serverId}/power", Method.Post);
+        RestResponse restartResponse = this.executeRestRequest(apiKey, restartRequest, $"{{\"signal\": \"restart\"}}");
 
+        if (!restartResponse.IsSuccessStatusCode)
+        {
+            throw new Exception($"Could not restart server {serverId}: {restartResponse.StatusCode}: {restartResponse.Content}");
+        }
+    }
 }

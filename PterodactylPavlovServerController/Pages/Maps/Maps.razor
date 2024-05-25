@@ -154,6 +154,7 @@
             <button class="btn btn-primary mb-3" @onclick="apply">Apply</button>
             <button class="btn btn-success mb-3" @onclick="applyAndSave">Apply and save</button>
             <button class="btn btn-primary mb-3" @onclick="save">Save</button>
+            <button class="btn btn-danger mb-3" @onclick="applyAndRestart">Apply and Restart</button>
         }
     </div>
 </div>
@@ -291,6 +292,16 @@
         Toast.ShowSuccess("Rotation applied to server");
 
         await AuditService.Add(ServerId, $"Applied map rotation: {string.Join(',', currentRotation!.Select(r => $"{r.MapLabel} ({r.GameMode})"))}");
+    }
+
+    private async Task applyAndRestart()
+    {
+        await apply();
+        await this.PavlovServerService.Restart(ApiKey.ApiKey, ServerId);
+
+        Toast.ShowSuccess("Server is restarting");
+
+        await AuditService.Add(ServerId, "Restarted server after applying map list");
     }
 
     private async Task save()
