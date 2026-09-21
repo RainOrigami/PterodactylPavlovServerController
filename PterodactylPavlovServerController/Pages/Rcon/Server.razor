@@ -1,5 +1,6 @@
 ﻿@page "/rcon/{ServerId}"
 @using Fluxor
+@using System.Diagnostics
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore;
 @using PavlovVR_Rcon.Models.Pavlov
@@ -87,15 +88,22 @@
             <div class="card bg-dark">
                 <div class="row g-0">
                     <div class="col-auto">
-                        <a href="@serverMap.Url" class="text-decoration-none" target="_blank">
-                            <img class="card-img rounded-start" width="256" height="256" src="@(mapDetail == null ? "https://pavlov.bloodisgood.net/gunimages/unknown.png" : mapDetail.ImageURL)" alt="@serverInfo.MapLabel" />
-                        </a>
+                        @if (mapDetail is { Unavailable: false, } && !string.IsNullOrEmpty(serverMap.Url))
+                        {
+                            <a href="@serverMap.Url" class="text-decoration-none" target="_blank">
+                                <img class="card-img rounded-start" width="256" height="256" style="object-fit: cover;" src="@(mapDetail.HasImage ? mapDetail.ImageURL : MapImage.PlaceholderImageUrl)" alt="@serverInfo.MapLabel" />
+                            </a>
+                        }
+                        else
+                        {
+                            <img class="card-img rounded-start" width="256" height="256" style="object-fit: cover;" src="@MapImage.PlaceholderImageUrl" alt="@serverInfo.MapLabel" title="@(mapDetail is { Unavailable: true, } ? "This map is no longer available on mod.io" : "Pavlov built-in map - no mod.io thumbnail")" />
+                        }
                     </div>
 
                     <div class="col">
                         <div class="card-body">
                             <a href="@serverMap.Url" class="text-decoration-none" target="_blank">
-                                <h5 class="card-title">@(mapDetail == null ? serverInfo.MapLabel : mapDetail.Name)</h5>
+                                <h5 class="card-title">@(mapDetail is null or { Unavailable: true, } ? serverInfo.MapLabel : mapDetail.Name)</h5>
                             </a>
                             <p class="card-text">
                                 <div class="container px-0">
@@ -177,46 +185,56 @@
             <div class="container px-0">
                 <ul class="nav nav-tabs mb-3">
                     <li class="nav-item" role="presentation">
-                        <a class="nav-link @(currentTab == "players" ? "active" : "")" style="font-size: 2em;" href="#players" @onclick="@(() => currentTab = "players")" @onclick:preventDefault>Players</a>
+                        <a class="nav-link @(currentTab == "players" ? "active" : "")" style="font-size: 2em;" href="#players" @onclick="@(() => switchTab("players"))" @onclick:preventDefault>Players</a>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <a class="nav-link @(currentTab == "maps" ? "active" : "")" style="font-size: 2em;" href="#maps" @onclick="@(() => currentTab = "maps")" @onclick:preventDefault>Map change</a>
+                        <a class="nav-link @(currentTab == "maps" ? "active" : "")" style="font-size: 2em;" href="#maps" @onclick="@(() => switchTab("maps"))" @onclick:preventDefault>Map change</a>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <a class="nav-link @(currentTab == "offline" ? "active" : "")" style="font-size: 2em;" href="#offline" @onclick="@(() => currentTab = "offline")" @onclick:preventDefault>Offline</a>
+                        <a class="nav-link @(currentTab == "offline" ? "active" : "")" style="font-size: 2em;" href="#offline" @onclick="@(() => switchTab("offline"))" @onclick:preventDefault>Offline</a>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <a class="nav-link @(currentTab == "banned" ? "active" : "")" style="font-size: 2em;" href="#banned" @onclick="@(() => currentTab = "banned")" @onclick:preventDefault>Banned</a>
+                        <a class="nav-link @(currentTab == "banned" ? "active" : "")" style="font-size: 2em;" href="#banned" @onclick="@(() => switchTab("banned"))" @onclick:preventDefault>Banned</a>
                     </li>
                     @if (!leagueMode)
                     {
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link @(currentTab == "cheats" ? "active" : "")" style="font-size: 2em;" href="#cheats" @onclick="@(() => currentTab = "cheats")" @onclick:preventDefault>Cheats</a>
+                            <a class="nav-link @(currentTab == "cheats" ? "active" : "")" style="font-size: 2em;" href="#cheats" @onclick="@(() => switchTab("cheats"))" @onclick:preventDefault>Cheats</a>
                         </li>
                     }
                     @if (rconPlus)
                     {
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link @(currentTab == "rconplus" ? "active" : "")" style="font-size: 2em;" href="#rconplus" @onclick="@(() => currentTab = "rconplus")" @onclick:preventDefault>Rcon Plus</a>
+                            <a class="nav-link @(currentTab == "rconplus" ? "active" : "")" style="font-size: 2em;" href="#rconplus" @onclick="@(() => switchTab("rconplus"))" @onclick:preventDefault>Rcon Plus</a>
                         </li>
                     }
                     <li class="nav-item" role="presentation">
-                        <a class="nav-link @(currentTab == "server" ? "active" : "")" style="font-size: 2em;" href="#server" @onclick="@(() => currentTab = "server")" @onclick:preventDefault>Server</a>
+                        <a class="nav-link @(currentTab == "server" ? "active" : "")" style="font-size: 2em;" href="#server" @onclick="@(() => switchTab("server"))" @onclick:preventDefault>Server</a>
                     </li>
                     @if (serverInfo.GameMode.ToLower() == GameMode.TTT.ToString().ToLower())
                     {
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link @(currentTab == "ttt" ? "active" : "")" style="font-size: 2em;" href="#ttt" @onclick="@(() => currentTab = "ttt")" @onclick:preventDefault>TTT</a>
+                            <a class="nav-link @(currentTab == "ttt" ? "active" : "")" style="font-size: 2em;" href="#ttt" @onclick="@(() => switchTab("ttt"))" @onclick:preventDefault>TTT</a>
                         </li>
                     }
                     <li class="nav-item" role="presentation">
-                        <a class="nav-link @(currentTab == "settings" ? "active" : "")" style="font-size: 2em;" href="#server" @onclick="@(() => currentTab = "settings")" @onclick:preventDefault>Settings</a>
+                        <a class="nav-link @(currentTab == "settings" ? "active" : "")" style="font-size: 2em;" href="#server" @onclick="@(() => switchTab("settings"))" @onclick:preventDefault>Settings</a>
                     </li>
                 </ul>
 
                 <div class="tab-content">
                     @if (connection != null && serverInfo != null)
                     {
+                        if (tabSwitching)
+                        {
+                            <div class="d-flex justify-content-center my-4">
+                                <div class="spinner-border text-secondary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
                         switch (currentTab)
                         {
                             case "players":
@@ -247,6 +265,7 @@
                                 <ServerSettingsComponent Connection="connection" ServerInfo="serverInfo" />
                                 break;
                         }
+                        }
                     }
                     else
                     {
@@ -260,6 +279,48 @@
 
 @code {
     private string currentTab = "players";
+    private bool tabSwitching = false;
+
+    // Blazor Server renders the whole new tab before it ships the DOM diff, so
+    // a tab whose first render is slow leaves the click looking ignored. Paint
+    // the new tab with a spinner first, then let its content render.
+    private async Task switchTab(string tab)
+    {
+        if (currentTab == tab)
+        {
+            return;
+        }
+
+        currentTab = tab;
+        tabSwitching = true;
+        await InvokeAsync(StateHasChanged);
+
+        // Yield long enough for the render above to reach the browser.
+        await Task.Delay(1);
+
+        tabSwitching = false;
+
+        // Time how long the tab's own content takes to render, so a slow tab
+        // says so in the journal instead of having to be guessed at.
+        tabRenderStopwatch = Stopwatch.StartNew();
+        timedTab = tab;
+    }
+
+    private Stopwatch? tabRenderStopwatch = null;
+    private string? timedTab = null;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (tabRenderStopwatch != null && !tabSwitching)
+        {
+            tabRenderStopwatch.Stop();
+            await Console.Out.WriteLineAsync($"Tab '{timedTab}' rendered in {tabRenderStopwatch.ElapsedMilliseconds}ms");
+            tabRenderStopwatch = null;
+            timedTab = null;
+        }
+
+        await base.OnAfterRenderAsync(firstRender);
+    }
 
     private const bool separateConnection = false;
 
@@ -267,6 +328,8 @@
     private int reservedSlotAmount = 0;
     private bool leagueMode = false;
     private bool rconPlus = false;
+
+    private PavlovRconConnection? subscribedConnection = null;
 
     [Parameter]
     [EditorRequired]
@@ -289,25 +352,12 @@
     {
         if (Rcon.GetServer(ApiKey.ApiKey, ServerId) is PavlovRconConnection connection)
         {
-            connection.OnServerErrorRaised += (id, error) =>
-            {
-                bool? online = Rcon.GetServer(ApiKey.ApiKey, ServerId)?.Online;
-                if (!online.HasValue || !online.Value || id != ServerId)
-                {
-                    return;
-                }
-
-                Toast.ShowError(error, "Error");
-            };
             if (!PavlovServersState.Value.ServerNamesFromGameIni.ContainsKey(ServerId))
             {
                 Dispatcher.Dispatch(new PavlovServerLoadNameFromGameIniAction(connection.ApiKey, ServerId));
             }
             await loadMaps(connection);
         }
-
-        await updateReservedSlots();
-        await updateLeagueMode();
 
         await base.OnParametersSetAsync();
     }
@@ -319,6 +369,23 @@
         await updateReservedSlots();
         await updateRconPlus();
         Rcon.OnServersUpdated += refresh;
+
+        subscribedConnection = Rcon.GetServer(ApiKey.ApiKey, ServerId);
+        if (subscribedConnection != null)
+        {
+            subscribedConnection.OnServerErrorRaised += onServerErrorRaised;
+        }
+    }
+
+    private void onServerErrorRaised(string id, string error)
+    {
+        bool? online = Rcon.GetServer(ApiKey.ApiKey, ServerId)?.Online;
+        if (!online.HasValue || !online.Value || id != ServerId)
+        {
+            return;
+        }
+
+        Toast.ShowError(error, "Error");
     }
 
     private async Task updateRconPlus()
@@ -379,6 +446,10 @@
     protected override void Dispose(bool disposing)
     {
         Rcon.OnServersUpdated -= refresh;
+        if (subscribedConnection != null)
+        {
+            subscribedConnection.OnServerErrorRaised -= onServerErrorRaised;
+        }
         base.Dispose(disposing);
     }
 }

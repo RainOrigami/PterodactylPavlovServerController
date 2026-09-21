@@ -8,11 +8,11 @@ public class RPGLoadout : BaseLoadout
     public override Task DisablePlayer(PavlovRconService rconService, string apiKey, string serverId, ulong playerId) => Task.CompletedTask;
     public override Task DisablePlayers(PavlovRconService rconService, string apiKey, string serverId) => Task.CompletedTask;
     public override Task DisableRound(PavlovRconService rconService, string apiKey, string serverId) => Task.CompletedTask;
-    public override async Task EnablePlayer(PavlovRconService rconService, string apiKey, string serverId, ulong playerId)
+    public override async Task<bool> EnablePlayer(PavlovRconService rconService, string apiKey, string serverId, ulong playerId)
     {
-        await rconService.GiveItem(apiKey, serverId, playerId, Item.rl_rpg);
-        await Task.Delay(15);
-        await rconService.GiveItem(apiKey, serverId, playerId, Item.Syringe);
+        bool equipped = await BaseLoadout.GiveItem(rconService, apiKey, serverId, playerId, Item.rl_rpg);
+        equipped &= await BaseLoadout.GiveItem(rconService, apiKey, serverId, playerId, Item.Syringe);
+        return equipped;
     }
     public override async Task EnablePlayers(PavlovRconService rconService, string apiKey, string serverId)
     {

@@ -34,6 +34,70 @@ Welcome to PPSC - the Pterodactyl Pavlov Server Control.
 <br />
 <h3>Changelog</h3>
 
+<h4>1.0.12</h4>
+<ul>
+    <li>
+        Statistics page
+        <ul>
+            <li>Rebuilt as a tabbed page with a sortable, searchable player table and charts</li>
+            <li>Added rivalries: every player card now shows their nemesis and their favourite victim, and the server tab shows the biggest and the most one-sided rivalry</li>
+            <li>Added first bloods, best round, longest kill streak, multikills and aces</li>
+            <li>Added round length, and how often the team that draws first blood wins the round</li>
+            <li>Added match stats: biggest blowout, matches decided by a single round, and the most one-sided and most balanced map of the last three months</li>
+            <li>Added a monthly population chart, team win split, map balance and average round length, total chickens and the sharpest weapon by headshot rate</li>
+            <li>Every stat label now explains on hover how it is worked out</li>
+            <li>Clicking a player, gun or map anywhere on the page now jumps to that card, including from the player table</li>
+            <li>Team cards moved onto the server tab, the demos tab hides itself when there are no demos</li>
+            <li>Fixed the page scripts never running, which left the player table empty, the view buttons dead and the charts blank</li>
+            <li>Fixed statistics being skewed by warmup rounds and pre-match noise, and corrected K/D accuracy</li>
+            <li>Added how often planted bombs actually detonate, per server and per player - the rest are defused, or were still ticking when the round ended by elimination</li>
+            <li>Fixed the link preview on Discord printing its line breaks as markup instead of breaking the lines</li>
+        </ul>
+    </li>
+    <li>
+        RCON
+        <ul>
+            <li>Added the missing commands from the command reference: SetBotsEnabled, GiveAll, MapList, ModeratorList, Help and the UGC mod list commands</li>
+            <li>Fixed eleven commands that were sending no arguments at all, among them SetMaxPlayers, SetTimeLimit, UpdateServerName, Teleport and both map rotation commands</li>
+            <li>Gag and ungag are now available on the player card</li>
+        </ul>
+    </li>
+    <li>
+        Server panel
+        <ul>
+            <li>Opening the banned tab no longer freezes the panel - the list is paged</li>
+            <li>The offline tab no longer flashes its spinner and shifts the list around</li>
+            <li>Tabs and the map rotation editor open much faster the first time</li>
+            <li>Changing the map now asks for confirmation first, from the map grid, the "Next map" button and the manual map ID form - a stray click no longer sends everyone to the loading screen</li>
+        </ul>
+    </li>
+    <li>
+        Maps
+        <ul>
+            <li>Maps that are no longer on mod.io are marked as unavailable, cannot be added to a rotation, and are blocked from being saved into one</li>
+            <li>Pavlov's built-in maps and maps with no thumbnail now use a placeholder cropped to the same shape, so map rows line up</li>
+            <li>Fixed map names staying on "Loading..." when opening the rotation editor directly or refreshing it</li>
+        </ul>
+    </li>
+    <li>
+        Fixes
+        <ul>
+            <li>Fixed a failed warmup setup leaving the warmup round stuck until the next map change</li>
+            <li>Warmup loadouts no longer come up short: every item and cash command is now checked against the server's reply and repeated up to three times, and players who left during setup are skipped</li>
+            <li>RCON commands are no longer fired off back to back - they are spaced out and sent one at a time per server, which is what made Pavlov drop or skip them</li>
+            <li>Ping kick warnings now show a whole number</li>
+        </ul>
+    </li>
+</ul>
+<h4>1.0.11.7</h4>
+<ul>
+    <li>Updated map URL export format</li>
+</ul>
+<h4>1.0.11.6</h4>
+<ul>
+    <li>Improved kill skin handling to prevent kill skins on fresh maps</li>
+    <li>Fixed warmup round suicide</li>
+</ul>
 <h4>1.0.11.5</h4>
 <ul>
     <li>Added apply and restart button to map rotation editor</li>

@@ -1,16 +1,20 @@
 ﻿@using PterodactylPavlovServerController.Models;
 @using System.Web;
-<div class="col-auto mt-3 me-3" id="@Id">
+<div class="col-auto mt-3" id="@Id">
     <div class="card bg-dark h-100" style="width: @(cardWidth)px">
         @if (LinkURL != null)
         {
             <a href="@LinkURL" target="@(OpenInBlank ? "_blank" : "_self")">
-                <img class="card-img-top" src="@ImageURL" width="@cardWidth" height="@ImageHeight" loading="lazy" />
+                <div class="card-img-top" style="@imageBoxStyle">
+                    <img src="@ImageURL" style="@imageStyle" loading="lazy" />
+                </div>
             </a>
         }
         else
         {
-            <img class="card-img-top" src="@ImageURL" width="@cardWidth" height="@ImageHeight" loading="lazy" />
+            <div class="card-img-top" style="@imageBoxStyle">
+                <img src="@ImageURL" style="@imageStyle" loading="lazy" />
+            </div>
         }
 
         <div class="card-body px-0">
@@ -33,7 +37,14 @@
                     {
                         <div class="row row-alternating gx-0">
                             <div class="col-auto ps-3 pe-1">
-                                <b>@(item.Key):</b>
+                                @if (StatsDescriptions.For(item.Key) is string description)
+                                {
+                                    <b class="stat-label" title="@description">@(item.Key):</b>
+                                }
+                                else
+                                {
+                                    <b>@(item.Key):</b>
+                                }
                             </div>
                             <div class="col text-end ps-1 pe-3">
                                 @if (item.Value is string textValue)
@@ -43,7 +54,7 @@
                                 else if (item.Value is StatsOwnPercentageModel ownPercentage)
                                 {
                                     <span>
-                                        @ownPercentage.Text (@(ownPercentage.Percentage)%<a href="stats/@(ServerId)#asterix-own-kills" )">*</a>)
+                                        @ownPercentage.Text (@(ownPercentage.Percentage)%<a href="stats/@(ServerId)#asterix-own-kills">*</a>)
                                     </span>
                                 }
                                 else if (item.Value is StatsImageModel statsImage)
@@ -57,7 +68,7 @@
                                     if (statsLink.AdditionalText is StatsOwnPercentageModel additionalOwnPercentage)
                                     {
                                         <span>
-                                            @((MarkupString)HttpUtility.HtmlEncode(@additionalOwnPercentage.Text).Replace(" ", "&nbsp;"))&nbsp;(@(additionalOwnPercentage.Percentage)%<a href="stats/@(ServerId)#asterix-own-kills" )">*</a>)
+                                            @((MarkupString)HttpUtility.HtmlEncode(@additionalOwnPercentage.Text).Replace(" ", "&nbsp;"))&nbsp;(@(additionalOwnPercentage.Percentage)%<a href="stats/@(ServerId)#asterix-own-kills">*</a>)
                                         </span>
                                     }
                                     else if (statsLink.AdditionalText is string additionalText)
@@ -108,4 +119,18 @@
 
     [Parameter]
     public int ImageHeight { get; set; } = cardWidth;
+
+    /// <summary>
+    ///     How the image fills its box. "cover" crops to fill, so a source of the
+    ///     wrong aspect ratio (a map placeholder, a banner) is cropped rather than
+    ///     squished or left sitting in letterbox bars. "contain" is for artwork
+    ///     that must not be cut, such as the wide transparent gun renders.
+    /// </summary>
+    [Parameter]
+    public string ImageFit { get; set; } = "cover";
+
+    // Fixed box, so every card in a row is the same height regardless of what the
+    // source image's aspect ratio happens to be.
+    private string imageBoxStyle => $"width: 100%; height: {ImageHeight}px; overflow: hidden; background-color: #222;";
+    private string imageStyle => $"width: 100%; height: 100%; object-fit: {ImageFit}; object-position: center;";
 }

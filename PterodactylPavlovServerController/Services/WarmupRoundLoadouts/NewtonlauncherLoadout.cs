@@ -5,13 +5,12 @@ namespace PterodactylPavlovServerController.Services.WarmupRoundLoadouts;
 
 public class NewtonlauncherLoadout : BaseLoadout
 {
-    public override async Task EnablePlayer(PavlovRconService rconService, string apiKey, string serverId, ulong playerId)
+    public override async Task<bool> EnablePlayer(PavlovRconService rconService, string apiKey, string serverId, ulong playerId)
     {
-        await rconService.GiveItem(apiKey, serverId, playerId, Item.newtonlauncher.ToString());
-        await Task.Delay(15);
-        await rconService.GiveItem(apiKey, serverId, playerId, Item.Painkillers);
-        await Task.Delay(15);
-        await rconService.GiveItem(apiKey, serverId, playerId, Item.Painkillers);
+        bool equipped = await BaseLoadout.GiveItem(rconService, apiKey, serverId, playerId, Item.newtonlauncher.ToString());
+        equipped &= await BaseLoadout.GiveItem(rconService, apiKey, serverId, playerId, Item.Painkillers);
+        equipped &= await BaseLoadout.GiveItem(rconService, apiKey, serverId, playerId, Item.Painkillers);
+        return equipped;
     }
     public override Task DisablePlayer(PavlovRconService rconService, string apiKey, string serverId, ulong playerId)
     {

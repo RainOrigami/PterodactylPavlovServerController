@@ -16,13 +16,10 @@ public class MapsReducers
     [ReducerMethod]
     public static MapsState OnMapsAdd(MapsState mapsState, MapsAddWorkshopAction mapsAddWorkshopAction)
     {
-        Dictionary<long, MapWorkshopModel> maps = (Dictionary<long, MapWorkshopModel>)mapsState.MapDetails;
-        if (maps.ContainsKey(mapsAddWorkshopAction.MapWorkshopModel.Id))
+        Dictionary<long, MapWorkshopModel> maps = new(mapsState.MapDetails)
         {
-            maps.Remove(mapsAddWorkshopAction.MapWorkshopModel.Id);
-        }
-
-        maps.Add(mapsAddWorkshopAction.MapWorkshopModel.Id, mapsAddWorkshopAction.MapWorkshopModel);
+            [mapsAddWorkshopAction.MapWorkshopModel.Id] = mapsAddWorkshopAction.MapWorkshopModel,
+        };
 
         return mapsState with
         {
@@ -33,14 +30,10 @@ public class MapsReducers
     [ReducerMethod]
     public static MapsState OnMapsServerAdd(MapsState mapsState, MapsAddServerAction mapsAddServerAction)
     {
-        Dictionary<string, ServerMapModel[]> maps = (Dictionary<string, ServerMapModel[]>)mapsState.ServerMaps;
-
-        if (maps.ContainsKey(mapsAddServerAction.ServerId))
+        Dictionary<string, ServerMapModel[]> maps = new(mapsState.ServerMaps)
         {
-            maps.Remove(mapsAddServerAction.ServerId);
-        }
-
-        maps.Add(mapsAddServerAction.ServerId, mapsAddServerAction.Maps);
+            [mapsAddServerAction.ServerId] = mapsAddServerAction.Maps,
+        };
 
         return mapsState with
         {

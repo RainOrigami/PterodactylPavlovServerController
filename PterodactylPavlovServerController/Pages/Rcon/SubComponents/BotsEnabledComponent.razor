@@ -1,0 +1,56 @@
+﻿@using PavlovVR_Rcon.Models.Pavlov;
+@using PterodactylPavlovServerController.Models;
+@using PterodactylPavlovServerController.Services;
+@inject PavlovRconService RconService
+@inject IToastService Toast
+@inject ApiKeyService ApiKey
+@inject AuditService AuditService
+
+<div class="me-2" style="width: 425px; display: inline-block; vertical-align: top;">
+    <h3 class="mb-0">Bots</h3>
+    <small class="text-muted">
+        Enables bots on the server, filling it up to the player limit.
+    </small>
+    <EditForm Model="@bots" OnValidSubmit="@botsSubmitted" class="mt-3">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <button type="submit" class="btn btn-outline-success form-control" @onclick="@(() => bots.Enable = true)">Enable</button>
+        </div>
+        <div class="mb-3">
+            <button type="submit" class="btn btn-outline-danger form-control" @onclick="@(() => bots.Enable = false)">Disable</button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public PavlovRconConnection Connection { get; set; }
+
+    [Parameter]
+    [EditorRequired]
+    public ServerInfo ServerInfo { get; set; }
+
+    private readonly GenericEnableModel bots = new();
+
+    private async Task botsSubmitted()
+    {
+        try
+        {
+            if (!await RconService.SetBotsEnabled(ApiKey.ApiKey, Connection.ServerId, bots.Enable!.Value))
+            {
+                Toast.ShowError("Server refused the command");
+                return;
+            }
+
+            Toast.ShowSuccess($"Bots set to {bots.Enable!.Value}");
+            await AuditService.Add(Connection.ServerId, $"Set bots enabled to {bots.Enable!.Value}");
+        }
+        catch (Exception e)
+        {
+            Toast.ShowError(e.Message);
+        }
+    }
+}

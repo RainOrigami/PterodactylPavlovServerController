@@ -3,7 +3,7 @@
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
 
 <!DOCTYPE html>
-<html lang="en" style="height: 100%">
+<html lang="en" style="min-height: 100%">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="lib/bootstrap/css/bootstrap.min.css" />
     <link href="css/site.css" rel="stylesheet" />
     <link href="PterodactylPavlovServerController.styles.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.0.8/css/dataTables.bootstrap5.min.css" />
     <title>@ViewData["title"]</title>
 
     <meta property="og:title" content="@ViewData["title"]">
@@ -18,11 +19,14 @@
     <meta property="og:image" content="https://bloodisgood.net/wp-content/uploads/2022/10/image_2022-10-31_114051512.png">
     <meta property="og:type" content="website">
 </head>
-<body style="height: 100%">
+<body style="min-height: 100%; background-color: #212529">
     @RenderBody()
 
     <script src="lib/jquery/jquery.min.js"></script>
     <script src="lib/bootstrap/js/bootstrap.min.js"></script>
+    <script src="https://cdn.datatables.net/2.0.8/js/dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/2.0.8/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
     @RenderSection("scripts")
 </body>
 </html>

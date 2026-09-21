@@ -414,6 +414,10 @@ public class PavlovStatisticsService : IDisposable
             templateRenderer.Set(m => m.ServerCountStats, getServerCountStats(allStats, serverStatsType));
             templateRenderer.Set(m => m.ServerKillStats, getServerKillStats(allStats, serverStatsType));
             templateRenderer.Set(m => m.ServerBombStats, getServerBombStats(allStats, serverStatsType));
+            templateRenderer.Set(m => m.ServerRoundStats, getServerRoundStats(allStats, serverStatsType));
+            templateRenderer.Set(m => m.ServerMatchStats, await getServerMatchStats(allStats, serverStatsType));
+            templateRenderer.Set(m => m.Rivalries, await getRivalries(allStats));
+            templateRenderer.Set(m => m.Population, allStats.OfType<CPopulationStats>().ToList());
 
             // Map stats
             if (serverStatsType == "SND")
@@ -487,7 +491,10 @@ public class PavlovStatisticsService : IDisposable
             templateRenderer.Set(m => m.HonorableMentions, await getHonorableMentions(allStats, serverStatsType, server.ServerId, relevantPlayers));
             templateRenderer.Set(m => m.DishonorableMentions, await getDishonorableMentions(allStats, serverStatsType, relevantPlayers));
 
-            templateRenderer.Set(m => m.ogDescription, $"Total rounds: {allStats.OfType<CServerStats>().First().TotalRoundsPlayed}<br>&#10;Total kills: {allStats.OfType<CServerStats>().First().TotalKills}<br>&#10;Total bombs exploded: {allStats.OfType<CServerStats>().First().TotalBombExplosions}<br>&#10;Visit page for more detailed stats.");
+            CServerStats ogServerStats = allStats.OfType<CServerStats>().First();
+            // Goes into the og:description attribute, which renders as plain text:
+            // real newlines break the lines, markup would be printed verbatim.
+            templateRenderer.Set(m => m.ogDescription, $"Total rounds: {ogServerStats.TotalRoundsPlayed}\nTotal kills: {ogServerStats.TotalKills}\nTotal bombs exploded: {ogServerStats.TotalBombExplosions}\nVisit page for more detailed stats.");
 
             await File.WriteAllTextAsync($"stats/{server.ServerId}.html", templateRenderer.Render());
         }
@@ -512,6 +519,13 @@ public class PavlovStatisticsService : IDisposable
             honorableMentions.Add(await createPlayerMentionStat(playerStats, "Highest average score", "Score", p => p.RoundsPlayed < 5 ? 0 : p.AverageScore, p => p.TotalScore, false, (v, p) => $"{Math.Round(v, 0)}"));
             honorableMentions.Add(await createPlayerMentionStat(playerStats, "Most bomb plants", "Plants", p => p.BombsPlanted, p => p.TotalScore, false, (v, p) => $"{Math.Round(v, 0)}"));
             honorableMentions.Add(await createPlayerMentionStat(playerStats, "Most bomb defuses", "Defuses", p => p.BombsDefused, p => p.TotalScore, false, (v, p) => $"{Math.Round(v, 1)}"));
+            // Ten plants is enough that the rate is not one lucky round.
+            honorableMentions.Add(await createPlayerMentionStat(playerStats, "Best plant conversion", "Exploded", p => p.PlantsMade >= 10 ? this.calculateSafePercent(p.PlantsConverted, p.PlantsMade) : 0, p => p.PlantsMade, false, (v, p) => $"{Math.Round(v, 0)}% of {p.PlantsMade}"));
+            honorableMentions.Add(await createPlayerMentionStat(playerStats, "Most first bloods", "First bloods", p => p.FirstBloods, p => p.Kills, false, (v, p) => $"{Math.Round(v, 0)}"));
+            honorableMentions.Add(await createPlayerMentionStat(playerStats, "Best round", "Kills", p => p.BestRoundKills, p => p.Kills, false, (v, p) => $"{Math.Round(v, 0)} in one round"));
+            honorableMentions.Add(await createPlayerMentionStat(playerStats, "Longest kill streak", "Streak", p => p.LongestKillStreak, p => p.Kills, false, (v, p) => $"{Math.Round(v, 0)} without dying"));
+            honorableMentions.Add(await createPlayerMentionStat(playerStats, "Most aces", "Aces", p => p.Aces, p => p.Multikills, false, (v, p) => $"{Math.Round(v, 0)} rounds of 5+"));
+            honorableMentions.Add(await createPlayerMentionStat(playerStats, "Most multikills", "Multikills", p => p.Multikills, p => p.Kills, false, (v, p) => $"{Math.Round(v, 0)} rounds of 3+"));
         }
 
         using PavlovServerContext pavlovServerContext = new(this.configuration);
@@ -529,7 +543,73 @@ public class PavlovStatisticsService : IDisposable
             }
         }
 
+        // Playtime comes from PPSC's own presence tracking, not from the match
+        // logs, so it is an approximation - good enough for a fun stat, and the
+        // hour threshold keeps someone who dropped in for one round off the card.
+        Dictionary<ulong, TimeSpan> playtimes = await pavlovServerContext.Players
+            .Where(p => p.ServerId == serverId && p.TotalTime > TimeSpan.FromHours(1))
+            .ToDictionaryAsync(p => p.UniqueId, p => p.TotalTime);
+
+        var mostEfficient = playerStats
+            .Where(p => playtimes.ContainsKey(p.UniqueId) && p.Kills > 50)
+            .Select(p => new { Player = p, PerHour = p.Kills / playtimes[p.UniqueId].TotalHours })
+            .MaxBy(p => p.PerHour);
+
+        if (mostEfficient != null)
+        {
+            PlayerSummaryModel? efficientSummary = await this.steamService.GetPlayerSummary(mostEfficient.Player.UniqueId);
+            if (efficientSummary != null)
+            {
+                honorableMentions.Add(("Most kills per hour", efficientSummary, new Dictionary<string, object>
+                {
+                    { "Player", new StatsLinkModel($"player-{efficientSummary.SteamId}", efficientSummary.Nickname, null) },
+                    { "Kills/hour", $"{Math.Round(mostEfficient.PerHour, 1)}" },
+                }));
+            }
+        }
+
         return honorableMentions.Where(s => s.HasValue).Select(s => s!.Value).ToList();
+    }
+
+    /// <summary>
+    ///     Who fights whom. Rendered like a mention card, with both players linked
+    ///     so the reader can jump to either.
+    /// </summary>
+    private async Task<List<(string title, PlayerSummaryModel summary, Dictionary<string, object> items)>> getRivalries(CBaseStats[] allStats)
+    {
+        List<(string title, PlayerSummaryModel summary, Dictionary<string, object> items)> rivalries = new();
+
+        foreach (CRivalryStats rivalry in allStats.OfType<CRivalryStats>())
+        {
+            PlayerSummaryModel? winner;
+            PlayerSummaryModel? loser;
+            try
+            {
+                winner = await this.steamService.GetPlayerSummary(rivalry.PlayerA);
+                loser = await this.steamService.GetPlayerSummary(rivalry.PlayerB);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Could not get summaries for rivalry {rivalry.PlayerA} vs {rivalry.PlayerB}: {ex.Message}");
+                continue;
+            }
+
+            if (winner == null || loser == null)
+            {
+                continue;
+            }
+
+            string title = rivalry.Kind == "feud" ? "Biggest rivalry" : "Most one-sided rivalry";
+
+            rivalries.Add((title, winner, new Dictionary<string, object>
+            {
+                { "Leads", new StatsLinkModel($"player-{winner.SteamId}", winner.Nickname, $"{rivalry.AKills} kills") },
+                { "Trails", new StatsLinkModel($"player-{loser.SteamId}", loser.Nickname, $"{rivalry.BKills} kills") },
+                { "Total", $"{rivalry.TotalKills} kills between them" },
+            }));
+        }
+
+        return rivalries;
     }
 
     private async Task<List<(string title, PlayerSummaryModel summary, Dictionary<string, object> items)>> getDishonorableMentions(CBaseStats[] allStats, string serverStatsType, ulong[] relevantPlayers)
@@ -545,6 +625,7 @@ public class PavlovStatisticsService : IDisposable
         if (serverStatsType == "SND")
         {
             dishonorableMentions.Add(await createPlayerMentionStat(playerStats, "Most teamkills", "Teamkills", p => p.TeamKills, p => p.Kills, false, (v, p) => $"{Math.Round(v, 0)}"));
+            dishonorableMentions.Add(await createPlayerMentionStat(playerStats, "Most team switches", "Switches", p => p.TeamSwitches, p => p.RoundsPlayed, false, (v, p) => $"{Math.Round(v, 0)}"));
         }
 
         return dishonorableMentions.Where(s => s.HasValue).Select(s => s!.Value).ToList();
@@ -593,6 +674,7 @@ public class PavlovStatisticsService : IDisposable
             serverCountStats.Add("Total matches", serverStats.TotalMatchesPlayed.ToString());
             serverCountStats.Add("Unique players", serverStats.TotalUniquePlayers.ToString());
             serverCountStats.Add("Total rounds", serverStats.TotalRoundsPlayed.ToString());
+            serverCountStats.Add("Total chickens", serverStats.TotalChickensKilled.ToString());
         }
         else if (serverStatsType == "EFP")
         {
@@ -642,7 +724,131 @@ public class PavlovStatisticsService : IDisposable
             serverKillStats.Add("Total teamkills", serverStats.TotalTeamkills.ToString());
         }
 
+        // Needs enough kills behind it to mean anything - a gun with four kills and
+        // three headshots is not the sharpest weapon on the server.
+        CGunStats? sharpestGun = allStats.OfType<CGunStats>()
+            .Where(g => g.Kills >= 100)
+            .MaxBy(g => (double)g.Headshots / g.Kills);
+        if (sharpestGun != null)
+        {
+            string? gunKey = GetCorrectGunKey(sharpestGun.Name);
+            string gunName = gunKey != null ? PavlovStatisticsService.GunMap[gunKey] : sharpestGun.Name;
+            serverKillStats.Add("Sharpest weapon", new StatsLinkModel($"gun-{sharpestGun.Name}", gunName, $"{Math.Round(this.calculateSafePercent(sharpestGun.Headshots, sharpestGun.Kills), 1)}% headshots"));
+        }
+
         return serverKillStats;
+    }
+
+    private Dictionary<string, object> getServerRoundStats(CBaseStats[] allStats, string serverStatsType)
+    {
+        Dictionary<string, object> roundStats = new();
+
+        if (serverStatsType != "SND")
+        {
+            return roundStats;
+        }
+
+        CServerStats serverStats = allStats.OfType<CServerStats>().First();
+
+        if (serverStats.AverageRoundSeconds > 0)
+        {
+            roundStats.Add("Average round", formatDuration(serverStats.AverageRoundSeconds));
+            roundStats.Add("Fastest round", formatDuration(serverStats.FastestRoundSeconds));
+            roundStats.Add("Longest round", formatDuration(serverStats.LongestRoundSeconds));
+        }
+
+        if (serverStats.FirstBloodRounds > 0)
+        {
+            roundStats.Add("First blood wins", $"{Math.Round(this.calculateSafePercent(serverStats.FirstBloodWins, serverStats.FirstBloodRounds), 1)}%");
+        }
+
+        return roundStats;
+    }
+
+    private async Task<Dictionary<string, object>> getServerMatchStats(CBaseStats[] allStats, string serverStatsType)
+    {
+        Dictionary<string, object> matchStats = new();
+
+        if (serverStatsType != "SND")
+        {
+            return matchStats;
+        }
+
+        CServerStats serverStats = allStats.OfType<CServerStats>().First();
+
+        if (serverStats.BiggestBlowoutMap != null)
+        {
+            matchStats.Add("Biggest blowout", new StatsLinkModel(
+                $"map-{serverStats.BiggestBlowoutMap}-{serverStats.BiggestBlowoutGameMode}",
+                await this.getMapName(serverStats.BiggestBlowoutMap),
+                serverStats.BiggestBlowoutScore));
+        }
+
+        matchStats.Add("Nailbiters", $"{serverStats.NailbiterMatches} decided by one round");
+
+        // Last three months only, and only maps played enough in that window for
+        // the split to mean anything: an all-time split is mostly a record of how
+        // the map played years ago.
+        CMapStats[] decidedMaps = allStats.OfType<CMapStats>().Where(m => m.RecentTeam0Wins + m.RecentTeam1Wins >= 5).ToArray();
+        if (decidedMaps.Length > 0)
+        {
+            double share(CMapStats map)
+            {
+                return this.calculateSafePercent(Math.Max(map.RecentTeam0Wins, map.RecentTeam1Wins), map.RecentTeam0Wins + map.RecentTeam1Wins);
+            }
+
+            CMapStats lopsided = decidedMaps.MaxBy(share)!;
+            CMapStats balanced = decidedMaps.MinBy(share)!;
+
+            matchStats.Add("Most one-sided map", new StatsLinkModel(
+                $"map-{lopsided.MapId}-{lopsided.GameMode}",
+                await this.getMapName(lopsided.MapId),
+                $"{Math.Round(share(lopsided), 0)}% {(lopsided.RecentTeam0Wins > lopsided.RecentTeam1Wins ? "blue" : "red")}, 3 months"));
+
+            matchStats.Add("Most balanced map", new StatsLinkModel(
+                $"map-{balanced.MapId}-{balanced.GameMode}",
+                await this.getMapName(balanced.MapId),
+                $"{Math.Round(share(balanced), 0)}% split, 3 months"));
+        }
+
+        return matchStats;
+    }
+
+    /// <summary>
+    ///     Workshop maps are stored as their UGC id; resolve it to the name people
+    ///     actually know the map by, and fall back to the id when mod.io cannot
+    ///     tell us (a delisted map, most often).
+    /// </summary>
+    private async Task<string> getMapName(string mapId)
+    {
+        if (!mapId.ToLower().StartsWith("ugc"))
+        {
+            return mapId;
+        }
+
+        try
+        {
+            MapWorkshopModel? mapDetail = this.mapSourceService.GetMapDetail(long.Parse(mapId[3..]));
+            if (!string.IsNullOrWhiteSpace(mapDetail?.Name))
+            {
+                return mapDetail.Name;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Could not get map detail for {mapId}: {ex.Message}");
+        }
+
+        return await Task.FromResult(mapId);
+    }
+
+    private static string formatDuration(double seconds)
+    {
+        TimeSpan duration = TimeSpan.FromSeconds(Math.Round(seconds));
+
+        return duration.TotalHours >= 1
+            ? duration.ToString("h\\:mm\\:ss")
+            : duration.ToString("m\\:ss");
     }
 
     private Dictionary<string, object> getServerBombStats(CBaseStats[] allStats, string serverStatsType)
@@ -656,6 +862,8 @@ public class PavlovStatisticsService : IDisposable
             serverBombStats.Add("Total plants", serverStats.TotalBombPlants.ToString());
             serverBombStats.Add("Total defuses", serverStats.TotalBombDefuses.ToString());
             serverBombStats.Add("Total explosions", serverStats.TotalBombExplosions.ToString());
+            serverBombStats.Add("Plants defused", $"{Math.Round(this.calculateSafePercent(serverStats.TotalBombDefuses, serverStats.TotalBombPlants), 1)}%");
+            serverBombStats.Add("Plants exploded", $"{Math.Round(this.calculateSafePercent(serverStats.TotalBombExplosions, serverStats.TotalBombPlants), 1)}%");
         }
 
         return serverBombStats;
@@ -684,6 +892,20 @@ public class PavlovStatisticsService : IDisposable
         Dictionary<string, object> mapStatValues = new();
         mapStatValues.Add("Played", $"{mapStats.PlayCount} time{(mapStats.PlayCount != 1 ? "s" : "")}");
         mapStatValues.Add("Wins", $"Blue {mapStats.Team0Wins}, Red {mapStats.Team1Wins}");
+
+        int decidedMatches = mapStats.Team0Wins + mapStats.Team1Wins;
+        if (decidedMatches > 0)
+        {
+            int leaderWins = Math.Max(mapStats.Team0Wins, mapStats.Team1Wins);
+            double leaderShare = this.calculateSafePercent(leaderWins, decidedMatches);
+            string leader = mapStats.Team0Wins == mapStats.Team1Wins ? "even" : mapStats.Team0Wins > mapStats.Team1Wins ? "blue" : "red";
+            mapStatValues.Add("Balance", leader == "even" ? "Dead even" : $"{Math.Round(leaderShare, 0)}% {leader}");
+        }
+
+        if (mapStats.AverageRoundSeconds > 0)
+        {
+            mapStatValues.Add("Round length", formatDuration(mapStats.AverageRoundSeconds));
+        }
         mapStatValues.Add("Rounds", $"{Math.Round(mapStats.AverageRounds, 2)} avg, {mapStats.MaxRounds} max, {mapStats.MinRounds} min");
         if (mapStats.BestPlayer != null)
         {
@@ -796,6 +1018,20 @@ public class PavlovStatisticsService : IDisposable
         }
     }
 
+    private async Task<string> getPlayerName(ulong uniqueId)
+    {
+        try
+        {
+            return await this.steamService.GetUsername(uniqueId) ?? uniqueId.ToString();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Could not get username of player id {uniqueId}: {ex.Message}");
+
+            return uniqueId.ToString();
+        }
+    }
+
     private async Task<Dictionary<string, object>> getPlayerStats(CPlayerStats playerStats, CBaseStats[] allStats, string serverStatsType, string serverId)
     {
         CServerStats serverStats = allStats.OfType<CServerStats>().First();
@@ -884,7 +1120,56 @@ public class PavlovStatisticsService : IDisposable
             playerStatValues.Add("Avg. points", $"{Math.Round(playerStats.AverageScore, 0)}");
             playerStatValues.Add("Total points", $"{playerStats.TotalScore} ({Math.Round(this.calculateSafePercent(playerStats.TotalScore, totalScore), 1)}%)");
             playerStatValues.Add("Bombs", $"{playerStats.BombsPlanted} planted, {playerStats.BombsDefused} defused");
+            if (playerStats.PlantsMade > 0)
+            {
+                playerStatValues.Add("Plants exploded", $"{playerStats.PlantsConverted} of {playerStats.PlantsMade} ({Math.Round(this.calculateSafePercent(playerStats.PlantsConverted, playerStats.PlantsMade), 0)}%)");
+            }
+
             playerStatValues.Add("Rounds played", $"{playerStats.RoundsPlayed}");
+
+            if (playerStats.FirstBloods > 0)
+            {
+                playerStatValues.Add("First bloods", playerStats.FirstBloods.ToString());
+            }
+
+            if (playerStats.BestRoundKills > 0)
+            {
+                playerStatValues.Add("Best round", $"{playerStats.BestRoundKills} kills");
+            }
+
+            if (playerStats.LongestKillStreak > 0)
+            {
+                playerStatValues.Add("Kill streak", $"{playerStats.LongestKillStreak} in a row");
+            }
+
+            if (playerStats.Multikills > 0)
+            {
+                playerStatValues.Add("Multikills", playerStats.Aces > 0 ? $"{playerStats.Multikills} ({playerStats.Aces} aces)" : playerStats.Multikills.ToString());
+            }
+
+            if (playerStats.BlueMatches + playerStats.RedMatches > 0)
+            {
+                playerStatValues.Add("Plays", $"{Math.Round(this.calculateSafePercent(playerStats.BlueMatches, playerStats.BlueMatches + playerStats.RedMatches), 0)}% blue");
+            }
+
+            if (playerStats.TeamSwitches > 0)
+            {
+                playerStatValues.Add("Team switches", playerStats.TeamSwitches.ToString());
+            }
+        }
+
+        // Who this player struggles against, and who they feast on. Both link to
+        // the other player's card.
+        if (playerStats.Nemesis != null)
+        {
+            string nemesisName = await this.getPlayerName(playerStats.Nemesis.Value);
+            playerStatValues.Add("Nemesis", new StatsLinkModel($"player-{playerStats.Nemesis}", nemesisName, $"killed you {playerStats.NemesisKills}x"));
+        }
+
+        if (playerStats.FavouriteVictim != null)
+        {
+            string victimName = await this.getPlayerName(playerStats.FavouriteVictim.Value);
+            playerStatValues.Add("Favourite victim", new StatsLinkModel($"player-{playerStats.FavouriteVictim}", victimName, $"killed {playerStats.FavouriteVictimKills}x"));
         }
 
         if (bestGunName != null)

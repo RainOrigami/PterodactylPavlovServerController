@@ -2,7 +2,22 @@
 @using PterodactylPavlovServerController.Models;
 @using PterodactylPavlovServerController.Pages.Player
 @using PterodactylPavlovServerController.Services;
+@implements IDisposable
 <div class="tab-pane container active px-0" id="players">
+    @{
+        // Demo cards sit in the same columns as real players so their layout is
+        // the one that actually ships, not a full-width variant.
+        IReadOnlyList<DemoPlayerModel> demoPlayers = DemoPlayerService.Players;
+        Dictionary<ulong, DemoPlayerModel> demoPlayersById = demoPlayers.ToDictionary(d => d.UniqueId);
+    }
+
+    @if (demoPlayers.Count > 0)
+    {
+        <div class="alert alert-warning py-1 my-2">
+            @demoPlayers.Count demo player card(s) - not real players. Remove with <code>ppsc.clearPlayers()</code>.
+        </div>
+    }
+
     @if (ServerInfo.Teams)
     {
         List<ulong> blueTeam = new();
@@ -13,6 +28,9 @@
             blueTeam.AddRange(playersDetails.Where(kvp => kvp.Value.TeamId == 0).Select(kvp => kvp.Key));
             redTeam.AddRange(playersDetails.Where(kvp => kvp.Value.TeamId == 1).Select(kvp => kvp.Key));
         }
+
+        blueTeam.AddRange(demoPlayers.Where(d => (d.PlayerDetail?.TeamId ?? 0) == 0).Select(d => d.UniqueId));
+        redTeam.AddRange(demoPlayers.Where(d => (d.PlayerDetail?.TeamId ?? 0) == 1).Select(d => d.UniqueId));
 
         <div class="row">
             <div class="col rounded h2 p-3 me-2" style="background-color: lightskyblue; color: #222;">
@@ -42,7 +60,7 @@
                         <div class="row">
                             <div class="col px-0">
 
-                                <PlayerCard @key="playerId" PlayerId="@playerId" ServerId="@Connection.ServerId" LeagueMode="LeagueMode" />
+                                <PlayerCard @key="playerId" PlayerId="@playerId" ServerId="@Connection.ServerId" LeagueMode="LeagueMode" Demo="@(demoPlayersById.TryGetValue(playerId, out DemoPlayerModel? demoPlayer) ? demoPlayer : null)" />
 
                             </div>
                         </div>
@@ -59,7 +77,7 @@
                         <div class="row">
                             <div class="col px-0">
 
-                                <PlayerCard @key="playerId" PlayerId="@playerId" ServerId="@Connection.ServerId" LeagueMode="LeagueMode" />
+                                <PlayerCard @key="playerId" PlayerId="@playerId" ServerId="@Connection.ServerId" LeagueMode="LeagueMode" Demo="@(demoPlayersById.TryGetValue(playerId, out DemoPlayerModel? demoPlayer) ? demoPlayer : null)" />
 
                             </div>
                         </div>
@@ -71,12 +89,12 @@
     }
     else if (Connection.PlayerDetails is IReadOnlyDictionary<ulong, PlayerDetail> playersDetails)
     {
-        @foreach (ulong playerId in playersDetails.Keys)
+        @foreach (ulong playerId in playersDetails.Keys.Concat(demoPlayers.Select(d => d.UniqueId)))
         {
             <div class="row">
                 <div class="col px-0">
 
-                    <PlayerCard @key="playerId" PlayerId="@playerId" ServerId="@Connection.ServerId" LeagueMode="LeagueMode" />
+                    <PlayerCard @key="playerId" PlayerId="@playerId" ServerId="@Connection.ServerId" LeagueMode="LeagueMode" Demo="@(demoPlayersById.TryGetValue(playerId, out DemoPlayerModel? demoPlayer) ? demoPlayer : null)" />
 
                 </div>
             </div>
@@ -85,6 +103,22 @@
 </div>
 
 @code {
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        DemoPlayerService.OnChanged += demoPlayersChanged;
+    }
+
+    private async void demoPlayersChanged()
+    {
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        DemoPlayerService.OnChanged -= demoPlayersChanged;
+    }
+
     [Parameter]
     [EditorRequired]
     public PavlovRconConnection Connection { get; set; }

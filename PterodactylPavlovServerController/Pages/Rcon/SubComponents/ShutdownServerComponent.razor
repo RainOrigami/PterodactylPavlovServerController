@@ -1,0 +1,55 @@
+﻿@using PavlovVR_Rcon.Models.Pavlov;
+@using PterodactylPavlovServerController.Models;
+@using PterodactylPavlovServerController.Services;
+@inject PavlovRconService RconService
+@inject IToastService Toast
+@inject ApiKeyService ApiKey
+@inject AuditService AuditService
+
+<div class="me-2" style="width: 425px; display: inline-block; vertical-align: top;">
+    <h3 class="mb-0">Shut down server</h3>
+    <small class="text-muted">
+        Immediately shuts the server down. Pterodactyl restarts it afterwards if the
+        server is configured to do so.
+    </small>
+    <div class="mt-3 mb-3">
+        <ConfirmDialog @ref="shutdownConfirm" ConfirmationChanged="confirmShutdown" ConfirmationTitle="Shut down the server?" ConfirmationMessage="Do you really want to shut this server down? Every connected player will be disconnected." Id="@($"shutdown-{Connection.ServerId}")" />
+        <a class="btn btn-outline-danger form-control" href="#" data-bs-toggle="modal" data-bs-target="#shutdown-@Connection.ServerId">Shut down</a>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public PavlovRconConnection Connection { get; set; }
+
+    [Parameter]
+    [EditorRequired]
+    public ServerInfo ServerInfo { get; set; }
+
+    private ConfirmDialog shutdownConfirm { get; set; } = null!;
+
+    private async Task confirmShutdown(bool confirmed)
+    {
+        if (!confirmed)
+        {
+            return;
+        }
+
+        try
+        {
+            if (!await RconService.ShutdownServer(ApiKey.ApiKey, Connection.ServerId))
+            {
+                Toast.ShowError("Server refused the command");
+                return;
+            }
+
+            Toast.ShowSuccess("Server is shutting down");
+            await AuditService.Add(Connection.ServerId, "Shut the server down");
+        }
+        catch (Exception e)
+        {
+            Toast.ShowError(e.Message);
+        }
+    }
+}

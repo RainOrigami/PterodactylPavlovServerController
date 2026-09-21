@@ -3,9 +3,17 @@
 @using PterodactylPavlovServerController.Models;
 @using PterodactylPavlovServerController.Pages.Player
 @using PterodactylPavlovServerController.Services;
-@inject PavlovServerContext PavlovServerContext
+@inject IConfiguration Configuration
 
 <div class="tab-pane container active px-0" id="offline">
+    @if (isLoading)
+    {
+        <div class="d-flex justify-content-center my-4">
+            <div class="spinner-border text-secondary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
     @foreach (ulong uniqueId in offlinePlayerList.Skip(currentPage * pageSize).Take(pageSize))
     {
         <PlayerCard @key="uniqueId" PlayerId="@uniqueId" ServerId="@Connection.ServerId" />
@@ -32,17 +40,70 @@
     private ulong[] offlinePlayerList = Array.Empty<ulong>();
     private int currentPage = 0;
     private int pageCount = 0;
+    private bool isLoading = false;
+    private string? loadedSignature = null;
     private const int pageSize = 25;
 
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
-        offlinePlayerList = PavlovServerContext.Players.Where(p => p.ServerId == Connection.ServerId).AsEnumerable().Where(p => !(Connection?.PlayerListPlayers?.ContainsKey(p.UniqueId) ?? false)).OrderByDescending(p => p.LastSeen).Select(p => p.UniqueId).ToArray();
+        string serverId = Connection.ServerId;
+        IReadOnlyDictionary<ulong, Player>? playerListPlayers = Connection?.PlayerListPlayers;
+
+        // Parameters are set again on every RCON poll. Only re-query when the inputs
+        // actually changed, otherwise the list reloads roughly once a second.
+        string signature = buildSignature(serverId, playerListPlayers);
+        if (signature == loadedSignature)
+        {
+            await base.OnParametersSetAsync();
+            return;
+        }
+
+        // Only show the spinner on the first load. A background refresh keeps the
+        // current list on screen instead of collapsing it and shifting the page.
+        isLoading = loadedSignature == null;
+
+        // Materialising the player list is expensive; keep it off the render thread
+        // so the tab switches immediately instead of freezing the frontend.
+        // Own context: the scoped one is shared across the circuit and is not thread-safe.
+        // The online ids go into the query so the database does the filtering.
+        // AsEnumerable() pulled every player row for the server into memory
+        // first, which is what made opening this tab take seconds.
+        ulong[] onlinePlayerIds = playerListPlayers?.Keys.ToArray() ?? Array.Empty<ulong>();
+
+        offlinePlayerList = await Task.Run(() =>
+        {
+            using PavlovServerContext context = new(Configuration);
+            return context.Players
+                .Where(p => p.ServerId == serverId && !onlinePlayerIds.Contains(p.UniqueId))
+                .OrderByDescending(p => p.LastSeen)
+                .Select(p => p.UniqueId)
+                .ToArray();
+        });
+
+        loadedSignature = signature;
         pageCount = (int)Math.Ceiling(offlinePlayerList.Length / (decimal)pageSize);
         if (currentPage > pageCount)
         {
             currentPage = pageCount;
         }
+        isLoading = false;
 
-        base.OnParametersSet();
+        await base.OnParametersSetAsync();
+    }
+
+    private static string buildSignature(string serverId, IReadOnlyDictionary<ulong, Player>? playerListPlayers)
+    {
+        if (playerListPlayers == null)
+        {
+            return $"{serverId}:-";
+        }
+
+        ulong fingerprint = 0;
+        foreach (ulong uniqueId in playerListPlayers.Keys)
+        {
+            fingerprint ^= uniqueId;
+        }
+
+        return $"{serverId}:{playerListPlayers.Count}:{fingerprint}";
     }
 }

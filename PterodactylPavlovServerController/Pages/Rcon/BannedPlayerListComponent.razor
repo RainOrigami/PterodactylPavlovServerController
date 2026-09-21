@@ -1,20 +1,27 @@
-﻿@using PavlovVR_Rcon.Models.Pavlov;
+@using PavlovVR_Rcon.Models.Pavlov;
 @using PterodactylPavlovServerController.Contexts;
 @using PterodactylPavlovServerController.Models;
 @using PterodactylPavlovServerController.Pages.Player
 @using PterodactylPavlovServerController.Services;
-@inject PavlovServerContext PavlovServerContext
 
 @if (Connection.BanList == null)
 {
     return;
 }
 
-<div class="tab-pane container active px-0" id="offline">
-    @foreach (ulong uniqueId in Connection.BanList)
+<div class="tab-pane container active px-0" id="banned">
+    @foreach (ulong uniqueId in bannedPlayerList.Skip(currentPage * pageSize).Take(pageSize))
     {
         <PlayerCard @key="uniqueId" PlayerId="@uniqueId" ServerId="@Connection.ServerId" />
     }
+
+    <div class="justify-content-center my-3">
+        @for (int i = 0; i < pageCount; i++)
+        {
+            int page = i;
+            <button class="m-1 btn @(currentPage == i ? "btn-secondary" : "btn-outline-secondary")" style="width: 50px" @onclick="@(() => currentPage = page)" @onclick:preventDefault>@(i + 1)</button>
+        }
+    </div>
 </div>
 
 @code {
@@ -25,4 +32,24 @@
     [Parameter]
     [EditorRequired]
     public ServerInfo ServerInfo { get; set; }
+
+    private ulong[] bannedPlayerList = Array.Empty<ulong>();
+    private int currentPage = 0;
+    private int pageCount = 0;
+    private const int pageSize = 25;
+
+    protected override void OnParametersSet()
+    {
+        // Rendering the whole ban list at once meant one PlayerCard per banned
+        // player, each loading its own data. Page it like the offline list.
+        bannedPlayerList = Connection.BanList?.ToArray() ?? Array.Empty<ulong>();
+
+        pageCount = (int)Math.Ceiling(bannedPlayerList.Length / (decimal)pageSize);
+        if (currentPage > pageCount)
+        {
+            currentPage = pageCount;
+        }
+
+        base.OnParametersSet();
+    }
 }

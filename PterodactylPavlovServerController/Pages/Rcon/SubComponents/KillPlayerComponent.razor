@@ -1,0 +1,72 @@
+﻿@using PavlovVR_Rcon.Models.Pavlov;
+@using PterodactylPavlovServerController.Models;
+@using PterodactylPavlovServerController.Services;
+@inject PavlovRconService RconService
+@inject IToastService Toast
+@inject ApiKeyService ApiKey
+@inject AuditService AuditService
+
+<div class="me-2" style="width: 425px; display: inline-block; vertical-align: top;">
+    <h3 class="mb-0">Kill player</h3>
+    <small class="text-muted">
+        Kills the selected player where they stand.
+    </small>
+    <EditForm Model="@kill" OnValidSubmit="@killSubmitted" class="mt-3">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <InputSelect @bind-Value="kill.UniqueId" class="form-select">
+                    <option selected disabled>Select a player</option>
+
+                    @if (Connection.PlayerListPlayers != null)
+                    {
+                        foreach (KeyValuePair<ulong, Player> connectionPlayer in Connection.PlayerListPlayers)
+                        {
+                            <option value="@connectionPlayer.Key">@connectionPlayer.Value.Username</option>
+                        }
+                    }
+            </InputSelect>
+        </div>
+        <div class="mb-3">
+            <button type="submit" class="btn btn-outline-danger form-control">Kill</button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public PavlovRconConnection Connection { get; set; }
+
+    [Parameter]
+    [EditorRequired]
+    public ServerInfo ServerInfo { get; set; }
+
+    private readonly GenericPlayerIdModel kill = new();
+
+    private async Task killSubmitted()
+    {
+        if (kill.UniqueId == null)
+        {
+            Toast.ShowError("You need to select a player");
+            return;
+        }
+
+        try
+        {
+            if (!await RconService.Kill(ApiKey.ApiKey, Connection.ServerId, kill.UniqueId!.Value))
+            {
+                Toast.ShowError("Server refused the command");
+                return;
+            }
+
+            Toast.ShowSuccess("Player has been killed");
+            await AuditService.Add(Connection.ServerId, $"Killed player {kill.UniqueId!.Value}");
+        }
+        catch (Exception e)
+        {
+            Toast.ShowError(e.Message);
+        }
+    }
+}

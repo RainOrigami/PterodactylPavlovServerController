@@ -1,0 +1,63 @@
+﻿@using PavlovVR_Rcon.Models.Pavlov;
+@using PterodactylPavlovServerController.Models;
+@using PterodactylPavlovServerController.Services;
+@inject PavlovRconService RconService
+@inject IToastService Toast
+@inject ApiKeyService ApiKey
+@inject AuditService AuditService
+
+<div class="me-2" style="width: 425px; display: inline-block; vertical-align: top;">
+    <h3 class="mb-0">Time limit</h3>
+    <small class="text-muted">
+        Sets the time limit of the current match, in seconds.
+    </small>
+    <EditForm Model="@timeLimit" OnValidSubmit="@timeLimitSubmitted" class="mt-3">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label>Seconds</label>
+            <InputNumber @bind-Value="timeLimit.Amount" class="form-control" />
+        </div>
+        <div class="mb-3">
+            <button type="submit" class="btn btn-outline-success form-control">Set time limit</button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public PavlovRconConnection Connection { get; set; }
+
+    [Parameter]
+    [EditorRequired]
+    public ServerInfo ServerInfo { get; set; }
+
+    private readonly GenericAmountModel timeLimit = new();
+
+    private async Task timeLimitSubmitted()
+    {
+        if (timeLimit.Amount is null or < 0)
+        {
+            Toast.ShowError("The time limit must not be negative");
+            return;
+        }
+
+        try
+        {
+            if (!await RconService.SetTimeLimit(ApiKey.ApiKey, Connection.ServerId, timeLimit.Amount!.Value))
+            {
+                Toast.ShowError("Server refused the command");
+                return;
+            }
+
+            Toast.ShowSuccess("Time limit has been updated");
+            await AuditService.Add(Connection.ServerId, $"Set time limit to {timeLimit.Amount!.Value}s");
+        }
+        catch (Exception e)
+        {
+            Toast.ShowError(e.Message);
+        }
+    }
+}

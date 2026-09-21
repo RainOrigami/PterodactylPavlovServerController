@@ -8,19 +8,15 @@ public class M1GarandLoadout : BaseLoadout
     public override Task DisablePlayer(PavlovRconService rconService, string apiKey, string serverId, ulong playerId) => Task.CompletedTask;
     public override Task DisablePlayers(PavlovRconService rconService, string apiKey, string serverId) => Task.CompletedTask;
     public override Task DisableRound(PavlovRconService rconService, string apiKey, string serverId) => Task.CompletedTask;
-    public override async Task EnablePlayer(PavlovRconService rconService, string apiKey, string serverId, ulong playerId)
+    public override async Task<bool> EnablePlayer(PavlovRconService rconService, string apiKey, string serverId, ulong playerId)
     {
-        await rconService.GiveItem(apiKey, serverId, playerId, Item.m1garand);
-        await Task.Delay(15);
-        await rconService.GiveItem(apiKey, serverId, playerId, Item.bayonet_m1garand);
-        await Task.Delay(15);
-        await rconService.GiveItem(apiKey, serverId, playerId, Item.antipersonnelmine);
-        await Task.Delay(15);
-        await rconService.GiveItem(apiKey, serverId, playerId, Item.antipersonnelmine);
-        await Task.Delay(15);
-        await rconService.GiveItem(apiKey, serverId, playerId, Item.smoke_svt);
-        await Task.Delay(15);
-        await rconService.GiveItem(apiKey, serverId, playerId, Item.smoke_svt);
+        bool equipped = await BaseLoadout.GiveItem(rconService, apiKey, serverId, playerId, Item.m1garand);
+        equipped &= await BaseLoadout.GiveItem(rconService, apiKey, serverId, playerId, Item.bayonet_m1garand);
+        equipped &= await BaseLoadout.GiveItem(rconService, apiKey, serverId, playerId, Item.antipersonnelmine);
+        equipped &= await BaseLoadout.GiveItem(rconService, apiKey, serverId, playerId, Item.antipersonnelmine);
+        equipped &= await BaseLoadout.GiveItem(rconService, apiKey, serverId, playerId, Item.smoke_svt);
+        equipped &= await BaseLoadout.GiveItem(rconService, apiKey, serverId, playerId, Item.smoke_svt);
+        return equipped;
     }
     public override async Task EnablePlayers(PavlovRconService rconService, string apiKey, string serverId)
     {

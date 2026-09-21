@@ -1,0 +1,78 @@
+﻿@using PavlovVR_Rcon.Models.Pavlov;
+@using PterodactylPavlovServerController.Models;
+@using PterodactylPavlovServerController.Services;
+@inject PavlovRconService RconService
+@inject IToastService Toast
+@inject ApiKeyService ApiKey
+@inject AuditService AuditService
+
+<div class="me-2" style="width: 425px; display: inline-block; vertical-align: top;">
+    <h3 class="mb-0">Give item to team</h3>
+    <small class="text-muted">
+        Gives an item to every player on the selected team.
+    </small>
+    <EditForm Model="@giveAll" OnValidSubmit="@giveAllSubmitted" class="mt-3">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label>Team</label>
+            <InputSelect @bind-Value="giveAll.TeamId" class="form-select">
+                <option selected disabled>Select a team</option>
+                <option value="0">Blue</option>
+                <option value="1">Red</option>
+            </InputSelect>
+        </div>
+        <div class="mb-3">
+            <label>Item</label>
+            <InputSelect @bind-Value="giveAll.Item" class="form-select">
+                <option selected disabled>Select an item</option>
+
+                @foreach (Item item in Enum.GetValues<Item>())
+                {
+                    <option value="@item.ToString()">@item.ToString()</option>
+                }
+            </InputSelect>
+        </div>
+        <div class="mb-3">
+            <button type="submit" class="btn btn-outline-warning form-control">Give to team</button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public PavlovRconConnection Connection { get; set; }
+
+    [Parameter]
+    [EditorRequired]
+    public ServerInfo ServerInfo { get; set; }
+
+    private readonly GiveAllModel giveAll = new();
+
+    private async Task giveAllSubmitted()
+    {
+        if (giveAll.TeamId == null || string.IsNullOrEmpty(giveAll.Item))
+        {
+            Toast.ShowError("You need to select a team and an item");
+            return;
+        }
+
+        try
+        {
+            if (!await RconService.GiveAll(ApiKey.ApiKey, Connection.ServerId, giveAll.TeamId!.Value, giveAll.Item!))
+            {
+                Toast.ShowError("Server refused the command");
+                return;
+            }
+
+            Toast.ShowSuccess("Item has been given to the team");
+            await AuditService.Add(Connection.ServerId, $"Gave item {giveAll.Item} to team {giveAll.TeamId!.Value}");
+        }
+        catch (Exception e)
+        {
+            Toast.ShowError(e.Message);
+        }
+    }
+}

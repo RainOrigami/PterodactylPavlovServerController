@@ -4,6 +4,8 @@
 @using PterodactylPavlovServerController.Services;
 @using PterodactylPavlovServerController.Stores;
 @using PterodactylPavlovServerDomain.Models;
+@using PterodactylPavlovServerController.Pages.Shared;
+@using Microsoft.JSInterop;
 @inject IDispatcher Dispatcher
 @inject IState<MapsState> MapsState
 @inject PavlovRconService RconService
@@ -11,8 +13,18 @@
 @inject ApiKeyService ApiKey
 @inject IMapSourceService MapSourceService
 @inject AuditService AuditService
+@inject IJSRuntime JS
 
 <div class="tab-pane container active px-0" id="maps">
+    @* A map change boots everyone into a loading screen, and the whole tab is a
+       grid of click targets - too easy to hit one by accident. *@
+    <ConfirmDialog Id="@mapChangeConfirmId"
+                   ConfirmationTitle="Change the map?"
+                   ConfirmationMessage="@mapChangeConfirmMessage"
+                   ConfirmButtonText="Change map"
+                   ConfirmButtonClass="btn-warning"
+                   ConfirmationChanged="confirmMapChange" />
+
     <h3>Click a map to change to</h3>
     @if (!MapsState.Value.ServerMaps.ContainsKey(Connection.ServerId))
     {
@@ -20,7 +32,7 @@
     }
     else
     {
-        <button type="submit" class="btn btn-outline-primary mb-3" @onclick="@nextMap">Next map</button>
+        <a href="#" class="btn btn-outline-primary mb-3" data-bs-toggle="modal" data-bs-target="@mapChangeConfirmTarget" @onclick="@requestNextMap" @onclick:preventDefault>Next map</a>
         <br />
 
         foreach (ServerMapModel mapRow in MapsState.Value.ServerMaps[Connection.ServerId])
@@ -32,12 +44,12 @@
             }
 
             <div class="card bg-dark me-2 mb-2" style="display: inline-block; width: 256px;@(ServerInfo.MapLabel.ToLower() == mapRow.MapLabel.ToLower() ? " background-color: #7D7 !important; color: #444;" : "")">
-                <a href="#" @onclick="() => changeMap(mapRow)" @onclick:preventDefault class="text-decoration-none">
-                    <img class="card-img-top" src="@(mapRowDetail == null ? "https://pavlov.bloodisgood.net/gunimages/unknown.png" : mapRowDetail.ImageURL)" alt="@mapRow.MapLabel" />
+                <a href="#" @onclick="() => requestMapChange(mapRow)" @onclick:preventDefault data-bs-toggle="modal" data-bs-target="@mapChangeConfirmTarget" class="text-decoration-none">
+                    <MapImage MapDetail="@mapRowDetail" Alt="@mapRow.MapLabel" />
                 </a>
                 <div class="card-body">
-                    <a href="#" @onclick="() => changeMap(mapRow)" @onclick:preventDefault class="text-decoration-none">
-                        <h5 class="card-title">@(mapRowDetail == null ? mapRow.MapLabel : mapRowDetail.Name)</h5>
+                    <a href="#" @onclick="() => requestMapChange(mapRow)" @onclick:preventDefault data-bs-toggle="modal" data-bs-target="@mapChangeConfirmTarget" class="text-decoration-none">
+                        <h5 class="card-title">@(mapRowDetail is null or { Unavailable: true, } ? mapRow.MapLabel : mapRowDetail.Name)</h5>
                     </a>
                     <p class="card-text">
                         <div class="container px-0">
@@ -47,15 +59,37 @@
                                 </div>
                                 <div class="col text-end px-1">@mapRow.GameMode</div>
                             </div>
-                            <div class="row gx-0">
-                                <div class="col-auto px-1">
-                                    <b>Workshop:</b>
+                            @if (mapRow.IsWorkshopMap)
+                            {
+                                <div class="row gx-0">
+                                    <div class="col-auto px-1">
+                                        <b>Workshop:</b>
+                                    </div>
+                                    <div class="col text-end px-1">
+                                        @if (mapRowDetail is { Unavailable: false, } && !string.IsNullOrEmpty(mapRow.Url))
+                                        {
+                                            <a href="@mapRow.Url" target="_blank">Open page</a>
+                                        }
+                                        else if (mapRowDetail is { Unavailable: true, })
+                                        {
+                                            <span class="text-warning">Delisted</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Loading...</span>
+                                        }
+                                    </div>
                                 </div>
-                                <div class="col text-end px-1">
-                                    <a href="@mapRow.Url" target="_blank">Open page</a>
+                            }
+                            @if (mapRowDetail is { Unavailable: true, })
+                            {
+                                <div class="row gx-0">
+                                    <div class="col px-1 text-warning" style="font-size: 0.85em;">
+                                        Not on mod.io anymore - players without it cached cannot join.
+                                    </div>
                                 </div>
-                            </div>
-                            @if (mapRowDetail == null)
+                            }
+                            else if (mapRowDetail == null && mapRow.IsWorkshopMap)
                             {
                                 <div class="row gx-0">
                                     <div class="col-auto px-1">Loading...</div>
@@ -69,7 +103,7 @@
     }
 
     <h3 class="mt-3">Enter a map ID</h3>
-    <EditForm Model="@mapChangeInput" OnValidSubmit="@mapChange">
+    <EditForm Model="@mapChangeInput" OnValidSubmit="@requestFormMapChange">
         <DataAnnotationsValidator />
         <div class="container mb-5">
             <div class="row">
@@ -91,6 +125,12 @@
                 <div class="col">
                     <button type="submit" class="btn btn-outline-primary">Change map</button>
                 </div>
+                <div class="col">
+                    <button type="button" class="btn btn-outline-success" @onclick="addToRotation">Add to rotation</button>
+                </div>
+                <div class="col">
+                    <button type="button" class="btn btn-outline-danger" @onclick="removeFromRotation">Remove from rotation</button>
+                </div>
 
             </div>
         </div>
@@ -105,6 +145,82 @@
     [Parameter]
     [EditorRequired]
     public ServerInfo ServerInfo { get; set; }
+
+    private async Task addToRotation()
+    {
+        await changeRotation(true);
+    }
+
+    private async Task removeFromRotation()
+    {
+        await changeRotation(false);
+    }
+
+    private async Task changeRotation(bool add)
+    {
+        if (string.IsNullOrWhiteSpace(mapChangeInput.Map) || mapChangeInput.GameMode == null)
+        {
+            Toast.ShowError("You need to enter a map ID and select a game mode");
+            return;
+        }
+
+        try
+        {
+            GameMode gameMode = mapChangeInput.GameMode!.Value;
+            string mapLabel = mapChangeInput.MapLabel!;
+            bool successful = add
+                ? await RconService.AddMapRotation(ApiKey.ApiKey, Connection.ServerId, mapLabel, gameMode)
+                : await RconService.RemoveMapRotation(ApiKey.ApiKey, Connection.ServerId, mapLabel, gameMode);
+
+            if (!successful)
+            {
+                Toast.ShowError($"Server refused to {(add ? "add the map to" : "remove the map from")} the rotation");
+                return;
+            }
+
+            Toast.ShowSuccess($"Map {mapLabel} ({gameMode}) has been {(add ? "added to" : "removed from")} the rotation");
+            await AuditService.Add(Connection.ServerId, $"{(add ? "Added" : "Removed")} map {mapLabel} game mode {gameMode} {(add ? "to" : "from")} the rotation");
+        }
+        catch (Exception e)
+        {
+            Toast.ShowError(e.Message);
+        }
+    }
+
+    private void requestMapChange(ServerMapModel serverMap)
+    {
+        MapWorkshopModel? mapDetail = null;
+        if (serverMap.IsWorkshopMap)
+        {
+            MapsState.Value.MapDetails.TryGetValue(serverMap.WorkshopId, out mapDetail);
+        }
+
+        string mapName = mapDetail is null or { Unavailable: true, } ? serverMap.MapLabel : mapDetail.Name;
+
+        this.pendingMapChange = new PendingMapChange(
+            $"Change the map to {mapName} ({serverMap.GameMode})? Everyone on the server will be sent to the loading screen.",
+            () => this.changeMap(serverMap));
+    }
+
+    private void requestNextMap()
+    {
+        this.pendingMapChange = new PendingMapChange(
+            "Skip to the next map in the rotation? Everyone on the server will be sent to the loading screen.",
+            this.nextMap);
+    }
+
+    private async Task confirmMapChange(bool confirmed)
+    {
+        PendingMapChange? request = this.pendingMapChange;
+        this.pendingMapChange = null;
+
+        if (!confirmed || request == null)
+        {
+            return;
+        }
+
+        await request.Execute();
+    }
 
     private async Task changeMap(ServerMapModel serverMap)
     {
@@ -135,6 +251,39 @@
     }
 
     private readonly MapChangeInputModel mapChangeInput = new();
+
+    private sealed record PendingMapChange(string Message, Func<Task> Execute);
+
+    private PendingMapChange? pendingMapChange;
+
+    private string mapChangeConfirmId => $"mapchange-{Connection.ServerId}";
+
+    private string mapChangeConfirmTarget => $"#{this.mapChangeConfirmId}";
+
+    private string mapChangeConfirmMessage => this.pendingMapChange?.Message ?? "Everyone on the server will be sent to the loading screen.";
+
+    private async Task requestFormMapChange()
+    {
+        if (mapChangeInput.MapLabel == null || mapChangeInput.GameMode == null)
+        {
+            Toast.ShowError("Map label and game mode are required for a map change");
+            return;
+        }
+
+        this.pendingMapChange = new PendingMapChange(
+            $"Change the map to {mapChangeInput.MapLabel} ({mapChangeInput.GameMode})? Everyone on the server will be sent to the loading screen.",
+            this.mapChange);
+
+        // The card grid opens this modal with data-bs-toggle, but the form only
+        // knows whether to ask once it has validated, so it opens it by hand.
+        if (!await JS.InvokeAsync<bool>("ppscUi.showModal", this.mapChangeConfirmId))
+        {
+            // No modal to show means no way to confirm; do not silently drop the
+            // map change the operator asked for.
+            this.pendingMapChange = null;
+            await this.mapChange();
+        }
+    }
 
     private async Task mapChange()
     {

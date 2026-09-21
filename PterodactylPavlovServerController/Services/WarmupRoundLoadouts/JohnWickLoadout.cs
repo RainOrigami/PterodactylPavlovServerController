@@ -5,21 +5,16 @@ namespace PterodactylPavlovServerController.Services.WarmupRoundLoadouts;
 
 public class JohnWickLoadout : BaseLoadout
 {
-    public override async Task EnablePlayer(PavlovRconService rconService, string apiKey, string serverId, ulong playerId)
+    public override async Task<bool> EnablePlayer(PavlovRconService rconService, string apiKey, string serverId, ulong playerId)
     {
-        await rconService.SetCash(apiKey, serverId, playerId, 650);
-        await Task.Delay(15);
-        await rconService.GiveItem(apiKey, serverId, playerId, Item.flash);
-        await Task.Delay(15);
-        await rconService.GiveItem(apiKey, serverId, playerId, Item.flash);
-        await Task.Delay(15);
-        await rconService.GiveItem(apiKey, serverId, playerId, Item.flash);
-        await Task.Delay(15);
-        await rconService.GiveItem(apiKey, serverId, playerId, Item.supp_pistol);
-        await Task.Delay(15);
-        await rconService.GiveItem(apiKey, serverId, playerId, Item.reddot_pistol);
-        await Task.Delay(15);
-        await rconService.GiveItem(apiKey, serverId, playerId, Item.Laser_Pistol);
+        bool equipped = await BaseLoadout.SetCash(rconService, apiKey, serverId, playerId, 650);
+        equipped &= await BaseLoadout.GiveItem(rconService, apiKey, serverId, playerId, Item.flash);
+        equipped &= await BaseLoadout.GiveItem(rconService, apiKey, serverId, playerId, Item.flash);
+        equipped &= await BaseLoadout.GiveItem(rconService, apiKey, serverId, playerId, Item.flash);
+        equipped &= await BaseLoadout.GiveItem(rconService, apiKey, serverId, playerId, Item.supp_pistol);
+        equipped &= await BaseLoadout.GiveItem(rconService, apiKey, serverId, playerId, Item.reddot_pistol);
+        equipped &= await BaseLoadout.GiveItem(rconService, apiKey, serverId, playerId, Item.Laser_Pistol);
+        return equipped;
     }
     public override Task DisablePlayer(PavlovRconService rconService, string apiKey, string serverId, ulong playerId)
     {

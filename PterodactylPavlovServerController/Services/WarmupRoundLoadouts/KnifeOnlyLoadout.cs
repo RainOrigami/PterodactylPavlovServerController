@@ -5,7 +5,7 @@ namespace PterodactylPavlovServerController.Services.WarmupRoundLoadouts;
 
 public class KnifeOnlyLoadout : BaseLoadout
 {
-    public override Task EnablePlayer(PavlovRconService rconService, string apiKey, string serverId, ulong playerId) => Task.CompletedTask;
+    public override Task<bool> EnablePlayer(PavlovRconService rconService, string apiKey, string serverId, ulong playerId) => Task.FromResult(true);
     public override Task DisablePlayer(PavlovRconService rconService, string apiKey, string serverId, ulong playerId) => Task.CompletedTask;
     public override Task EnableRound(PavlovRconService rconService, string apiKey, string serverId) => Task.CompletedTask;
     public override Task DisableRound(PavlovRconService rconService, string apiKey, string serverId) => Task.CompletedTask;

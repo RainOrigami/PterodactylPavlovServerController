@@ -12,6 +12,26 @@ public class PterodactylContext : DbContext
         this.configuration = configuration;
     }
 
+
+    // AutoDetect opens a connection to the database to probe its version.
+    // OnConfiguring runs for every context instance, so without this cache a
+    // page that builds one context per row paid a round-trip per row before it
+    // could render.
+    private static readonly Dictionary<string, ServerVersion> serverVersionCache = new();
+
+    private static ServerVersion getServerVersion(string connectionString)
+    {
+        lock (serverVersionCache)
+        {
+            if (!serverVersionCache.TryGetValue(connectionString, out ServerVersion? serverVersion))
+            {
+                serverVersion = ServerVersion.AutoDetect(connectionString);
+                serverVersionCache[connectionString] = serverVersion;
+            }
+
+            return serverVersion;
+        }
+    }
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         string? connectionString = this.configuration.GetConnectionString("Pterodactyl");
@@ -19,7 +39,7 @@ public class PterodactylContext : DbContext
         {
             throw new Exception("Connection string required");
         }
-        optionsBuilder.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
+        optionsBuilder.UseMySql(connectionString, getServerVersion(connectionString));
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

@@ -1,0 +1,63 @@
+﻿@using PavlovVR_Rcon.Models.Pavlov;
+@using PterodactylPavlovServerController.Models;
+@using PterodactylPavlovServerController.Services;
+@inject PavlovRconService RconService
+@inject IToastService Toast
+@inject ApiKeyService ApiKey
+@inject AuditService AuditService
+
+<div class="me-2" style="width: 425px; display: inline-block; vertical-align: top;">
+    <h3 class="mb-0">Max players</h3>
+    <small class="text-muted">
+        Sets the amount of player slots on the server.
+    </small>
+    <EditForm Model="@maxPlayers" OnValidSubmit="@maxPlayersSubmitted" class="mt-3">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label>Slots</label>
+            <InputNumber @bind-Value="maxPlayers.Amount" class="form-control" />
+        </div>
+        <div class="mb-3">
+            <button type="submit" class="btn btn-outline-success form-control">Set max players</button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public PavlovRconConnection Connection { get; set; }
+
+    [Parameter]
+    [EditorRequired]
+    public ServerInfo ServerInfo { get; set; }
+
+    private readonly GenericAmountModel maxPlayers = new();
+
+    private async Task maxPlayersSubmitted()
+    {
+        if (maxPlayers.Amount is null or < 1)
+        {
+            Toast.ShowError("The slot count must be at least 1");
+            return;
+        }
+
+        try
+        {
+            if (!await RconService.SetMaxPlayers(ApiKey.ApiKey, Connection.ServerId, maxPlayers.Amount!.Value))
+            {
+                Toast.ShowError("Server refused the command");
+                return;
+            }
+
+            Toast.ShowSuccess("Max players has been updated");
+            await AuditService.Add(Connection.ServerId, $"Set max players to {maxPlayers.Amount!.Value}");
+        }
+        catch (Exception e)
+        {
+            Toast.ShowError(e.Message);
+        }
+    }
+}

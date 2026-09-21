@@ -4,6 +4,7 @@ using PavlovVR_Rcon.Models.Commands;
 using PavlovVR_Rcon.Models.Pavlov;
 using PavlovVR_Rcon.Models.Replies;
 using PterodactylPavlovServerDomain.Rcon.Commands;
+using System.Collections.Concurrent;
 
 namespace PterodactylPavlovServerController.Services;
 
@@ -12,102 +13,111 @@ public class PavlovRconService
     private static readonly Dictionary<string, PavlovRcon> pavlovRconConnections = new();
     private readonly PterodactylService pterodactylService;
     private readonly IConfiguration configuration;
-    private DateTime lastCommand = DateTime.MinValue;
+
+    /// <summary>
+    /// Pavlov drops commands that arrive back to back, so every command for a server waits
+    /// until this many milliseconds have passed since the previous one was sent.
+    /// </summary>
+    private readonly int commandIntervalMilliseconds;
 
     public PavlovRconService(PterodactylService pterodactylService, IConfiguration configuration)
     {
         this.pterodactylService = pterodactylService;
         this.configuration = configuration;
+        this.commandIntervalMilliseconds = Math.Max(0, configuration.GetValue<int?>("rcon_command_interval_ms") ?? 60);
     }
 
-    private readonly Dictionary<string, bool> commandRunning = new();
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> serverCommandLocks = new();
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> serverPacingLocks = new();
+    private readonly ConcurrentDictionary<string, DateTime> serverLastCommand = new();
 
-    private async Task delay()
+    private SemaphoreSlim commandLock(string serverId) => this.serverCommandLocks.GetOrAdd(serverId, _ => new SemaphoreSlim(1, 1));
+    private SemaphoreSlim pacingLock(string serverId) => this.serverPacingLocks.GetOrAdd(serverId, _ => new SemaphoreSlim(1, 1));
+
+    private async Task delay(string serverId)
     {
-        if (this.lastCommand > DateTime.Now.AddMilliseconds(100))
+        SemaphoreSlim pacing = this.pacingLock(serverId);
+        await pacing.WaitAsync();
+        try
         {
-            await Task.Delay(100);
-        }
+            DateTime last = this.serverLastCommand.TryGetValue(serverId, out DateTime previous) ? previous : DateTime.MinValue;
+            int wait = this.commandIntervalMilliseconds - (int)(DateTime.Now - last).TotalMilliseconds;
+            if (wait > 0)
+            {
+                await Task.Delay(wait);
+            }
 
-        this.lastCommand = DateTime.Now;
+            this.serverLastCommand[serverId] = DateTime.Now;
+        }
+        finally
+        {
+            pacing.Release();
+        }
     }
 
     private async Task<T> execute<T>(Func<PavlovRcon, Task<T>> action, string apiKey, string serverId, bool separateConnection, bool awaitResponse = true)
     {
-        lock (this.commandRunning)
-        {
-            if (!this.commandRunning.ContainsKey(serverId))
-            {
-                this.commandRunning.Add(serverId, false);
-            }
-        }
-
-        while (!separateConnection && this.commandRunning[serverId])
-        {
-            Console.WriteLine($"Command running for server {serverId}, delaying");
-            await Task.Delay(50);
-        }
-
-        await this.delay();
-
+        SemaphoreSlim? held = null;
         if (!separateConnection)
         {
-            this.commandRunning[serverId] = true;
+            // One command at a time on the shared connection: a check-then-set flag let two
+            // callers through at once, which is how replies ended up matched to the wrong command.
+            held = this.commandLock(serverId);
+            await held.WaitAsync();
         }
 
-        T result;
-        int commandTimeout = 2000;
-        PavlovRcon? rcon = null;
         try
         {
-            rcon = await openConnection(apiKey, serverId, separateConnection);
-            commandTimeout = rcon.CommandTimeout;
-            if (!awaitResponse)
+            await this.delay(serverId);
+
+            T result;
+            int commandTimeout = 2000;
+            PavlovRcon? rcon = null;
+            try
             {
-                rcon.CommandTimeout = 5;
-            }
-            result = await action(rcon);
-            if (!awaitResponse)
-            {
-                rcon.CommandTimeout = commandTimeout;
-            }
-            if (separateConnection)
-            {
-                try
+                rcon = await openConnection(apiKey, serverId, separateConnection);
+                commandTimeout = rcon.CommandTimeout;
+                if (!awaitResponse)
                 {
-                    await Console.Out.WriteLineAsync("Disconnecting separate connection");
-                    await rcon.SendTextCommand("Disconnect");
+                    rcon.CommandTimeout = 5;
                 }
-                catch { }
+                result = await action(rcon);
+                if (!awaitResponse)
+                {
+                    rcon.CommandTimeout = commandTimeout;
+                }
+                if (separateConnection)
+                {
+                    try
+                    {
+                        await Console.Out.WriteLineAsync("Disconnecting separate connection");
+                        await rcon.SendTextCommand("Disconnect");
+                    }
+                    catch { }
+                }
             }
+            catch (Exception ex)
+            {
+                if (rcon != null)
+                {
+                    rcon.CommandTimeout = commandTimeout;
+                }
+
+                if (!awaitResponse && ex.InnerException is CommandTimeoutException and not null)
+                {
+                    // RCON Plus does not send a response but other errors must still be thrown
+                    return default(T)!;
+                }
+
+                throw;
+            }
+
+            return result;
         }
-        catch (Exception ex)
+        finally
         {
-            if (rcon != null)
-            {
-                rcon.CommandTimeout = commandTimeout;
-            }
-
-            if (!awaitResponse && ex.InnerException is CommandTimeoutException and not null)
-            {
-                // RCON Plus does not send a response but other errors must still be thrown
-                return default(T)!;
-            }
-
-            if (!separateConnection)
-            {
-                this.commandRunning[serverId] = false;
-            }
-
-            throw;
+            held?.Release();
         }
-
-        if (!separateConnection)
-        {
-            this.commandRunning[serverId] = false;
-        }
-
-        return result;
     }
 
     public async Task<Player[]> GetActivePlayers(string apiKey, string serverId, bool separateConnection = false)
@@ -558,17 +568,23 @@ public class PavlovRconService
         }
     }
 
-    public async Task<bool> GagPlayer(string apiKey, string serverId, ulong uniqueId, bool separateConnection = false)
+    public async Task<(bool success, bool gagged)> GagPlayer(string apiKey, string serverId, ulong uniqueId, bool? gag = null, bool separateConnection = false)
     {
         try
         {
-            return await execute(async (rcon) => (await new GagCommand(uniqueId).ExecuteCommand(rcon)).Gag, apiKey, serverId, separateConnection);
+            return await execute(async (rcon) =>
+            {
+                GagReply gagReply = await new GagCommand(uniqueId, gag).ExecuteCommand(rcon);
+                return (true, gagReply.Gag);
+            }, apiKey, serverId, separateConnection);
         }
         catch (CommandFailedException ex)
         {
             if (ex.InnerException == null)
             {
-                return false;
+                // A refused gag returns the same false as a successful ungag,
+                // so the caller needs the success flag to tell them apart.
+                return (false, false);
             }
 
             throw;
@@ -608,6 +624,389 @@ public class PavlovRconService
             throw;
         }
     }
+
+    #region Base RCON commands added from the Pavlov RCON command reference
+
+    public async Task<bool> Kill(string apiKey, string serverId, ulong uniqueId, bool separateConnection = false)
+    {
+        try
+        {
+            return await execute(async (rcon) => (await new KillCommand(uniqueId).ExecuteCommand(rcon)).Successful, apiKey, serverId, separateConnection);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return false;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task<bool> Teleport(string apiKey, string serverId, ulong sourceUniqueId, ulong targetUniqueId, bool separateConnection = false)
+    {
+        try
+        {
+            return await execute(async (rcon) => (await new TeleportCommand(sourceUniqueId, targetUniqueId).ExecuteCommand(rcon)).Successful, apiKey, serverId, separateConnection);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return false;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task<bool> SetTimeLimit(string apiKey, string serverId, int seconds, bool separateConnection = false)
+    {
+        try
+        {
+            return await execute(async (rcon) => (await new SetTimeLimitCommand(seconds).ExecuteCommand(rcon)).Successful, apiKey, serverId, separateConnection);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return false;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task<bool> SetMaxPlayers(string apiKey, string serverId, int maxPlayers, bool separateConnection = false)
+    {
+        try
+        {
+            return await execute(async (rcon) => (await new SetMaxPlayersCommand(maxPlayers).ExecuteCommand(rcon)).Successful, apiKey, serverId, separateConnection);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return false;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task<bool> UpdateServerName(string apiKey, string serverId, string serverName, bool separateConnection = false)
+    {
+        try
+        {
+            return await execute(async (rcon) => (await new UpdateServerNameCommand(serverName).ExecuteCommand(rcon)).Successful, apiKey, serverId, separateConnection);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return false;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task<bool> EnableCompMode(string apiKey, string serverId, bool enable, bool separateConnection = false)
+    {
+        try
+        {
+            return await execute(async (rcon) => (await new EnableCompModeCommand(enable).ExecuteCommand(rcon)).Successful, apiKey, serverId, separateConnection);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return false;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task<bool> EnableVerboseLogging(string apiKey, string serverId, bool enable, bool separateConnection = false)
+    {
+        try
+        {
+            return await execute(async (rcon) => (await new EnableVerboseLoggingCommand(enable).ExecuteCommand(rcon)).Successful, apiKey, serverId, separateConnection);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return false;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task<bool> EnableWhitelist(string apiKey, string serverId, bool enable, bool separateConnection = false)
+    {
+        try
+        {
+            return await execute(async (rcon) => (await new EnableWhitelistCommand(enable).ExecuteCommand(rcon)).Successful, apiKey, serverId, separateConnection);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return false;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task<bool> SetBotsEnabled(string apiKey, string serverId, bool enable, bool separateConnection = false)
+    {
+        try
+        {
+            return await execute(async (rcon) => (await new SetBotsEnabledCommand(enable).ExecuteCommand(rcon)).Successful, apiKey, serverId, separateConnection);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return false;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task<bool> ShutdownServer(string apiKey, string serverId, bool separateConnection = false)
+    {
+        try
+        {
+            return await execute(async (rcon) => (await new ShutdownServerCommand().ExecuteCommand(rcon)).Successful, apiKey, serverId, separateConnection);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return false;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task<bool> AddMapRotation(string apiKey, string serverId, string mapLabel, GameMode gameMode, bool separateConnection = false)
+    {
+        try
+        {
+            return await execute(async (rcon) => (await new AddMapRotationCommand(mapLabel, gameMode).ExecuteCommand(rcon)).Successful, apiKey, serverId, separateConnection);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return false;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task<bool> RemoveMapRotation(string apiKey, string serverId, string mapLabel, GameMode gameMode, bool separateConnection = false)
+    {
+        try
+        {
+            return await execute(async (rcon) => (await new RemoveMapRotationCommand(mapLabel, gameMode).ExecuteCommand(rcon)).Successful, apiKey, serverId, separateConnection);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return false;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task<bool> GiveAll(string apiKey, string serverId, int teamId, string item, bool separateConnection = false)
+    {
+        try
+        {
+            return await execute(async (rcon) => (await new GiveAllCommand(teamId, item).ExecuteCommand(rcon)).Successful, apiKey, serverId, separateConnection);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return false;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task<bool> TTTSetRole(string apiKey, string serverId, ulong uniqueId, string roleId, bool separateConnection = false)
+    {
+        try
+        {
+            return await execute(async (rcon) => (await new TTTSetRoleCommand(uniqueId, roleId).ExecuteCommand(rcon)).Successful, apiKey, serverId, separateConnection);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return false;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task<bool> TTTGiveCredits(string apiKey, string serverId, ulong uniqueId, int amount, bool separateConnection = false)
+    {
+        try
+        {
+            return await execute(async (rcon) => (await new TTTGiveCreditsCommand(uniqueId, amount).ExecuteCommand(rcon)).Successful, apiKey, serverId, separateConnection);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return false;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task<bool> UGCAddMod(string apiKey, string serverId, long modId, bool separateConnection = false)
+    {
+        try
+        {
+            return await execute(async (rcon) => (await new UGCAddModCommand(modId).ExecuteCommand(rcon)).Successful, apiKey, serverId, separateConnection);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return false;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task<bool> UGCRemoveMod(string apiKey, string serverId, long modId, bool separateConnection = false)
+    {
+        try
+        {
+            return await execute(async (rcon) => (await new UGCRemoveModCommand(modId).ExecuteCommand(rcon)).Successful, apiKey, serverId, separateConnection);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return false;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task<bool> UGCClearModList(string apiKey, string serverId, bool separateConnection = false)
+    {
+        try
+        {
+            return await execute(async (rcon) => (await new UGCClearModListCommand().ExecuteCommand(rcon)).Successful, apiKey, serverId, separateConnection);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return false;
+            }
+
+            throw;
+        }
+    }
+
+    public async Task<string[]> UGCModList(string apiKey, string serverId, bool separateConnection = false)
+    {
+        try
+        {
+            return await execute(async (rcon) => (await new UGCModListCommand().ExecuteCommand(rcon)).ModList ?? Array.Empty<string>(), apiKey, serverId, separateConnection);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return Array.Empty<string>();
+            }
+
+            throw;
+        }
+    }
+
+    public async Task<string[]> ItemList(string apiKey, string serverId, bool separateConnection = false)
+    {
+        try
+        {
+            return await execute(async (rcon) => (await new ItemListCommand().ExecuteCommand(rcon)).ItemList ?? Array.Empty<string>(), apiKey, serverId, separateConnection);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return Array.Empty<string>();
+            }
+
+            throw;
+        }
+    }
+
+    public async Task<MapListEntry[]> MapList(string apiKey, string serverId, bool separateConnection = false)
+    {
+        try
+        {
+            return await execute(async (rcon) => (await new MapListCommand().ExecuteCommand(rcon)).MapList ?? Array.Empty<MapListEntry>(), apiKey, serverId, separateConnection);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return Array.Empty<MapListEntry>();
+            }
+
+            throw;
+        }
+    }
+
+    public async Task<ulong[]> ModeratorList(string apiKey, string serverId, bool separateConnection = false)
+    {
+        try
+        {
+            return await execute(async (rcon) => (await new ModeratorListCommand().ExecuteCommand(rcon)).ModeratorList ?? Array.Empty<ulong>(), apiKey, serverId, separateConnection);
+        }
+        catch (CommandFailedException ex)
+        {
+            if (ex.InnerException == null)
+            {
+                return Array.Empty<ulong>();
+            }
+
+            throw;
+        }
+    }
+
+    public async Task<PlayerDetail[]> InspectTeam(string apiKey, string serverId, int teamId, bool separateConnection = false)
+    {
+        return await execute(async (rcon) => (await new InspectTeamCommand(teamId).ExecuteCommand(rcon)).InspectList ?? Array.Empty<PlayerDetail>(), apiKey, serverId, separateConnection);
+    }
+
+    #endregion
 
     public async Task<string> CustomCommand(string apiKey, string serverId, string customCommand, bool separateConnection = false)
     {

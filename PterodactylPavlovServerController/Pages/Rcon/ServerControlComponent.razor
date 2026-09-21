@@ -30,6 +30,27 @@
     {
         <ShowNametagsComponent Connection="Connection" ServerInfo="ServerInfo" />
     }
+
+    <UpdateServerNameComponent Connection="Connection" ServerInfo="ServerInfo" />
+
+    <SetMaxPlayersComponent Connection="Connection" ServerInfo="ServerInfo" />
+
+    <SetTimeLimitComponent Connection="Connection" ServerInfo="ServerInfo" />
+
+    <CompModeComponent Connection="Connection" ServerInfo="ServerInfo" />
+
+    <WhitelistComponent Connection="Connection" ServerInfo="ServerInfo" />
+
+    <VerboseLoggingComponent Connection="Connection" ServerInfo="ServerInfo" />
+
+    @if (!LeagueMode)
+    {
+        <BotsEnabledComponent Connection="Connection" ServerInfo="ServerInfo" />
+    }
+
+    <UGCModListComponent Connection="Connection" ServerInfo="ServerInfo" />
+
+    <ShutdownServerComponent Connection="Connection" ServerInfo="ServerInfo" />
 </div>
 
 @code {

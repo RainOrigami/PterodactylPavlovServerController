@@ -8,17 +8,17 @@ public class TranquillizerLoadout : BaseLoadout
     public override Task DisablePlayer(PavlovRconService rconService, string apiKey, string serverId, ulong playerId) => Task.CompletedTask;
     public override Task DisablePlayers(PavlovRconService rconService, string apiKey, string serverId) => Task.CompletedTask;
     public override Task DisableRound(PavlovRconService rconService, string apiKey, string serverId) => Task.CompletedTask;
-    public override async Task EnablePlayer(PavlovRconService rconService, string apiKey, string serverId, ulong playerId)
+    public override async Task<bool> EnablePlayer(PavlovRconService rconService, string apiKey, string serverId, ulong playerId)
     {
-        await rconService.GiveItem(apiKey, serverId, playerId, Item.tranqgun);
-        await Task.Delay(15);
-        await rconService.GiveItem(apiKey, serverId, playerId, Item.Syringe);
-        await Task.Delay(15);
-        await rconService.GiveItem(apiKey, serverId, playerId, Item.Painkillers);
+        bool equipped = await BaseLoadout.GiveItem(rconService, apiKey, serverId, playerId, Item.tranqgun);
+        equipped &= await BaseLoadout.GiveItem(rconService, apiKey, serverId, playerId, Item.Syringe);
+        equipped &= await BaseLoadout.GiveItem(rconService, apiKey, serverId, playerId, Item.Painkillers);
+        return equipped;
     }
     public override async Task EnablePlayers(PavlovRconService rconService, string apiKey, string serverId)
     {
-        await rconService.SetVitality(apiKey, serverId, "All", 100, 100, 100);
+        //await rconService.SetVitality(apiKey, serverId, "All", 100, 0, 0);
+        await Task.CompletedTask;
     }
     public override Task EnableRound(PavlovRconService rconService, string apiKey, string serverId) => Task.CompletedTask;
 

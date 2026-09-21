@@ -15,11 +15,10 @@ public class SkinByKillCountSetterService
     private readonly PavlovServerContext pavlovServerContext;
 
     private string currentMap = string.Empty;
-    private bool skinSet = false;
+    private bool setSkin = false;
 
     private ulong skinTarget = 0;
     private Skin skin = Skin.clown;
-    private int skinSetCount = 0;
 
     public SkinByKillCountSetterService(string apiKey, PavlovRconConnection connection, PavlovRconService pavlovRconService, IConfiguration configuration)
     {
@@ -36,8 +35,7 @@ public class SkinByKillCountSetterService
     {
         if (this.connection.ServerInfo!.MapLabel != currentMap)
         {
-            skinSet = false;
-            skinSetCount = 100;
+            setSkin = false;
             skinTarget = 0;
             currentMap = this.connection.ServerInfo!.MapLabel;
             return;
@@ -48,15 +46,25 @@ public class SkinByKillCountSetterService
             return;
         }
 
-        if (skinSet)
+        if (this.connection.ServerInfo!.RoundState != "Started")
         {
-            if (skinTarget > 0 && skinSetCount < 10)
+            return;
+        }
+
+        if (setSkin)
+        {
+            if (skinTarget > 0)
             {
                 PlayerDetail? target = this.connection.PlayerDetails.Values.FirstOrDefault(d => d.UniqueId == skinTarget);
-                if (target != null && !target.Dead)
+                if (target == null)
+                {
+                    setSkin = false;
+                    skinTarget = 0;
+                    return;
+                }
+                if (!target.Dead)
                 {
                     await this.pavlovRconService.SetSkin(this.apiKey, this.connection.ServerId, skinTarget, skin.ToString());
-                    skinSetCount++;
                 }
             }
 
@@ -66,7 +74,7 @@ public class SkinByKillCountSetterService
         ServerSettings? setKillSkinEnabledSetting = await this.pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == this.connection.ServerId && s.SettingName == ServerSettings.SETTING_SKIN_ENABLED);
         if (setKillSkinEnabledSetting == null || !bool.TryParse(setKillSkinEnabledSetting.SettingValue, out bool setKillSkinEnabled) || !setKillSkinEnabled)
         {
-            skinSet = true;
+            setSkin = true;
             return;
         }
 
@@ -76,7 +84,7 @@ public class SkinByKillCountSetterService
         if (setKillSkinThresholdSetting == null || !int.TryParse(setKillSkinThresholdSetting.SettingValue, out int setKillSkinThreshold) ||
             setKillSkinSkinSetting == null || !Enum.TryParse<Skin>(setKillSkinSkinSetting.SettingValue, out skin))
         {
-            skinSet = true;
+            setSkin = true;
             return;
         }
 
@@ -89,11 +97,10 @@ public class SkinByKillCountSetterService
         if (mostKills.Kills() >= setKillSkinThreshold)
         {
             skinTarget = mostKills.UniqueId;
-            skinSetCount = 0;
 
             try
             {
-                skinSet = true;
+                setSkin = true;
                 await this.pavlovRconService.SetSkin(this.apiKey, this.connection.ServerId, mostKills.UniqueId, skin.ToString());
             }
             catch (Exception ex)

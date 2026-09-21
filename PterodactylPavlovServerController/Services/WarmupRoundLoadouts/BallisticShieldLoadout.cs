@@ -8,11 +8,12 @@ public class BallisticShieldLoadout : BaseLoadout
     public override Task DisablePlayer(PavlovRconService rconService, string apiKey, string serverId, ulong playerId) => Task.CompletedTask;
     public override Task DisablePlayers(PavlovRconService rconService, string apiKey, string serverId) => Task.CompletedTask;
     public override Task DisableRound(PavlovRconService rconService, string apiKey, string serverId) => Task.CompletedTask;
-    public override async Task EnablePlayer(PavlovRconService rconService, string apiKey, string serverId, ulong playerId)
+    public override async Task<bool> EnablePlayer(PavlovRconService rconService, string apiKey, string serverId, ulong playerId)
     {
-        await rconService.GiveItem(apiKey, serverId, playerId, Item.BallisticsShield);
-        await rconService.GiveItem(apiKey, serverId, playerId, Item.p90);
-        await rconService.GiveItem(apiKey, serverId, playerId, Item.Flashlight_Rifle);
+        bool equipped = await BaseLoadout.GiveItem(rconService, apiKey, serverId, playerId, Item.BallisticsShield);
+        equipped &= await BaseLoadout.GiveItem(rconService, apiKey, serverId, playerId, Item.p90);
+        equipped &= await BaseLoadout.GiveItem(rconService, apiKey, serverId, playerId, Item.Flashlight_Rifle);
+        return equipped;
     }
     public override Task EnablePlayers(PavlovRconService rconService, string apiKey, string serverId) => Task.CompletedTask;
     public override Task EnableRound(PavlovRconService rconService, string apiKey, string serverId) => Task.CompletedTask;

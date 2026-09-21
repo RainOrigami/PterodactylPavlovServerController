@@ -37,6 +37,9 @@ public class WarmupRoundService
     private bool isWarmupRoundEnding = false;
     private bool isWarmupRoundStarted = false;
 
+    private DateTime? ungodmodeAt = null;
+    private readonly List<ulong> alivePlayers = new();
+
     private List<BaseLoadout> usedLoadouts = new();
     private BaseLoadout? currentLoadout = null;
 
@@ -78,6 +81,33 @@ public class WarmupRoundService
             return;
         }
 
+        if (this.ungodmodeAt != null)
+        {
+            if (this.connection.PlayerDetails != null)
+            {
+                // Suicide detection
+                ulong[] currentAlivePlayers = this.connection.PlayerDetails.Values.Where(p => !p.Dead).Select(p => p.UniqueId).ToArray();
+                ulong[] playersNotAliveAnymore = this.alivePlayers.Except(currentAlivePlayers).ToArray();
+                foreach (ulong playerId in playersNotAliveAnymore)
+                {
+                    try
+                    {
+                        await this.pavlovRconService.Godmode(this.apiKey, this.connection.ServerId, playerId.ToString(), false);
+                    }
+                    catch { }
+                }
+
+                this.alivePlayers.Clear();
+                this.alivePlayers.AddRange(currentAlivePlayers);
+            }
+
+            if (DateTime.Now > this.ungodmodeAt)
+            {
+                await this.pavlovRconService.Godmode(this.apiKey, this.connection.ServerId, "All", false);
+                this.ungodmodeAt = null;
+            }
+        }
+
         //await Console.Out.WriteLineAsync($"For safety: Team1Score: {this.connection.ServerInfo.Team1Score}, Team0Score: {this.connection.ServerInfo.Team0Score}");
 
         if (lastRoundState == "Ended" && this.connection.ServerInfo!.RoundState == "StandBy" && mapJustChanged && !isWarmupRound && /* for safety */ this.connection.ServerInfo.Team1Score == 0 && this.connection.ServerInfo.Team0Score == 0)
@@ -98,72 +128,110 @@ public class WarmupRoundService
                 currentLoadout = loadouts[Random.Shared.Next(loadouts.Count())];
                 usedLoadouts.Add(currentLoadout);
 
-                await Task.Run(async () =>
+                try
                 {
-                    await currentLoadout.EnableRound(this.pavlovRconService, apiKey, connection.ServerId);
-
-                    List<ulong> playersToEquip = new();
-
-                    // Wait for players to spawn or at least 2 seconds
-                    Stopwatch stopwatch = Stopwatch.StartNew();
-                    int waitForPlayersTimeout = 0;
-                    while (playersToEquip.Count == 0 && waitForPlayersTimeout < 16)
+                    await Task.Run(async () =>
                     {
-                        try
-                        {
-                            PlayerDetail[] players = await this.pavlovRconService.GetActivePlayerDetails(apiKey, connection.ServerId);
-                            playersToEquip = players
-                                .Where(p => !p.Dead)
-                                .Select(p => p.UniqueId)
-                                .ToList();
+                        await this.pavlovRconService.Notify(apiKey, connection.ServerId, "All", $"- WARMUP ROUND - CURRENT LOADOUT: {currentLoadout.Name}", 10);
+                        await Task.Delay(15);
 
-                            if (players.Any(p => p.Dead))
+                        await currentLoadout.EnableRound(this.pavlovRconService, apiKey, connection.ServerId);
+
+                        List<ulong> playersToEquip = new();
+
+                        // Wait for players to spawn or at least 2 seconds
+                        Stopwatch stopwatch = Stopwatch.StartNew();
+                        int waitForPlayersTimeout = 0;
+                        while (playersToEquip.Count == 0 && waitForPlayersTimeout < 16)
+                        {
+                            try
                             {
+                                PlayerDetail[] players = await this.pavlovRconService.GetActivePlayerDetails(apiKey, connection.ServerId);
+                                playersToEquip = players
+                                    .Where(p => !p.Dead)
+                                    .Select(p => p.UniqueId)
+                                    .ToList();
+
+                                if (players.Any(p => p.Dead))
+                                {
+                                    await Task.Delay(250);
+                                    waitForPlayersTimeout++;
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                await Console.Out.WriteLineAsync($"Error while waiting for players to spawn: {ex.Message}");
                                 await Task.Delay(250);
                                 waitForPlayersTimeout++;
                             }
                         }
-                        catch (Exception ex)
-                        {
-                            await Console.Out.WriteLineAsync($"Error while waiting for players to spawn: {ex.Message}");
-                            await Task.Delay(250);
-                            waitForPlayersTimeout++;
-                        }
-                    }
-                    await Task.Delay(Math.Max(2000 - (int)stopwatch.ElapsedMilliseconds, 0));
+                        await Task.Delay(Math.Max(2000 - (int)stopwatch.ElapsedMilliseconds, 0));
 
-                    // Clean round start
-                    await this.pavlovRconService.EnableBuyMenu(apiKey, connection.ServerId, "All", false);
-                    for (int i = 0; i < 2; i++)
-                    {
+                        // Clean round start
+                        await this.pavlovRconService.EnableBuyMenu(apiKey, connection.ServerId, "All", false);
+                        for (int i = 0; i < 2; i++)
+                        {
+                            foreach (ulong uniqueId in playersToEquip)
+                            {
+                                await RconRetry.Ensure($"SetCash 0 for {uniqueId} on {connection.ServerId}", () => this.pavlovRconService.SetCash(apiKey, connection.ServerId, uniqueId, 0));
+                            }
+                            await this.pavlovRconService.DropItems(apiKey, connection.ServerId, "All");
+                            await this.pavlovRconService.CleanUp(apiKey, connection.ServerId, RconObjectType.All);
+                        }
+
+                        await currentLoadout.EnablePlayers(this.pavlovRconService, apiKey, connection.ServerId);
+                        await this.pavlovRconService.Godmode(apiKey, connection.ServerId, "All", true);
+
+                        // Only equip players who are still on the server, so a disconnect during
+                        // setup does not burn retries on someone who will never receive anything.
+                        ulong[] stillConnected = await this.getConnectedPlayers();
+                        List<ulong> notFullyEquipped = new();
                         foreach (ulong uniqueId in playersToEquip)
                         {
-                            await this.pavlovRconService.SetCash(apiKey, connection.ServerId, uniqueId, 0);
-                            await Task.Delay(30);
+                            if (stillConnected.Length > 0 && !stillConnected.Contains(uniqueId))
+                            {
+                                await Console.Out.WriteLineAsync($"Skipping loadout for {uniqueId}: no longer on the server");
+                                continue;
+                            }
+
+                            if (!await currentLoadout.EnablePlayer(this.pavlovRconService, apiKey, connection.ServerId, uniqueId))
+                            {
+                                notFullyEquipped.Add(uniqueId);
+                            }
                         }
-                        await this.pavlovRconService.DropItems(apiKey, connection.ServerId, "All");
-                        await Task.Delay(15);
-                        await this.pavlovRconService.CleanUp(apiKey, connection.ServerId, RconObjectType.All);
-                    }
 
-                    await currentLoadout.EnablePlayers(this.pavlovRconService, apiKey, connection.ServerId);
-                    await Task.Delay(15);
-                    await this.pavlovRconService.Godmode(apiKey, connection.ServerId, "All", true);
+                        if (notFullyEquipped.Count > 0)
+                        {
+                            await Console.Out.WriteLineAsync($"Warmup loadout incomplete for {notFullyEquipped.Count} player(s): {string.Join(", ", notFullyEquipped)}");
+                        }
 
-                    foreach (ulong uniqueId in playersToEquip)
+                        playersToEquip.Clear();
+                    });
+                }
+                catch (Exception ex)
+                {
+                    await Console.Out.WriteLineAsync($"Warmup round setup failed: {ex.Message}");
+
+                    // Roll back so this loadout can be drawn again and the warmup can retry
+                    if (currentLoadout != null)
                     {
-                        await Task.Delay(15);
-                        await currentLoadout.EnablePlayer(this.pavlovRconService, apiKey, connection.ServerId, uniqueId);
+                        usedLoadouts.Remove(currentLoadout);
+                        currentLoadout = null;
                     }
 
-                    await Task.Delay(15);
-                    await this.pavlovRconService.Notify(apiKey, connection.ServerId, "All", $"- WARMUP ROUND - CURRENT LOADOUT: {currentLoadout.Name}", 10);
+                    isWarmupRound = false;
+                    isWarmupRoundStarted = false;
+                    isWarmupRoundEnding = false;
 
-                    playersToEquip.Clear();
-                });
+                    // Re-arm: the 0-0 score guard keeps this from firing mid-match
+                    mapJustChanged = true;
+                }
             }
 
-            await Console.Out.WriteLineAsync("Warmup round loadout set");
+            if (isWarmupRound)
+            {
+                await Console.Out.WriteLineAsync("Warmup round loadout set");
+            }
         }
 
         if (lastRoundState == "StandBy" && this.connection.ServerInfo.RoundState == "Started" && isWarmupRound && !isWarmupRoundStarted)
@@ -171,17 +239,16 @@ public class WarmupRoundService
             await Console.Out.WriteLineAsync("Warmup round started");
 
             isWarmupRoundStarted = true;
+            this.ungodmodeAt = DateTime.Now.AddSeconds(4);
 
-#pragma warning disable CS4014
-            Task.Run(async () =>
-#pragma warning restore CS4014
-            {
-                await Task.Delay(4000);
-                if (this.isWarmupRound && this.connection.ServerInfo.RoundState == "Started" && isWarmupRoundStarted)
-                {
-                    await this.pavlovRconService.Godmode(apiKey, connection.ServerId, "All", false);
-                }
-            });
+            //_ = Task.Run(async () =>
+            //{
+            //    await Task.Delay(4000);
+            //    if (this.isWarmupRound && this.connection.ServerInfo.RoundState == "Started" && isWarmupRoundStarted)
+            //    {
+            //        await this.pavlovRconService.Godmode(apiKey, connection.ServerId, "All", false);
+            //    }
+            //});
         }
 
         if (lastRoundState == "Started" && this.connection.ServerInfo.RoundState == "Ended" && isWarmupRound)
@@ -223,5 +290,22 @@ public class WarmupRoundService
 
         lastMap = this.connection.ServerInfo!.MapLabel;
         lastRoundState = this.connection.ServerInfo.RoundState;
+    }
+
+    /// <summary>
+    /// Best-effort list of players currently on the server. An empty array means the query failed,
+    /// in which case callers should carry on rather than skip everyone.
+    /// </summary>
+    private async Task<ulong[]> getConnectedPlayers()
+    {
+        try
+        {
+            return (await this.pavlovRconService.GetActivePlayerDetails(this.apiKey, this.connection.ServerId)).Select(p => p.UniqueId).ToArray();
+        }
+        catch (Exception ex)
+        {
+            await Console.Out.WriteLineAsync($"Could not refresh the player list before equipping: {ex.Message}");
+            return Array.Empty<ulong>();
+        }
     }
 }

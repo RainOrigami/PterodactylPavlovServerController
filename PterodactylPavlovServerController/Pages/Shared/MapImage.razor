@@ -1,0 +1,41 @@
+@using PterodactylPavlovServerDomain.Models;
+
+@*
+    Renders a map thumbnail in a fixed 16:9 box, matching mod.io's crop_320x180
+    thumbnails. Internal Pavlov maps (oilrig and friends) and maps that are no
+    longer on mod.io have no thumbnail of that shape, so the placeholder is
+    cropped into the same box instead of setting the row height itself.
+*@
+
+<div class="@CssClass" style="position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background-color: #222;">
+    <img src="@imageUrl"
+         alt="@Alt"
+         title="@(isPlaceholder ? placeholderTitle : Alt)"
+         loading="lazy"
+         style="width: 100%; height: 100%; object-fit: cover; object-position: center;" />
+</div>
+
+@code {
+    public const string PlaceholderImageUrl = "https://pavlov.bloodisgood.net/gunimages/unknown.png";
+
+    /// <summary>
+    ///     Map details, or null for internal maps that have no workshop entry.
+    /// </summary>
+    [Parameter]
+    public MapWorkshopModel? MapDetail { get; set; }
+
+    [Parameter]
+    public string Alt { get; set; } = string.Empty;
+
+    [Parameter]
+    public string CssClass { get; set; } = "card-img-top";
+
+    private string imageUrl => MapDetail?.HasImage ?? false ? MapDetail.ImageURL! : PlaceholderImageUrl;
+    private bool isPlaceholder => !(MapDetail?.HasImage ?? false);
+
+    private string placeholderTitle => MapDetail == null
+        ? "Pavlov built-in map - no mod.io thumbnail"
+        : MapDetail.Unavailable
+            ? "This map is no longer available on mod.io"
+            : "No thumbnail available";
+}

@@ -91,7 +91,7 @@ public class PavlovPingLimiterService
                         }
                         _ = Task.Run(async () =>
                         {
-                            await this.pavlovRconService.Notify(this.apiKey, this.connection.ServerId, playerDetail.UniqueId.ToString(), $"YOUR PING IS TOO HIGH! Ping average: {averagePing}ms. Max allowed: {pingKickThreshold}ms.", 5);
+                            await this.pavlovRconService.Notify(this.apiKey, this.connection.ServerId, playerDetail.UniqueId.ToString(), $"YOUR PING IS TOO HIGH! Ping average: {(int)Math.Round(averagePing)}ms. Max allowed: {pingKickThreshold}ms.", 5);
                             await Task.Delay(5000);
                             await this.pavlovRconService.KickPlayer(this.apiKey, this.connection.ServerId, playerDetail.UniqueId);
 

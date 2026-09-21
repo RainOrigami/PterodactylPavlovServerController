@@ -1,4 +1,5 @@
 ﻿@page "/maps/{ServerId}"
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @using Fluxor;
 @using Microsoft.EntityFrameworkCore;
 @using PavlovVR_Rcon.Models.Pavlov;
@@ -89,16 +90,28 @@
                                     MapWorkshopModel? mapDetail = null;
                                     if (serverMap.IsWorkshopMap)
                                     {
-                                        <a href="@serverMap.Url" target="_blank" class="fw-bold text-info">
-                                            @if (MapsState.Value.MapDetails.TryGetValue(serverMap.WorkshopId, out mapDetail))
-                                            {
-                                                @:@mapDetail.Name
-                                            }
-                                            else
-                                            {
-                                                @:Loading...
-                                            }
-                                        </a>
+                                        MapsState.Value.MapDetails.TryGetValue(serverMap.WorkshopId, out mapDetail);
+
+                                        if (mapDetail is { Unavailable: true, })
+                                        {
+                                            <span class="fw-bold text-warning" title="This map is no longer available on mod.io">
+                                                @serverMap.MapLabel
+                                            </span>
+                                            <span class="badge bg-warning text-dark ms-1">Delisted</span>
+                                        }
+                                        else
+                                        {
+                                            <a href="@serverMap.Url" target="_blank" class="fw-bold text-info">
+                                                @if (mapDetail != null)
+                                                {
+                                                    @:@mapDetail.Name
+                                                }
+                                                else
+                                                {
+                                                    @:Loading...
+                                                }
+                                            </a>
+                                        }
                                     }
                                     else
                                     {
@@ -285,8 +298,54 @@
         await save();
     }
 
+    /// <summary>
+    ///     Names the maps in the current rotation that are known to be gone from
+    ///     mod.io. Only maps whose details are already loaded are considered, so
+    ///     this never blocks on a lookup and never guesses about unknown maps.
+    /// </summary>
+    private string[] delistedMapsInRotation()
+    {
+        if (currentRotation == null)
+        {
+            return Array.Empty<string>();
+        }
+
+        List<string> delisted = new();
+        foreach (ServerMapModel serverMap in currentRotation)
+        {
+            if (!serverMap.IsWorkshopMap)
+            {
+                continue;
+            }
+
+            if (MapsState.Value.MapDetails.TryGetValue(serverMap.WorkshopId, out MapWorkshopModel? mapDetail) && mapDetail.Unavailable)
+            {
+                delisted.Add($"{serverMap.MapLabel} ({serverMap.GameMode})");
+            }
+        }
+
+        return delisted.ToArray();
+    }
+
+    private bool blockedByDelistedMaps()
+    {
+        string[] delisted = delistedMapsInRotation();
+        if (delisted.Length == 0)
+        {
+            return false;
+        }
+
+        Toast.ShowError($"Rotation contains {delisted.Length} map(s) that are no longer on mod.io: {string.Join(", ", delisted)}. Remove them first.");
+        return true;
+    }
+
     private async Task apply()
     {
+        if (blockedByDelistedMaps())
+        {
+            return;
+        }
+
         await PavlovServerService.ApplyMapList(ApiKey.ApiKey, ServerId, currentRotation!);
 
         Toast.ShowSuccess("Rotation applied to server");
@@ -306,6 +365,11 @@
 
     private async Task save()
     {
+        if (blockedByDelistedMaps())
+        {
+            return;
+        }
+
         PavlovServerContext pavlovServerContext = new(Configuration);
 
         List<MapInMapRotationModel> mapsInRotation = new();
@@ -377,6 +441,15 @@
         if (addMapModel.IsCustomMap)
         {
             MapWorkshopModel mapModel = MapSourceService.GetMapDetail(addMapModel.MapId!.Value);
+
+            // Adding a map nobody can download only produces a rotation that
+            // strands players on a map they cannot load.
+            if (mapModel.Unavailable)
+            {
+                Toast.ShowError($"Map {addMapModel.MapLabel} is not available on mod.io and can not be added to a rotation");
+                return;
+            }
+
             mapName = mapModel.Name;
             nameId = mapModel.NameId;
         }
@@ -408,6 +481,6 @@
             return;
         }
 
-        this.mapExport = string.Join(Environment.NewLine, currentRotation.Where(m => m.IsWorkshopMap).Select(m => m.Url));
+        this.mapExport = string.Join(Environment.NewLine, currentRotation.Where(m => m.IsWorkshopMap).Select(m => $"- <{m.Url}>"));
     }
 }

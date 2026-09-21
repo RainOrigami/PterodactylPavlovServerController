@@ -6,10 +6,15 @@
 }
 
 <div class="page">
-    <main class="bg-dark">
+    @* min-height keeps the dark backdrop over the full viewport: without it a tab
+       with little content (an empty demo list, say) lets the body gradient show. *@
+    <main class="bg-dark" style="min-height: 100vh">
         <div class="w-100 p-4 d-flex justify-content-center pb-4">
-            <article class="content px-4 d-flex" style="width: 1325px">
-                <section>
+            @* The card rows need 1248px of usable width: four 300px cards plus the
+               three 1rem gaps between them. The article's px-4 and the template's
+               own px-4 add 48px each on top of that. *@
+            <article class="content px-4 d-flex" style="width: 1344px; max-width: 100%">
+                <section class="w-100">
                     @Html.Raw(Model.StatsContent)
                 </section>
             </article>

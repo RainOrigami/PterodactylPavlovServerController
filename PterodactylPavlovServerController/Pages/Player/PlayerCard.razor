@@ -46,15 +46,18 @@
 
     PlayersState.Value.PlayerBans.TryGetValue(PlayerId, out IReadOnlyCollection<PlayerBansModel>? playerBans);
 
-    PersistentPavlovPlayerModel? dbPlayer = null;
-
-    if (ServerId != null)
+    // A demo card carries its own fabricated data; nothing is looked up for it.
+    if (Demo != null)
     {
-        using (PavlovServerContext pavlovServerContext = new(Configuration))
-        {
-            dbPlayer = pavlovServerContext.Players.SingleOrDefault(p => p.ServerId == ServerId && p.UniqueId == PlayerId);
-        }
+        playerSummary ??= Demo.Summary;
+        playerBans ??= Demo.Bans;
+        playerListPlayer ??= Demo.PlayerListPlayer;
+        playerDetail ??= Demo.PlayerDetail;
     }
+
+    // Loaded once in OnParametersSetAsync. Querying here ran a blocking MySQL
+    // round-trip per card on every render, which froze lists of any size.
+    PersistentPavlovPlayerModel? dbPlayer = Demo?.DbPlayer ?? cachedDbPlayer;
 
     string profileUrl;
     string avatarUrl;
@@ -113,7 +116,7 @@
     <div class="row g-0">
         <div class="col-auto">
             <a href="@profileUrl" class="text-decoration-none" target="_blank">
-                <img class="card-img rounded-start" width="256" height="256" src="@avatarUrl" alt="@PlayerId" />
+                <img class="card-img rounded-start" width="256" height="256" loading="lazy" decoding="async" src="@avatarUrl" alt="@PlayerId" />
             </a>
         </div>
 
@@ -337,6 +340,20 @@
                                         </div>
                                     }
 
+                                    @if (playerListPlayer != null)
+                                    {
+                                        <div class="row pb-1">
+                                            <div class="col">
+                                                <button class="btn btn-outline-warning" style="width: 120px;" @onclick="@(() => setGag(true))">Gag</button>
+                                            </div>
+                                        </div>
+                                        <div class="row pb-1">
+                                            <div class="col">
+                                                <button class="btn btn-outline-secondary" style="width: 120px;" @onclick="@(() => setGag(false))">Ungag</button>
+                                            </div>
+                                        </div>
+                                    }
+
                                     <div class="row pb-1">
                                         <div class="col">
                                             @if (connection.BanList?.Contains(PlayerId) ?? false)
@@ -380,6 +397,13 @@
     [Parameter]
     [EditorRequired]
     public ulong PlayerId { get; set; }
+
+    /// <summary>
+    ///     Set for a fabricated card spawned from the browser console. Suppresses
+    ///     every lookup so no Steam or database call is made for a fake id.
+    /// </summary>
+    [Parameter]
+    public DemoPlayerModel? Demo { get; set; }
 
     [Parameter]
     public bool LeagueMode { get; set; } = false;
@@ -434,8 +458,51 @@
         await switchTeam();
     }
 
+    private PersistentPavlovPlayerModel? cachedDbPlayer = null;
+    private string? loadedDbPlayerKey = null;
+
+    private async Task loadDbPlayer(bool force = false)
+    {
+        if (Demo != null)
+        {
+            return;
+        }
+
+        if (ServerId == null)
+        {
+            cachedDbPlayer = null;
+            loadedDbPlayerKey = null;
+            return;
+        }
+
+        string key = $"{ServerId}:{PlayerId}";
+        if (!force && key == loadedDbPlayerKey)
+        {
+            return;
+        }
+
+        string serverId = ServerId;
+        ulong playerId = PlayerId;
+
+        cachedDbPlayer = await Task.Run(() =>
+        {
+            using PavlovServerContext pavlovServerContext = new(Configuration);
+            return pavlovServerContext.Players.SingleOrDefault(p => p.ServerId == serverId && p.UniqueId == playerId);
+        });
+
+        loadedDbPlayerKey = key;
+    }
+
     protected override async Task OnParametersSetAsync()
     {
+        if (Demo != null)
+        {
+            await base.OnParametersSetAsync();
+            return;
+        }
+
+        await loadDbPlayer();
+
         if (!PlayersState.Value.PlayerSummaries.ContainsKey(PlayerId))
         {
             await Task.Run(() => Dispatcher.Dispatch(new PlayersLoadSummaryAction(PlayerId)));
@@ -490,6 +557,32 @@
     {
         base.Dispose(disposing);
         Rcon.OnServersUpdated -= refresh;
+    }
+
+    private async Task setGag(bool gag)
+    {
+        if (ServerId == null)
+        {
+            Toast.ShowError("Can not gag a player that is not associated with a server");
+            return;
+        }
+
+        try
+        {
+            (bool success, bool _) = await RconService.GagPlayer(ApiKey.ApiKey, ServerId, PlayerId, gag, seperateConnection);
+            if (!success)
+            {
+                Toast.ShowError($"Server refused to {(gag ? "gag" : "ungag")} the player");
+                return;
+            }
+
+            Toast.ShowSuccess(gag ? "Player has been gagged" : "Player has been ungagged");
+            await AuditService.Add(ServerId, $"{(gag ? "Gagged" : "Ungagged")} player {PlayerId}");
+        }
+        catch (Exception e)
+        {
+            Toast.ShowError(e.Message, "Error during gag");
+        }
     }
 
     private async Task switchTeam()
@@ -622,6 +715,8 @@
                     }
                     await pavlovServerContext.SaveChangesAsync();
                 }
+
+                await loadDbPlayer(true);
             }
             else
             {
@@ -666,6 +761,8 @@
                         await pavlovServerContext.SaveChangesAsync();
                     }
                 }
+
+                await loadDbPlayer(true);
             }
             else
             {

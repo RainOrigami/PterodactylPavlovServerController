@@ -1,0 +1,93 @@
+﻿@using PavlovVR_Rcon.Models.Pavlov;
+@using PterodactylPavlovServerController.Models;
+@using PterodactylPavlovServerController.Services;
+@inject PavlovRconService RconService
+@inject IToastService Toast
+@inject ApiKeyService ApiKey
+@inject AuditService AuditService
+
+<div class="me-2" style="width: 425px; display: inline-block; vertical-align: top;">
+    <h3 class="mb-0">Teleport player</h3>
+    <small class="text-muted">
+        Teleports the first player to the position of the second player.
+    </small>
+    <EditForm Model="@teleport" OnValidSubmit="@teleportSubmitted" class="mt-3">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label>Player to move</label>
+            <InputSelect @bind-Value="teleport.SourceUniqueId" class="form-select">
+                    <option selected disabled>Select a player</option>
+
+                    @if (Connection.PlayerListPlayers != null)
+                    {
+                        foreach (KeyValuePair<ulong, Player> connectionPlayer in Connection.PlayerListPlayers)
+                        {
+                            <option value="@connectionPlayer.Key">@connectionPlayer.Value.Username</option>
+                        }
+                    }
+            </InputSelect>
+        </div>
+        <div class="mb-3">
+            <label>Teleport to</label>
+            <InputSelect @bind-Value="teleport.TargetUniqueId" class="form-select">
+                    <option selected disabled>Select a player</option>
+
+                    @if (Connection.PlayerListPlayers != null)
+                    {
+                        foreach (KeyValuePair<ulong, Player> connectionPlayer in Connection.PlayerListPlayers)
+                        {
+                            <option value="@connectionPlayer.Key">@connectionPlayer.Value.Username</option>
+                        }
+                    }
+            </InputSelect>
+        </div>
+        <div class="mb-3">
+            <button type="submit" class="btn btn-outline-warning form-control">Teleport</button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public PavlovRconConnection Connection { get; set; }
+
+    [Parameter]
+    [EditorRequired]
+    public ServerInfo ServerInfo { get; set; }
+
+    private readonly TeleportModel teleport = new();
+
+    private async Task teleportSubmitted()
+    {
+        if (teleport.SourceUniqueId == null || teleport.TargetUniqueId == null)
+        {
+            Toast.ShowError("You need to select both players");
+            return;
+        }
+
+        if (teleport.SourceUniqueId == teleport.TargetUniqueId)
+        {
+            Toast.ShowError("Can not teleport a player to themselves");
+            return;
+        }
+
+        try
+        {
+            if (!await RconService.Teleport(ApiKey.ApiKey, Connection.ServerId, teleport.SourceUniqueId!.Value, teleport.TargetUniqueId!.Value))
+            {
+                Toast.ShowError("Server refused the command");
+                return;
+            }
+
+            Toast.ShowSuccess("Player has been teleported");
+            await AuditService.Add(Connection.ServerId, $"Teleported player {teleport.SourceUniqueId!.Value} to {teleport.TargetUniqueId!.Value}");
+        }
+        catch (Exception e)
+        {
+            Toast.ShowError(e.Message);
+        }
+    }
+}

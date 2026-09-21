@@ -4,237 +4,769 @@
 @using PterodactylPavlovServerController.Services;
 @using PterodactylPavlovServerDomain.Models;
 @using Steam.Models.SteamCommunity;
+@using System.Text.Json;
+
+@{
+    bool isSnd = ServerStatsType == "SND";
+
+    // Player table data for DataTables
+    var playerRows = PlayerStatistics.Select(p => new
+    {
+        avatar = p.summary.AvatarMediumUrl?.ToString() ?? "",
+        name = p.summary.Nickname ?? p.playerStats.UniqueId.ToString(),
+        profileUrl = p.summary.ProfileUrl?.ToString() ?? "#",
+        id = p.playerStats.UniqueId.ToString(),
+        kills = p.playerStats.Kills,
+        deaths = p.playerStats.Deaths,
+        kd = p.playerStats.Deaths > 0
+            ? Math.Round((double)p.playerStats.Kills / p.playerStats.Deaths, 2)
+            : (double)p.playerStats.Kills,
+        headshots = p.playerStats.Headshots,
+        hsPct = p.playerStats.Kills > 0
+            ? Math.Round((double)p.playerStats.Headshots / p.playerStats.Kills * 100, 1)
+            : 0.0,
+        assists = p.playerStats.Assists,
+        teamkills = p.playerStats.TeamKills,
+        suicides = p.playerStats.Suicides,
+        chickens = p.playerStats.ChickensKilled,
+        planted = p.playerStats.BombsPlanted,
+        defused = p.playerStats.BombsDefused,
+        firstBloods = p.playerStats.FirstBloods,
+        bestRound = p.playerStats.BestRoundKills,
+        streak = p.playerStats.LongestKillStreak,
+        score = p.playerStats.TotalScore,
+        avgScore = Math.Round(p.playerStats.AverageScore, 1),
+        rounds = p.playerStats.RoundsPlayed,
+        bestGun = p.playerStats.MostKillsWithGun != null
+            ? (PavlovStatisticsService.GunMap.GetValueOrDefault(
+                PavlovStatisticsService.GetCorrectGunKey(p.playerStats.MostKillsWithGun) ?? "",
+                p.playerStats.MostKillsWithGun))
+            : "",
+    }).ToList();
+
+    // Top 20 weapons by kill count for the chart
+    var topWeapons = GunStatistics
+        .OrderByDescending(g => g.gunStats.Kills)
+        .Take(20)
+        .Select(g =>
+        {
+            string? key = PavlovStatisticsService.GetCorrectGunKey(g.gunStats.Name);
+            return new
+            {
+                name = key != null ? PavlovStatisticsService.GunMap[key] : g.gunStats.Name,
+                kills = g.gunStats.Kills,
+            };
+        })
+        .ToList();
+
+    // Emitted as data, not as hand-written JS: the @: escape this used to rely on
+    // produced "(function(){)", a syntax error that took the whole data block -
+    // player rows, weapon labels, the lot - down with it.
+    int teamWins(Dictionary<string, object> teamStats)
+    {
+        return teamStats.TryGetValue("Victories", out object? victories)
+            && int.TryParse(victories?.ToString(), out int parsed)
+                ? parsed
+                : 0;
+    }
+
+    string teamWinsJson = isSnd && (Team0Stats.ContainsKey("Victories") || Team1Stats.ContainsKey("Victories"))
+        ? JsonSerializer.Serialize(new[] { teamWins(Team0Stats), teamWins(Team1Stats) })
+        : "null";
+
+    string populationJson = JsonSerializer.Serialize(Population.Select(p => new
+    {
+        label = $"{p.Year}-{p.Month:00}",
+        average = Math.Round(p.AveragePlayers, 1),
+        max = p.MaxPlayers,
+        matches = p.Matches,
+    }));
+
+    string playerDataJson = JsonSerializer.Serialize(playerRows);
+    string weaponLabelsJson = JsonSerializer.Serialize(topWeapons.Select(w => w.name));
+    string weaponKillsJson = JsonSerializer.Serialize(topWeapons.Select(w => w.kills));
+}
 
 <style>
-    .row-alternating {
-        background-color: rgba(0, 0, 0, 0.1);
+    .row-alternating { background-color: rgba(0,0,0,0.1); }
+    .row-alternating:nth-child(2n) { background-color: rgba(0,0,0,0.2); }
+    a { text-decoration: none; }
+
+    .nav-tabs .nav-link { color: #adb5bd; }
+    .nav-tabs .nav-link.active { color: #fff; background-color: #1a1d20; border-color: #495057 #495057 #1a1d20; }
+    .nav-tabs { border-color: #495057; }
+    .tab-content { background-color: #1a1d20; }
+
+    /* DataTables dark overrides.
+       These were written for DataTables 1.x (.dataTables_wrapper, .dataTables_filter,
+       .paginate_button), but the page loads 2.0.8 with the Bootstrap 5 integration,
+       which renders .dt-container, .form-select, .form-control and a Bootstrap
+       .pagination instead - so none of it applied and the controls stayed white.
+       Both sets are kept so a version change does not silently undo this again. */
+    .dataTables_wrapper .dataTables_length select,
+    .dataTables_wrapper .dataTables_filter input,
+    .dt-container .dt-length select,
+    .dt-container .dt-search input,
+    .dt-container .form-select,
+    .dt-container .form-control {
+        background-color: #2b2f33; color: #dee2e6; border: 1px solid #495057; border-radius: 4px;
     }
 
-        .row-alternating:nth-child(2n) {
-            background-color: rgba(0, 0, 0, 0.2);
-        }
-
-    a:link {
-        text-decoration: none;
+    .dt-container .form-select:focus,
+    .dt-container .form-control:focus {
+        background-color: #2b2f33; color: #fff; border-color: #0dcaf0; box-shadow: 0 0 0 0.2rem rgba(13,202,240,0.15);
     }
 
-    a:visited {
-        text-decoration: none;
+    .dt-container .form-select option { background-color: #2b2f33; color: #dee2e6; }
+
+    .dataTables_wrapper .dataTables_info,
+    .dataTables_wrapper .dataTables_paginate,
+    .dt-container .dt-info,
+    .dt-container label,
+    .dt-container .dt-length,
+    .dt-container .dt-search { color: #adb5bd; }
+
+    .dt-container .dt-paging { margin-top: 0.5rem; }
+
+    /* Bootstrap's pagination is light by default, which is most of what looked
+       wrong here. */
+    .dt-container .page-link {
+        background-color: #2b2f33; border-color: #495057; color: #adb5bd;
     }
 
-    a:hover {
-        text-decoration: none;
+    .dt-container .page-link:hover { background-color: #343a40; border-color: #495057; color: #fff; }
+
+    .dt-container .page-item.active .page-link {
+        background-color: #0dcaf0; border-color: #0dcaf0; color: #06262c;
     }
 
-    a:active {
-        text-decoration: none;
+    .dt-container .page-item.disabled .page-link {
+        background-color: #212529; border-color: #343a40; color: #6c757d;
     }
+
+    .dt-container .page-link:focus { box-shadow: 0 0 0 0.2rem rgba(13,202,240,0.15); }
+
+    .dataTables_wrapper .dataTables_paginate .paginate_button { color: #adb5bd !important; }
+    .dataTables_wrapper .dataTables_paginate .paginate_button.current,
+    .dataTables_wrapper .dataTables_paginate .paginate_button:hover { background: #2b2f33 !important; color: #fff !important; border-color: #495057 !important; }
+    table.dataTable thead th { border-bottom: 2px solid #495057; }
+    table.dataTable tbody td { border-bottom: 1px solid #2b2f33; vertical-align: middle; }
+    table.dataTable.table-hover tbody tr:hover { background-color: rgba(255,255,255,0.05); }
+
+    /* Section headings on the server tab: h4 with nothing around it read as stray
+       text sitting on top of the cards. */
+    .stats-section, .stats-heading { padding-left: 0.5rem; }
+
+    /* Stat labels that carry an explanation say so, rather than hiding it behind
+       a hover nobody thinks to try. */
+    .stat-label {
+        text-decoration: underline dotted rgba(255,255,255,0.35);
+        text-underline-offset: 3px;
+        cursor: help;
+    }
+
+    .stats-section {
+        margin-top: 2.75rem;
+        margin-bottom: 0.25rem;
+        padding-bottom: 0.5rem;
+        font-size: 1.6rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        color: #f8f9fa;
+        border-bottom: 1px solid #495057;
+    }
+
+    .stats-section:first-of-type { margin-top: 1.5rem; }
+
+    /* Flashed on whatever a cross-link jumped to, so it is findable in a wall of cards */
+    .stats-target > .card { outline: 2px solid #0dcaf0; transition: outline-color 1s ease-out; }
+    #asterix-own-kills.stats-target { outline: 2px solid #0dcaf0; }
 </style>
-<div>
-    <h1>@ServerName server statistics</h1>
 
-    <h2>Table of contents</h2>
-    <ol>
-        <li><a href="stats/@(ServerId)#serverstats" class="link-light">Server statistics</a></li>
-        <li><a href="stats/@(ServerId)#demos" class="link-light">Demo downloads</a></li>
+<div class="px-4">
+    <h1 class="mt-2 stats-heading">@ServerName server statistics</h1>
 
-        @if (ServerStatsType == "SND")
+    <!-- Tab navigation -->
+    <ul class="nav nav-tabs mt-3" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-server" type="button">Server</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-btn-demos" data-bs-toggle="tab" data-bs-target="#tab-demos" type="button">Demos</button>
+        </li>
+        @if (isSnd)
         {
-            <li><a href="stats/@(ServerId)#mapstats" class="link-light">Map statistics</a></li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-maps" type="button">Maps</button>
+            </li>
         }
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-weapons" type="button">Weapons</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-players" type="button">Players</button>
+        </li>
+    </ul>
 
-        <li><a href="stats/@(ServerId)#gunstats" class="link-light">Gun statistics</a></li>
+    <div class="tab-content pt-3">
 
-        @if (ServerStatsType == "SND")
-        {
-            <li><a href="stats/@(ServerId)#teamstats" class="link-light">Team statistics</a></li>
-        }
-
-        <li><a href="stats/@(ServerId)#playerstats" class="link-light">Player statistics</a></li>
-    </ol>
-
-    <h2 id="serverstats" class="mt-3">Server statistics</h2>
-    <div class="card-group d-flex flex-wrap">
-        <div class="row mt-3">
-            <StatsCard ServerId="@ServerId" ImageURL="https://bloodisgood.net/wp-content/uploads/2022/10/image_2022-10-31_113333781.png" Title="Counts" Items="@ServerCountStats" />
-            <StatsCard ServerId="@ServerId" ImageURL="https://bloodisgood.net/wp-content/uploads/2022/10/image_2022-10-31_113751041.png" Title="Kill stats" Items="@ServerKillStats" />
-            @if (ServerStatsType == "SND")
-            {
-                <StatsCard ServerId="@ServerId" ImageURL="https://bloodisgood.net/wp-content/uploads/2022/10/image_2022-10-31_114051512.png" Title="Bomb stats" Items="@ServerBombStats" />
-            }
-        </div>
-    </div>
-
-    <h2 id="demos" class="mt-3">Demo downloads</h2>
-    <div class="card-group d-flex flex-wrap">
-        <div class="row mt-3">
-            !!demos!!
-        </div>
-    </div>
-
-    @if (ServerStatsType == "SND")
-    {
-        <h2 id="mapstats" class="mt-3">Map statistics</h2>
-        <div class="card-group d-flex flex-wrap">
-            @foreach ((MapWorkshopModel? workshopModel, CMapStats mapStats, Dictionary<string, object> items) in this.MapStatistics)
-            {
-                string imageUrl = "https://pavlov.bloodisgood.net/gunimages/unknown.png";
-                string mapName = mapStats.MapId;
-                string mapUrl = $"http://pavlovwiki.com/index.php/Default_Maps#{mapStats.MapId}";
-
-                if (workshopModel != null)
+        <!-- ── SERVER TAB ── -->
+        <div class="tab-pane fade show active" id="tab-server" role="tabpanel">
+            <h4 class="stats-section">Overview</h4>
+            <div class="d-flex flex-wrap justify-content-center gap-3">
+                <StatsCard ServerId="@ServerId" ImageURL="https://bloodisgood.net/wp-content/uploads/2022/10/image_2022-10-31_113333781.png" Title="Counts" Items="@ServerCountStats" />
+                <StatsCard ServerId="@ServerId" ImageURL="https://bloodisgood.net/wp-content/uploads/2022/10/image_2022-10-31_113751041.png" Title="Kill stats" Items="@ServerKillStats" />
+                @if (isSnd)
                 {
-                    if (workshopModel.ImageURL != null)
-                    {
-                        imageUrl = workshopModel.ImageURL;
-                    }
-
-                    mapName = workshopModel.Name;
-                    mapUrl = workshopModel.URL;
+                    <StatsCard ServerId="@ServerId" ImageURL="https://bloodisgood.net/wp-content/uploads/2022/10/image_2022-10-31_114051512.png" Title="Bomb stats" Items="@ServerBombStats" />
                 }
+            </div>
 
-                <StatsCard ServerId="@ServerId" ImageURL="@imageUrl" Title="@mapName" LinkURL="@mapUrl" OpenInBlank="true" Id="@($"map-{mapStats.MapId}-{mapStats.GameMode}")" Items="@items" ImageHeight="169" />
-            }
-        </div>
-    }
-
-    <h2 id="gunstats" class="mt-3">Gun statistics</h2>
-    <div class="card-group d-flex flex-wrap">
-        @foreach ((CGunStats gunStats, Dictionary<string, object> items) in this.GunStatistics)
-        {
-            string imageUrl = "https://pavlov.bloodisgood.net/gunimages/unknown.png";
-            string gunName = $"{gunStats.Name}(?)";
-            string? gunKey = PavlovStatisticsService.GetCorrectGunKey(gunStats.Name);
-            if (gunKey != null)
+            @* Own row: five cards across a four-wide grid left one card stranded
+               on a line of its own. *@
+            @if (isSnd && (ServerRoundStats.Count > 0 || ServerMatchStats.Count > 0))
             {
-                imageUrl = $"https://pavlov.bloodisgood.net/gunimages/{gunKey}.png";
-                gunName = PavlovStatisticsService.GunMap[gunKey];
+                <div class="d-flex flex-wrap justify-content-center gap-3">
+                    @if (ServerRoundStats.Count > 0)
+                    {
+                        <StatsCard ServerId="@ServerId" ImageURL="https://bloodisgood.net/wp-content/uploads/2022/10/image_2022-10-31_113751041.png" Title="Round stats" Items="@ServerRoundStats" />
+                    }
+                    @if (ServerMatchStats.Count > 0)
+                    {
+                        <StatsCard ServerId="@ServerId" ImageURL="https://bloodisgood.net/wp-content/uploads/2022/10/image_2022-10-31_113333781.png" Title="Match stats" Items="@ServerMatchStats" />
+                    }
+                </div>
             }
 
-            <StatsCard ServerId="@ServerId" ImageURL="@imageUrl" Id="@($"gun-{gunStats.Name}")" Title="@gunName" Items="@items" />
-        }
-    </div>
+            @if (isSnd && (Team0Stats.Count > 0 || Team1Stats.Count > 0))
+            {
+                <h4 class="stats-section">Teams</h4>
+                <div class="d-flex flex-wrap justify-content-center gap-3 align-items-start">
+                    <StatsCard ServerId="@ServerId" ImageURL="https://bloodisgood.net/wp-content/uploads/2022/10/blueteam.png" Title="Blue team" Items="@Team0Stats" />
+                    <StatsCard ServerId="@ServerId" ImageURL="https://bloodisgood.net/wp-content/uploads/2022/10/redteam.png" Title="Red team" Items="@Team1Stats" />
+                    <div class="col-auto mt-3">
+                        <div class="card bg-dark h-100 p-3" style="width: 300px">
+                            <h5 class="card-title">Victories</h5>
+                            <p class="card-text text-muted small mb-2">Rounds won, blue against red.</p>
+                            <canvas id="teamChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            }
 
-    @if (ServerStatsType == "SND")
-    {
-        <h2 id="teamstats" class="mt-3">Team statistics</h2>
-        <div class="card-group d-flex flex-wrap">
-            <StatsCard ServerId="@ServerId" ImageURL="https://bloodisgood.net/wp-content/uploads/2022/10/blueteam.png" Title="Blue team" Items="@Team0Stats" />
-            <StatsCard ServerId="@ServerId" ImageURL="https://bloodisgood.net/wp-content/uploads/2022/10/redteam.png" Title="Red team" Items="@Team1Stats" />
+            @if (Population.Count > 1)
+            {
+                <h4 class="stats-section">Population</h4>
+                <div class="mb-4" style="max-width: 900px; height: 320px;">
+                    <canvas id="populationChart"></canvas>
+                </div>
+            }
+
+            @if (Rivalries.Count > 0)
+            {
+                <h4 class="stats-section">Rivalries</h4>
+                <div class="d-flex flex-wrap justify-content-center gap-3">
+                    @foreach ((string title, PlayerSummaryModel playerSummary, Dictionary<string, object> items) in Rivalries)
+                    {
+                        <StatsCard ServerId="@ServerId" ImageURL="@playerSummary.AvatarFullUrl" Title="@title" Items="@items" />
+                    }
+                </div>
+            }
+
+            @if (HonorableMentions.Count > 0)
+            {
+                <h4 class="stats-section">Honorable mentions</h4>
+                <div class="d-flex flex-wrap justify-content-center gap-3">
+                    @foreach ((string title, PlayerSummaryModel playerSummary, Dictionary<string, object> items) in HonorableMentions)
+                    {
+                        <StatsCard ServerId="@ServerId" ImageURL="@playerSummary.AvatarFullUrl" Title="@title" Items="@items" />
+                    }
+                </div>
+            }
+
+            @if (DishonorableMentions.Count > 0)
+            {
+                <h4 class="stats-section">Dishonorable mentions</h4>
+                <div class="d-flex flex-wrap justify-content-center gap-3">
+                    @foreach ((string title, PlayerSummaryModel playerSummary, Dictionary<string, object> items) in DishonorableMentions)
+                    {
+                        <StatsCard ServerId="@ServerId" ImageURL="@playerSummary.AvatarFullUrl" Title="@title" Items="@items" />
+                    }
+                </div>
+            }
         </div>
-    }
 
-    <h3 id="playerstats" class="mt-3">Player statistics</h3>
-    <h4>
-        Honorable mentions
-    </h4>
-    <div class="card-group d-flex flex-wrap">
-        @foreach ((string title, PlayerSummaryModel playerSummary, Dictionary<string, object> items) in this.HonorableMentions)
+        <!-- ── DEMOS TAB ── -->
+        <div class="tab-pane fade" id="tab-demos" role="tabpanel">
+            <div class="d-flex flex-wrap justify-content-center gap-3">
+                !!demos!!
+            </div>
+        </div>
+
+        <!-- ── MAPS TAB (SND only) ── -->
+        @if (isSnd)
         {
-            <StatsCard ServerId="@ServerId" ImageURL="@playerSummary.AvatarFullUrl" Title="@title" Items="@items" />
+            <div class="tab-pane fade" id="tab-maps" role="tabpanel">
+                <div class="d-flex flex-wrap justify-content-center gap-3">
+                    @foreach ((MapWorkshopModel? workshopModel, CMapStats mapStats, Dictionary<string, object> items) in MapStatistics)
+                    {
+                        string imageUrl = "https://pavlov.bloodisgood.net/gunimages/unknown.png";
+                        string mapName = mapStats.MapId;
+                        string mapUrl = $"http://pavlovwiki.com/index.php/Default_Maps#{mapStats.MapId}";
+                        if (workshopModel != null)
+                        {
+                            if (workshopModel.ImageURL != null) imageUrl = workshopModel.ImageURL;
+                            mapName = workshopModel.Name;
+                            mapUrl = workshopModel.URL;
+                        }
+                        <StatsCard ServerId="@ServerId" ImageURL="@imageUrl" Title="@mapName" LinkURL="@mapUrl" OpenInBlank="true" Id="@($"map-{mapStats.MapId}-{mapStats.GameMode}")" Items="@items" ImageHeight="169" />
+                    }
+                </div>
+            </div>
         }
-    </div>
-    <br />
-    <h4>
-        Dishonorable mentions
-    </h4>
-    <div class="card-group d-flex flex-wrap">
-        @foreach ((string title, PlayerSummaryModel playerSummary, Dictionary<string, object> items) in this.DishonorableMentions)
-        {
-            <StatsCard ServerId="@ServerId" ImageURL="@playerSummary.AvatarFullUrl" Title="@title" Items="@items" />
-        }
-    </div>
-    <br />
-    <h4>
-        All players
-    </h4>
-    <div class="card-group d-flex flex-wrap">
-        @foreach ((PlayerSummaryModel playerSummary, CPlayerStats playerStats, Dictionary<string, object> items) in this.PlayerStatistics)
-        {
-            <StatsCard ServerId="@ServerId" ImageURL="@playerSummary.AvatarFullUrl" LinkURL="@playerSummary.ProfileUrl" OpenInBlank="true" Title="@playerSummary.Nickname" Id="@($"player-{playerStats.UniqueId}")" Items="@items" />
-        }
-    </div>
+
+        <!-- ── WEAPONS TAB ── -->
+        <div class="tab-pane fade" id="tab-weapons" role="tabpanel">
+            <div class="mb-4" style="max-width:900px; height:400px;">
+                <canvas id="weaponChart"></canvas>
+            </div>
+            <div class="d-flex flex-wrap justify-content-center gap-3">
+                @foreach ((CGunStats gunStats, Dictionary<string, object> items) in GunStatistics)
+                {
+                    string imageUrl = "https://pavlov.bloodisgood.net/gunimages/unknown.png";
+                    string gunName = gunStats.Name;
+                    string? gunKey = PavlovStatisticsService.GetCorrectGunKey(gunStats.Name);
+                    if (gunKey != null)
+                    {
+                        imageUrl = $"https://pavlov.bloodisgood.net/gunimages/{gunKey}.png";
+                        gunName = PavlovStatisticsService.GunMap[gunKey];
+                    }
+                    <StatsCard ServerId="@ServerId" ImageURL="@imageUrl" Id="@($"gun-{gunStats.Name}")" Title="@gunName" Items="@items" ImageFit="contain" />
+                }
+            </div>
+        </div>
+
+        <!-- ── PLAYERS TAB ── -->
+        <div class="tab-pane fade" id="tab-players" role="tabpanel">
+            <div class="mb-2 d-flex gap-2">
+                <button id="btn-view-list" class="btn btn-sm btn-info">⊞ List</button>
+                <button id="btn-view-cards" class="btn btn-sm btn-outline-secondary">▦ Cards</button>
+            </div>
+
+            <!-- List view -->
+            @* Thirteen columns do not fit the pane; scroll the table rather than
+               the page. *@
+            <div id="view-list" style="overflow-x: auto;">
+                <table id="playersTable" class="table table-dark table-hover table-sm" style="width:100%">
+                    <thead>
+                        <tr>
+                            <th>Player</th>
+                            <th>Kills</th>
+                            <th>Deaths</th>
+                            <th>K/D</th>
+                            <th>Headshots</th>
+                            <th>HS%</th>
+                            @if (isSnd)
+                            {
+                                <th>Assists</th>
+                                <th>Teamkills</th>
+                            }
+                            <th>Chickens</th>
+                            <th>Suicides</th>
+                            @if (isSnd)
+                            {
+                                <th>Planted</th>
+                                <th>Defused</th>
+                                <th>First bloods</th>
+                                <th>Best round</th>
+                                <th>Streak</th>
+                                <th>Score</th>
+                                <th>Avg Score</th>
+                                <th>Rounds</th>
+                            }
+                            <th>Best Gun</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <!-- Card view -->
+            <div id="view-cards" style="display:none" class="d-flex flex-wrap justify-content-center gap-3">
+                @foreach ((PlayerSummaryModel playerSummary, CPlayerStats playerStats, Dictionary<string, object> items) in PlayerStatistics)
+                {
+                    <StatsCard ServerId="@ServerId" ImageURL="@playerSummary.AvatarFullUrl" LinkURL="@playerSummary.ProfileUrl" OpenInBlank="true" Title="@playerSummary.Nickname" Id="@($"player-{playerStats.UniqueId}")" Items="@items" />
+                }
+            </div>
+        </div>
+
+    </div><!-- tab-content -->
 </div>
-<div>
-    <h3 id="asterix-own-kills" class="mt-3">Percentages marked with *</h3>
+
+<div class="mt-4 text-muted small" id="asterix-own-kills">
     <p>
-        Percentages marked with * are calculated using own amounts (eg. own kills), not total kill count.<br />
-        Unmarked percentages are calculated using total amounts (eg. total kills).
+        Percentages marked with * use own amounts (e.g. own kills), not totals.<br />
+        @if (isSnd)
+        {
+            @:Some aggregates differ from totals: team/player stats filter to matches with ≥2 players and ≥10 rounds.
+            @:Warmup rounds and pre-match noise are excluded from event-based stats.
+            <br />
+        }
+        Players inactive for more than 3 months are excluded from leaderboards but their events still count toward totals.
     </p>
-    @if (ServerStatsType == "SND")
-    {
-        <h3>Some values don't seem to add up</h3>
-        <p>You may notice that some values don't seem to add up, like Team Blue Kills + Team Red Kills is not equal to Total Kills. This is caused because some statistics have filters applied, like only counting matches with at least two players or with a combined Team Blue and Team Red score of at least 10 (draws and skipped maps). Prerounds often are omitted as well. Total kills however counts each single kill.</p>
-        <p>Players who haven't been on the server for more than three months are not considered for being mentioned however their stats will still count towards the totals.</p>
-    }
 </div>
 
-<footer class="text-center text-lg-start bg-dark text-muted">
-    <section class="d-flex justify-content-center justify-content-lg-between p-4 border-bottom">
-        Stats updated on @DateTime.UtcNow.ToLongDateString() @DateTime.UtcNow.ToLongTimeString().<br />
-        Stats are updated every eight hours.<br />
-        All times are UTC.
+<footer class="text-center text-lg-start bg-dark text-muted mt-3">
+    <section class="d-flex justify-content-center p-4 border-top border-secondary">
+        Stats updated @DateTime.UtcNow.ToLongDateString() @DateTime.UtcNow.ToLongTimeString() UTC · refreshed every 8 hours
     </section>
-    <div class="text-center p-4">
-        Provided by:
-        <a class="text-reset fw-bold" href="https://codefreak.net/">codefreak.net</a> for <a class="text-reset fw-bold" href="https://bloodisgood.net/">Blood is Good</a>
+    <div class="text-center p-3">
+        Provided by <a class="text-reset fw-bold" href="https://codefreak.net/">codefreak.net</a>
+        for <a class="text-reset fw-bold" href="https://bloodisgood.net/">Blood is Good</a>
     </div>
 </footer>
 
+
+<!-- Embedded stat data -->
+<script>
+const _isSnd = @(isSnd ? "true" : "false");
+const _playerData = @((MarkupString)playerDataJson);
+const _weaponLabels = @((MarkupString)weaponLabelsJson);
+const _weaponKills = @((MarkupString)weaponKillsJson);
+const _teamWins = @((MarkupString)teamWinsJson);
+const _population = @((MarkupString)populationJson);
+</script>
+
+<script>
+// jQuery, Bootstrap, DataTables and Chart.js are all loaded at the END of <body>,
+// below this markup. Running straight away therefore touched $ before it existed,
+// which threw a ReferenceError and took every later handler in this block down
+// with it: no player table, no charts, dead view-toggle buttons. Wait for the
+// parser to finish so those libraries are in place.
+document.addEventListener('DOMContentLoaded', function () {
+
+    // Chart.js sizes its canvas when the chart is created. Inside a hidden tab
+    // pane that measures as zero and the chart stays blank - which is the empty
+    // band at the top of the weapons tab. Build each chart the first time its
+    // own tab is actually shown instead.
+    function whenVisible(element, build) {
+        if (!element) return;
+        const pane = element.closest('.tab-pane');
+        if (!pane || pane.classList.contains('active')) {
+            build();
+            return;
+        }
+        const trigger = document.querySelector('[data-bs-target="#' + pane.id + '"]');
+        if (!trigger) {
+            build();
+            return;
+        }
+        trigger.addEventListener('shown.bs.tab', build, { once: true });
+    }
+
+    // ── Weapon kill chart ──
+    const weaponChartEl = document.getElementById('weaponChart');
+    if (weaponChartEl && typeof Chart !== 'undefined' && _weaponLabels.length) {
+        whenVisible(weaponChartEl, function () {
+            new Chart(weaponChartEl, {
+                type: 'bar',
+                data: {
+                    labels: _weaponLabels,
+                    datasets: [{
+                        label: 'Kills',
+                        data: _weaponKills,
+                        backgroundColor: 'rgba(13,202,240,0.7)',
+                        borderColor: 'rgba(13,202,240,1)',
+                        borderWidth: 1,
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { ticks: { color: '#adb5bd' }, grid: { color: '#2b2f33' } },
+                        y: { ticks: { color: '#dee2e6' }, grid: { color: '#2b2f33' } },
+                    }
+                }
+            });
+        });
+    } else if (weaponChartEl) {
+        // Nothing to draw - do not leave a 400px hole above the weapon cards.
+        weaponChartEl.parentElement.remove();
+    }
+
+    // ── Population trend ──
+    const populationChartEl = document.getElementById('populationChart');
+    if (populationChartEl && typeof Chart !== 'undefined' && _population.length) {
+        whenVisible(populationChartEl, function () {
+            new Chart(populationChartEl, {
+                type: 'line',
+                data: {
+                    labels: _population.map(p => p.label),
+                    datasets: [
+                        {
+                            label: 'Average players',
+                            data: _population.map(p => p.average),
+                            borderColor: 'rgba(13,202,240,1)',
+                            backgroundColor: 'rgba(13,202,240,0.2)',
+                            fill: true,
+                            tension: 0.3,
+                        },
+                        {
+                            label: 'Peak players',
+                            data: _population.map(p => p.max),
+                            borderColor: 'rgba(255,193,7,1)',
+                            backgroundColor: 'rgba(255,193,7,0.1)',
+                            borderDash: [5, 4],
+                            fill: false,
+                            tension: 0.3,
+                        },
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#dee2e6' } },
+                        tooltip: {
+                            callbacks: {
+                                afterLabel: function (context) {
+                                    const point = _population[context.dataIndex];
+                                    return point ? point.matches + ' matches' : '';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { ticks: { color: '#adb5bd' }, grid: { color: '#2b2f33' } },
+                        y: { beginAtZero: true, ticks: { color: '#dee2e6' }, grid: { color: '#2b2f33' } },
+                    }
+                }
+            });
+        });
+    }
+
+    // ── Team win doughnut ──
+    const teamChartEl = document.getElementById('teamChart');
+    if (teamChartEl && typeof Chart !== 'undefined' && _teamWins) {
+        whenVisible(teamChartEl, function () {
+            new Chart(teamChartEl, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Blue Team', 'Red Team'],
+                    datasets: [{
+                        data: _teamWins,
+                        backgroundColor: ['rgba(13,110,253,0.8)', 'rgba(220,53,69,0.8)'],
+                        borderColor: ['#0d6efd', '#dc3545'],
+                        borderWidth: 2,
+                    }]
+                },
+                options: {
+                    plugins: {
+                        legend: { labels: { color: '#dee2e6' } }
+                    }
+                }
+            });
+        });
+    } else if (teamChartEl) {
+        teamChartEl.closest('.col-auto').remove();
+    }
+
+    // ── Demos tab ──
+    // The demo cards are injected server-side into #tab-demos. With no demos the
+    // pane is empty, so drop the tab rather than showing half a page of nothing.
+    const demosPane = document.getElementById('tab-demos');
+    if (demosPane && demosPane.textContent.trim() === '' && demosPane.querySelector('.card') === null) {
+        demosPane.remove();
+        const demosButton = document.getElementById('tab-btn-demos');
+        if (demosButton) (demosButton.closest('li') || demosButton).remove();
+    }
+
+    // ── Player DataTable ──
+    function escHtml(s) {
+        return String(s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    if (typeof $ !== 'undefined' && typeof $.fn.DataTable !== 'undefined' && _playerData.length) {
+        const cols = [
+            {
+                data: null,
+                title: 'Player',
+                type: 'string',
+                render: {
+                    display: function(d) {
+                        // Into the player's card on this page, not out to Steam -
+                        // the card itself links to the Steam profile. Written with
+                        // the full path because a bare "#id" would resolve against
+                        // <base href> and leave the page.
+                        const target = window.location.pathname + window.location.search + '#player-' + encodeURIComponent(d.id);
+                        return '<a href="' + escHtml(target) + '" class="d-flex align-items-center gap-2 text-light">'
+                             + '<img src="' + escHtml(d.avatar) + '" width="24" height="24" class="rounded">'
+                             + '<span>' + escHtml(d.name) + '</span></a>';
+                    },
+                    sort: function(d) { return d.name; },
+                    filter: function(d) { return d.name; },
+                },
+            },
+            { data: 'kills',     title: 'Kills' },
+            { data: 'deaths',    title: 'Deaths' },
+            { data: 'kd',        title: 'K/D' },
+            { data: 'headshots', title: 'Headshots' },
+            { data: 'hsPct',     title: 'HS%', render: function(d) { return d + '%'; } },
+        ];
+
+        if (_isSnd) {
+            cols.push({ data: 'assists',   title: 'Assists' });
+            cols.push({ data: 'teamkills', title: 'Teamkills' });
+        }
+        cols.push({ data: 'chickens', title: 'Chickens' });
+        cols.push({ data: 'suicides', title: 'Suicides' });
+        if (_isSnd) {
+            cols.push({ data: 'planted',    title: 'Planted' });
+            cols.push({ data: 'defused',    title: 'Defused' });
+            cols.push({ data: 'firstBloods', title: 'First bloods' });
+            cols.push({ data: 'bestRound',  title: 'Best round' });
+            cols.push({ data: 'streak',     title: 'Streak' });
+            cols.push({ data: 'score',      title: 'Score' });
+            cols.push({ data: 'avgScore',   title: 'Avg Score' });
+            cols.push({ data: 'rounds',     title: 'Rounds' });
+        }
+        cols.push({ data: 'bestGun', title: 'Best Gun' });
+
+        const playersTable = $('#playersTable').DataTable({
+            data: _playerData,
+            columns: cols,
+            order: _isSnd ? [[cols.findIndex(c => c.data === 'score'), 'desc']] : [[1, 'desc']],
+            pageLength: 25,
+            autoWidth: false,
+            dom: '<"row mb-2"<"col-sm-6"l><"col-sm-6"f>>rtip',
+            language: { search: 'Search players:' },
+        });
+
+        // Column widths are measured while the pane is hidden, so they come out
+        // wrong until the table is re-measured on the tab it lives in.
+        const playersTrigger = document.querySelector('[data-bs-target="#tab-players"]');
+        if (playersTrigger) {
+            playersTrigger.addEventListener('shown.bs.tab', function () {
+                playersTable.columns.adjust();
+            });
+        }
+    }
+
+    // ── Card / List toggle ──
+    const btnList  = document.getElementById('btn-view-list');
+    const btnCards = document.getElementById('btn-view-cards');
+    const viewList  = document.getElementById('view-list');
+    const viewCards = document.getElementById('view-cards');
+
+    function showList() {
+        viewList.style.display  = '';
+        viewCards.style.display = 'none';
+        btnList.className  = 'btn btn-sm btn-info';
+        btnCards.className = 'btn btn-sm btn-outline-secondary';
+    }
+
+    function showCards() {
+        viewList.style.display  = 'none';
+        viewCards.style.display = '';
+        btnList.className  = 'btn btn-sm btn-outline-secondary';
+        btnCards.className = 'btn btn-sm btn-info';
+    }
+
+    if (btnList && btnCards) {
+        btnList.addEventListener('click', showList);
+        btnCards.addEventListener('click', showCards);
+    }
+
+    // ── Cross-links (best player, best gun, map links, the * footnote) ──
+    // Every one of these points at an element that is hidden when the link is
+    // clicked: a card in another tab, or a player card in the card view while
+    // the list view is showing. The browser cannot scroll to something with no
+    // box, so the click did nothing at all. Open whatever hides the target
+    // first, then scroll to it.
+    function revealTarget(id) {
+        const target = document.getElementById(id);
+        if (!target) return false;
+
+        if (viewCards && viewCards.contains(target) && viewCards.style.display === 'none') {
+            showCards();
+        }
+
+        const pane = target.closest('.tab-pane');
+        let switched = false;
+        if (pane && !pane.classList.contains('active')) {
+            const trigger = document.querySelector('[data-bs-target="#' + pane.id + '"]');
+            if (trigger) {
+                if (typeof bootstrap !== 'undefined' && bootstrap.Tab) {
+                    bootstrap.Tab.getOrCreateInstance(trigger).show();
+                } else {
+                    trigger.click();
+                }
+                switched = true;
+            }
+        }
+
+        // Scrolling has to wait for the tab's fade to finish, or the target is
+        // still at its pre-transition position.
+        window.setTimeout(function () {
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            target.classList.add('stats-target');
+            window.setTimeout(function () { target.classList.remove('stats-target'); }, 2000);
+        }, switched ? 200 : 0);
+
+        return true;
+    }
+
+    document.addEventListener('click', function (event) {
+        const link = event.target.closest('a[href*="#"]');
+        if (!link) return;
+        // Only links into this same page.
+        if (link.pathname !== window.location.pathname) return;
+        const id = decodeURIComponent(link.hash.slice(1));
+        if (!id) return;
+        if (revealTarget(id)) {
+            event.preventDefault();
+            // Spelled out in full: a bare "#id" is resolved against <base href>,
+            // which is the app root, not this page - that rewrote the address to
+            // /ppsc/#id and sent F5 to the wrong page entirely.
+            history.replaceState(null, '', window.location.pathname + window.location.search + link.hash);
+        }
+    });
+
+    // Someone arriving on a link with a hash already in it needs the same.
+    if (window.location.hash.length > 1) {
+        revealTarget(decodeURIComponent(window.location.hash.slice(1)));
+    }
+});
+</script>
+
+@* Must stay the LAST markup in this template: Stats.cshtml.cs cuts the page
+   at this marker and treats everything after it as the og:description. *@
 !!ogdescription!!: @((MarkupString)ogDescription)
 
 @code {
-
-
-    [Parameter]
-    [EditorRequired]
-    public string ServerStatsType { get; set; } = string.Empty;
-
-    [Parameter]
-    [EditorRequired]
-    public string ServerId { get; set; } = string.Empty;
-
-    [Parameter]
-    [EditorRequired]
-    public string ServerName { get; set; } = string.Empty;
-
-    [Parameter]
-    [EditorRequired]
-    public Dictionary<string, object> ServerCountStats { get; set; } = new();
-
-    [Parameter]
-    [EditorRequired]
-    public Dictionary<string, object> ServerKillStats { get; set; } = new();
-
-    [Parameter]
-    public Dictionary<string, object> ServerBombStats { get; set; } = new();
-
-    [Parameter]
-    public List<(MapWorkshopModel? workshop, CMapStats mapStats, Dictionary<string, object> items)> MapStatistics { get; set; } = new();
-
-    [Parameter]
-    [EditorRequired]
-    public List<(CGunStats gunStats, Dictionary<string, object> items)> GunStatistics { get; set; } = new();
-
-    [Parameter]
-    [EditorRequired]
-    public List<(PlayerSummaryModel summary, CPlayerStats playerStats, Dictionary<string, object> items)> PlayerStatistics { get; set; } = new();
-
-    [Parameter]
-    public Dictionary<string, object> Team0Stats { get; set; } = new();
-
-    [Parameter]
-    public Dictionary<string, object> Team1Stats { get; set; } = new();
-
-    [Parameter]
-    [EditorRequired]
-    public List<(string title, PlayerSummaryModel summary, Dictionary<string, object> items)> HonorableMentions { get; set; } = new();
-
-    [Parameter]
-    [EditorRequired]
-    public List<(string title, PlayerSummaryModel summary, Dictionary<string, object> items)> DishonorableMentions { get; set; } = new();
-
-    [Parameter]
-    [EditorRequired]
-    public string ogDescription { get; set; } = string.Empty;
+    [Parameter][EditorRequired] public string ServerStatsType { get; set; } = string.Empty;
+    [Parameter][EditorRequired] public string ServerId { get; set; } = string.Empty;
+    [Parameter][EditorRequired] public string ServerName { get; set; } = string.Empty;
+    [Parameter][EditorRequired] public Dictionary<string, object> ServerCountStats { get; set; } = new();
+    [Parameter][EditorRequired] public Dictionary<string, object> ServerKillStats { get; set; } = new();
+    [Parameter] public Dictionary<string, object> ServerBombStats { get; set; } = new();
+    [Parameter] public Dictionary<string, object> ServerRoundStats { get; set; } = new();
+    [Parameter] public Dictionary<string, object> ServerMatchStats { get; set; } = new();
+    [Parameter] public List<(string title, PlayerSummaryModel summary, Dictionary<string, object> items)> Rivalries { get; set; } = new();
+    [Parameter] public List<CPopulationStats> Population { get; set; } = new();
+    [Parameter] public List<(MapWorkshopModel? workshop, CMapStats mapStats, Dictionary<string, object> items)> MapStatistics { get; set; } = new();
+    [Parameter][EditorRequired] public List<(CGunStats gunStats, Dictionary<string, object> items)> GunStatistics { get; set; } = new();
+    [Parameter][EditorRequired] public List<(PlayerSummaryModel summary, CPlayerStats playerStats, Dictionary<string, object> items)> PlayerStatistics { get; set; } = new();
+    [Parameter] public Dictionary<string, object> Team0Stats { get; set; } = new();
+    [Parameter] public Dictionary<string, object> Team1Stats { get; set; } = new();
+    [Parameter][EditorRequired] public List<(string title, PlayerSummaryModel summary, Dictionary<string, object> items)> HonorableMentions { get; set; } = new();
+    [Parameter][EditorRequired] public List<(string title, PlayerSummaryModel summary, Dictionary<string, object> items)> DishonorableMentions { get; set; } = new();
+    [Parameter][EditorRequired] public string ogDescription { get; set; } = string.Empty;
 }

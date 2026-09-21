@@ -1,0 +1,56 @@
+﻿@using PavlovVR_Rcon.Models.Pavlov;
+@using PterodactylPavlovServerController.Models;
+@using PterodactylPavlovServerController.Services;
+@inject PavlovRconService RconService
+@inject IToastService Toast
+@inject ApiKeyService ApiKey
+@inject AuditService AuditService
+
+<div class="me-2" style="width: 425px; display: inline-block; vertical-align: top;">
+    <h3 class="mb-0">Verbose logging</h3>
+    <small class="text-muted">
+        Enables or disables verbose logging on the server.
+    </small>
+    <EditForm Model="@verboseLogging" OnValidSubmit="@verboseLoggingSubmitted" class="mt-3">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <button type="submit" class="btn btn-outline-success form-control" @onclick="@(() => verboseLogging.Enable = true)">Enable</button>
+        </div>
+        <div class="mb-3">
+            <button type="submit" class="btn btn-outline-danger form-control" @onclick="@(() => verboseLogging.Enable = false)">Disable</button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public PavlovRconConnection Connection { get; set; }
+
+    [Parameter]
+    [EditorRequired]
+    public ServerInfo ServerInfo { get; set; }
+
+    private readonly GenericEnableModel verboseLogging = new();
+
+    private async Task verboseLoggingSubmitted()
+    {
+        try
+        {
+            if (!await RconService.EnableVerboseLogging(ApiKey.ApiKey, Connection.ServerId, verboseLogging.Enable!.Value))
+            {
+                Toast.ShowError("Server refused the command");
+                return;
+            }
+
+            Toast.ShowSuccess($"Verbose logging set to {verboseLogging.Enable!.Value}");
+            await AuditService.Add(Connection.ServerId, $"Set verbose logging to {verboseLogging.Enable!.Value}");
+        }
+        catch (Exception e)
+        {
+            Toast.ShowError(e.Message);
+        }
+    }
+}

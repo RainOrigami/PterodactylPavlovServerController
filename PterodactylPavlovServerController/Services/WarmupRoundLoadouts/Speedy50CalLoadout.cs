@@ -5,9 +5,9 @@ namespace PterodactylPavlovServerController.Services.WarmupRoundLoadouts;
 
 public class Speedy50CalLoadout : BaseLoadout
 {
-    public override async Task EnablePlayer(PavlovRconService rconService, string apiKey, string serverId, ulong playerId)
+    public override async Task<bool> EnablePlayer(PavlovRconService rconService, string apiKey, string serverId, ulong playerId)
     {
-        await rconService.GiveItem(apiKey, serverId, playerId, Item.AntiTank.ToString());
+        return await BaseLoadout.GiveItem(rconService, apiKey, serverId, playerId, Item.AntiTank.ToString());
     }
     public override Task DisablePlayer(PavlovRconService rconService, string apiKey, string serverId, ulong playerId)
     {

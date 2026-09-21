@@ -1,0 +1,58 @@
+﻿@*
+    Generic yes/no confirmation modal. BanConfirm covers the ban-specific flow
+    with its reasons and durations; this one is for plain destructive actions.
+*@
+
+<div class="modal fade" id="@Id" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark">
+            <div class="modal-header">
+                <h5 class="modal-title">@ConfirmationTitle</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
+                        @onclick="() => onConfirmationChange(false)">
+                </button>
+            </div>
+            <div class="modal-body">
+                @ConfirmationMessage
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+                        @onclick="() => onConfirmationChange(false)">
+                    Cancel
+                </button>
+                <button type="button" class="btn @ConfirmButtonClass" data-bs-dismiss="modal"
+                        @onclick="() => onConfirmationChange(true)">
+                    @ConfirmButtonText
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public string Id { get; set; } = string.Empty;
+
+    [Parameter]
+    [EditorRequired]
+    public string ConfirmationTitle { get; set; } = string.Empty;
+
+    [Parameter]
+    [EditorRequired]
+    public string ConfirmationMessage { get; set; } = string.Empty;
+
+    [Parameter]
+    public string ConfirmButtonText { get; set; } = "Confirm";
+
+    [Parameter]
+    public string ConfirmButtonClass { get; set; } = "btn-danger";
+
+    [Parameter]
+    public EventCallback<bool> ConfirmationChanged { get; set; }
+
+    private async Task onConfirmationChange(bool confirmed)
+    {
+        await ConfirmationChanged.InvokeAsync(confirmed);
+    }
+}
