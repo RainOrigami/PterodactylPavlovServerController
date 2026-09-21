@@ -164,17 +164,7 @@ Generated from Pavlov log files every 8 hours and written out as a static HTML p
 
 **Per map and weapon** — aggregate kills and player stats, with 52+ weapons tracked individually.
 
-Scoring:
-
-| Event | Points |
-| --- | ---: |
-| Kill | +10 |
-| Headshot bonus | +5 |
-| Assist | +2 |
-| Death | −1 |
-| Teamkill | −40 |
-| Bomb plant | +50 |
-| Bomb defuse | +50 |
+Player score is the experience value reported by Pavlov itself in the end-of-map log block, not a score computed by PPSC. It is also what per-map and per-team "best player" rankings are based on.
 
 Stats pages also carry Steam VAC and ban status per player, total time on the server and demo download links where demos are stored.
 

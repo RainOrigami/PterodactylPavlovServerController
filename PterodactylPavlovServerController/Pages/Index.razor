@@ -34,6 +34,16 @@ Welcome to PPSC - the Pterodactyl Pavlov Server Control.
 <br />
 <h3>Changelog</h3>
 
+<h4>1.0.12.1</h4>
+<ul>
+    <li>
+        Statistics page
+        <ul>
+            <li>Fixed warmup rounds still counting towards the statistics: the warmup round is now recognised by the server's own round numbering, which restarts on the SND reset that ends the warmup, instead of by counting back from the final score - a single missing round end was enough to let the whole warmup round through, which is how the flare gun became the sharpest weapon on the server</li>
+            <li>Player score is the experience value Pavlov itself reports, and the readme no longer claims a scoring table that PPSC does not apply</li>
+        </ul>
+    </li>
+</ul>
 <h4>1.0.12</h4>
 <ul>
     <li>

@@ -35,7 +35,7 @@ public class StatsCalculator
 
         // Pass 1: collect all valid round windows (Started→Ended pairs with a matching RoundEnd log entry).
         Console.WriteLine($"Building round windows from {roundStates.Length} round states...");
-        var allRoundWindows = new List<(DateTime Start, DateTime End, int WinningTeam, KillData[] Kills, BombData[] Bombs)>();
+        var allRoundWindows = new List<(DateTime Start, DateTime End, int Round, int WinningTeam, KillData[] Kills, BombData[] Bombs)>();
         DateTime? roundStartTime = null;
         foreach (RoundState state in roundStates)
         {
@@ -59,6 +59,7 @@ public class StatsCalculator
                 allRoundWindows.Add((
                     roundStartTime.Value,
                     roundEndTime,
+                    roundEnd.Round,
                     roundEnd.WinningTeam,
                     baseKillData.Where(k => k.LogEntryDate >= roundStartTime && k.LogEntryDate <= roundEndTime).ToArray(),
                     baseBombData.Where(b => b.LogEntryDate >= roundStartTime && b.LogEntryDate <= roundEndTime).ToArray()
@@ -67,10 +68,15 @@ public class StatsCalculator
             }
         }
 
-        // Pass 2: for each map session (delimited by EndOfMapStats events), keep only the last
-        // (Team0Score + Team1Score) round windows — those are the real match rounds. Warmup
-        // rounds, SND resets and any other pre-match noise that occurred earlier in the session
-        // are discarded. Sessions with fewer than 4 real rounds are skipped entirely.
+        // Pass 2: for each map session (delimited by EndOfMapStats events), keep only the real
+        // match rounds. Warmup rounds, SND resets and any other pre-match noise are discarded.
+        // Sessions with fewer than 4 real rounds are skipped entirely.
+        //
+        // The server numbers its rounds and ResetSND restarts that counter, so a warmup round
+        // shows up as its own ascending run of round numbers ending right before the real match
+        // (e.g. warmup "1" followed by the match's "1,2,3,..."). The last ascending run of a
+        // session is therefore the match; the count from the scoreboard is only used as a cap on
+        // top of it. Gamemodes that never populate the round number fall back to the count alone.
         Console.WriteLine($"Filtering to real match rounds across {endOfMapStats.Length} map sessions...");
         List<KillData> killData = new();
         List<BombData> bombData = new();
@@ -89,6 +95,24 @@ public class StatsCalculator
                 .Where(r => r.Start > sessionStart && r.End <= eoms.LogEntryDate)
                 .OrderBy(r => r.Start)
                 .ToList();
+
+            // Only trust the round numbers when the counter actually runs — an all-zero or
+            // all-identical counter would otherwise split every round into its own run.
+            if (sessionRounds.Any(r => r.Round > 1))
+            {
+                int runStart = sessionRounds.Count - 1;
+                while (runStart > 0 && sessionRounds[runStart - 1].Round < sessionRounds[runStart].Round)
+                {
+                    runStart--;
+                }
+
+                if (runStart > 0)
+                {
+                    Console.WriteLine($"Dropping {runStart} pre-match round(s) (warmup/reset) before {sessionRounds[runStart].Start} on {eoms.MapLabel}");
+                }
+
+                sessionRounds = sessionRounds.Skip(runStart).ToList();
+            }
 
             foreach (var round in sessionRounds.TakeLast(realRoundCount))
             {
