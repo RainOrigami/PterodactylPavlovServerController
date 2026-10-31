@@ -16,7 +16,13 @@ public class CPopulationStats : CBaseStats
     public int Matches { get; set; }
 
     /// <summary>
-    ///     Matches divided by the days of the month covered by the data.
+    ///     Days of the month with at least one match.
+    /// </summary>
+    public int MatchDays { get; set; }
+
+    /// <summary>
+    ///     Matches divided by <see cref="MatchDays" />; days without a match are
+    ///     left out, and a month without any match day averages 0.
     /// </summary>
     public double AverageMatchesPerDay { get; set; }
 

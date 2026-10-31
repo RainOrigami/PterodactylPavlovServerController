@@ -43,6 +43,9 @@ public static class StatsDescriptions
         ["Longest round"] = "Longest match round on record.",
         ["First blood wins"] = "How often the team that landed the round's first kill went on to win that round.",
 
+        // ── population chart ──
+        ["Population"] = "Per calendar month: average and peak players in a counted match, and matches per day. The matches average only counts days with at least one match, so a server that plays four matches every Friday shows 4. Peak is the most matches on a single day. Dashed lines are least-squares trends.",
+
         // ── matches ──
         ["Biggest blowout"] = "The match with the largest gap between the two final scores.",
         ["Nailbiters"] = "Matches decided by a single round.",

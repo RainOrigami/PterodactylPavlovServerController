@@ -80,6 +80,7 @@
         average = Math.Round(p.AveragePlayers, 1),
         max = p.MaxPlayers,
         matches = p.Matches,
+        matchDays = p.MatchDays,
         averageMatches = Math.Round(p.AverageMatchesPerDay, 1),
         peakMatches = p.PeakMatchesPerDay,
     }));
@@ -258,7 +259,7 @@
 
             @if (Population.Count > 1)
             {
-                <h4 class="stats-section">Population</h4>
+                <h4 class="stats-section"><span class="stat-label" title="@StatsDescriptions.For("Population")">Population</span></h4>
                 <div class="mb-4" style="width: 100%; height: 380px;">
                     <canvas id="populationChart"></canvas>
                 </div>
@@ -536,8 +537,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const populationSeries = [
             { label: 'Average players', values: _population.map(p => p.average), color: '13,202,240', axis: 'y', fill: true },
             { label: 'Peak players', values: _population.map(p => p.max), color: '255,193,7', axis: 'y' },
-            { label: 'Average matches/day', values: _population.map(p => p.averageMatches), color: '25,135,84', axis: 'y1' },
-            { label: 'Peak matches/day', values: _population.map(p => p.peakMatches), color: '214,51,132', axis: 'y1' },
+            { label: 'Avg matches per match day', values: _population.map(p => p.averageMatches), color: '25,135,84', axis: 'y1' },
+            { label: 'Peak matches per day', values: _population.map(p => p.peakMatches), color: '214,51,132', axis: 'y1' },
         ];
 
         const populationDatasets = populationSeries.map(s => ({
@@ -600,7 +601,9 @@ document.addEventListener('DOMContentLoaded', function () {
                             callbacks: {
                                 footer: function (items) {
                                     const point = items.length ? _population[items[0].dataIndex] : null;
-                                    return point ? point.matches + ' matches this month' : '';
+                                    return point
+                                        ? point.matches + ' matches this month on ' + point.matchDays + (point.matchDays === 1 ? ' match day' : ' match days')
+                                        : '';
                                 }
                             }
                         }
