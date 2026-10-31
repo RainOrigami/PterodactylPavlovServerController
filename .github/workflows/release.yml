@@ -1,0 +1,118 @@
+# Builds a self-contained linux-x64 release whenever a version tag is pushed and
+# attaches the tarball to a GitHub release. The tarball has the same layout as
+# the one deploy-cfn.sh produces, so it can be deployed with
+#   ./deploy-cfn.sh --tarball ppsc-<tag>-linux-x64.tar.gz
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  # The projects reference these by relative path (..\..\PavlovVR-Rcon, ..\..\SteamWebAPI2),
+  # so they are checked out next to this repository, not inside it.
+  RCON_REPOSITORY: RainOrigami/PavlovVR-Rcon
+  RCON_REF: main
+  STEAMWEBAPI_REPOSITORY: hoppel/SteamWebAPI2
+  # Third-party, so pinned to the commit the app is known to build against.
+  STEAMWEBAPI_REF: 34ae844e9f42adce805675741fa2034f231fe495
+  PROJECT: PterodactylPavlovServerController/PterodactylPavlovServerController.csproj
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out PPSC
+        uses: actions/checkout@v4
+        with:
+          path: ppsc
+
+      - name: Check out PavlovVR-Rcon
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.RCON_REPOSITORY }}
+          ref: ${{ env.RCON_REF }}
+          path: PavlovVR-Rcon
+
+      - name: Check out SteamWebAPI2
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.STEAMWEBAPI_REPOSITORY }}
+          ref: ${{ env.STEAMWEBAPI_REF }}
+          path: SteamWebAPI2
+
+      # Build with the SDK the project targets. A newer SDK is what produced the
+      # scoped-CSS hash mismatch that deploy-cfn.sh guards against.
+      - name: Set up .NET 7
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '7.0.x'
+
+      - name: Determine version
+        id: version
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          if [[ "${GITHUB_REF_TYPE}" != "tag" ]]; then
+              tag="0.0.0-ci.${GITHUB_RUN_NUMBER}"
+          fi
+          echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
+          echo "version=${tag#v}" >> "${GITHUB_OUTPUT}"
+
+      - name: Publish (self-contained linux-x64)
+        working-directory: ppsc
+        run: |
+          dotnet publish "${PROJECT}" -c Release -r linux-x64 --self-contained true \
+              -p:Version="${{ steps.version.outputs.version }}" \
+              -o "${RUNNER_TEMP}/publish"
+
+      # Same check as deploy-cfn.sh: every b-<hash> the assembly emits must also
+      # appear in the bundled stylesheet, or the sidebar styling silently breaks.
+      - name: Verify scoped CSS bundle
+        run: |
+          publish_dir="${RUNNER_TEMP}/publish"
+          dll_hashes="$(strings -a -el "${publish_dir}/PterodactylPavlovServerController.dll" | grep -oE 'b-[a-z0-9]{10}' | sort -u)"
+          css_hashes="$(grep -oE 'b-[a-z0-9]{10}' "${publish_dir}/wwwroot/PterodactylPavlovServerController.styles.css" | sort -u)"
+          if [[ -z "${dll_hashes}" ]]; then
+              echo "::error::No scope hashes found in the assembly"
+              exit 1
+          fi
+          if [[ "${dll_hashes}" != "${css_hashes}" ]]; then
+              echo "::error::Scoped CSS mismatch - assembly: ${dll_hashes//$'\n'/ } / bundle: ${css_hashes//$'\n'/ }"
+              exit 1
+          fi
+
+      # appsettings.json holds production secrets; the server keeps its own copy.
+      - name: Package
+        id: package
+        run: |
+          tarball="ppsc-${{ steps.version.outputs.tag }}-linux-x64.tar.gz"
+          tar -C "${RUNNER_TEMP}/publish" \
+              --exclude='./appsettings.json' \
+              --exclude='./appsettings.Development.json' \
+              --exclude='*.pdb' \
+              -czf "${tarball}" .
+          sha256sum "${tarball}" > "${tarball}.sha256"
+          echo "tarball=${tarball}" >> "${GITHUB_OUTPUT}"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package.outputs.tarball }}
+          path: |
+            ${{ steps.package.outputs.tarball }}
+            ${{ steps.package.outputs.tarball }}.sha256
+
+      - name: Create GitHub release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{ steps.package.outputs.tarball }}
+            ${{ steps.package.outputs.tarball }}.sha256
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
