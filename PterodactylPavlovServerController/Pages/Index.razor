@@ -8,6 +8,7 @@
 @using PterodactylPavlovServerController.Stores
 @using PterodactylPavlovServerController.Pages.Player
 @using PterodactylPavlovServerDomain.Models;
+@using System.Reflection;
 @using System.Web;
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject SignInManager<PterodactylPavlovServerControllerUser> SignInManager
@@ -29,11 +30,33 @@ else
     <h1>Hello!</h1>
 }
 
-Welcome to PPSC - the Pterodactyl Pavlov Server Control.
+Welcome to PPSC - the Pterodactyl Pavlov Server Control, version @version.
 <br />
 <br />
 <h3>Changelog</h3>
 
+<h4>1.0.12.2</h4>
+<ul>
+    <li>
+        Statistics page
+        <ul>
+            <li>Every weapon now has a picture, taken from the game's own buy menu icons - this covers most of the WW2 weapons that had none</li>
+            <li>Weapons are shown with their real names, such as Desert Eagle, MP 40, KRISS Vector, Kar98k and Mossberg 590</li>
+            <li>Push, all deathmatch modes and rounds shorter than 10 seconds no longer count towards the statistics</li>
+            <li>Added map highlights: most played, crowd favourite, hardest for blue and for red, most even, closest matches, bloodbath, headshot heaven, quickest and slowest rounds, most explosive and defuser's paradise</li>
+            <li>Map cards now show the average players and kills per round</li>
+            <li>The population chart now also shows the average and peak matches per day, adds a trend line for every series and uses the full page width</li>
+            <li>Maps that were removed from mod.io keep their statistics, and their cards no longer link to a page that does not exist</li>
+        </ul>
+    </li>
+    <li>
+        Fixes
+        <ul>
+            <li>Fixed the first round after a deathmatch map, or after the server had been empty, announcing "MATCH BEGINS NOW" and resetting instead of starting its warmup loadout, then resetting a second time one round later</li>
+        </ul>
+    </li>
+    <li>The home page now shows which version of PPSC is running</li>
+</ul>
 <h4>1.0.12.1</h4>
 <ul>
     <li>
@@ -418,3 +441,7 @@ Welcome to PPSC - the Pterodactyl Pavlov Server Control.
 <ul>
     <li>Blazor based RCON client to supercede windows client</li>
 </ul>
+
+@code {
+    private static readonly string version = typeof(Index).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "unknown";
+}

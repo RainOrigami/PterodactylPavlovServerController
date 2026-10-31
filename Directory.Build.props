@@ -1,0 +1,12 @@
+<Project>
+
+	<!-- Single source of truth for the PPSC version. Every project in the solution picks this up, and the SDK
+	     derives AssemblyVersion, FileVersion and InformationalVersion from it. The homepage reads it back from the
+	     assembly, and the release workflow refuses a tag that does not match it (tag v1.2.3.4 for 1.2.3.4). -->
+	<PropertyGroup>
+		<Version>1.0.12.2</Version>
+		<!-- Newer SDKs append "+<commit>" to InformationalVersion; keep it identical to Version on every SDK. -->
+		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+	</PropertyGroup>
+
+</Project>

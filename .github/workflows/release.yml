@@ -56,21 +56,33 @@ jobs:
         with:
           dotnet-version: '7.0.x'
 
+      # Directory.Build.props is the single source of truth for the version; the
+      # tag only names the release and must agree with it.
       - name: Determine version
         id: version
+        working-directory: ppsc
         run: |
-          tag="${GITHUB_REF_NAME}"
-          if [[ "${GITHUB_REF_TYPE}" != "tag" ]]; then
-              tag="0.0.0-ci.${GITHUB_RUN_NUMBER}"
+          version="$(grep -oP '(?<=<Version>)[^<]+(?=</Version>)' Directory.Build.props)"
+          if [[ -z "${version}" ]]; then
+              echo "::error::No <Version> found in Directory.Build.props"
+              exit 1
+          fi
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+              tag="${GITHUB_REF_NAME}"
+              if [[ "${tag}" != "v${version}" ]]; then
+                  echo "::error::Tag ${tag} does not match Directory.Build.props version ${version} (expected v${version})"
+                  exit 1
+              fi
+          else
+              tag="v${version}-ci.${GITHUB_RUN_NUMBER}"
           fi
           echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
-          echo "version=${tag#v}" >> "${GITHUB_OUTPUT}"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
 
       - name: Publish (self-contained linux-x64)
         working-directory: ppsc
         run: |
           dotnet publish "${PROJECT}" -c Release -r linux-x64 --self-contained true \
-              -p:Version="${{ steps.version.outputs.version }}" \
               -o "${RUNNER_TEMP}/publish"
 
       # Same check as deploy-cfn.sh: every b-<hash> the assembly emits must also
