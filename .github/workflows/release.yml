@@ -31,6 +31,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: ppsc
+          persist-credentials: false
 
       - name: Check out PavlovVR-Rcon
         uses: actions/checkout@v4
@@ -38,6 +39,7 @@ jobs:
           repository: ${{ env.RCON_REPOSITORY }}
           ref: ${{ env.RCON_REF }}
           path: PavlovVR-Rcon
+          persist-credentials: false
 
       - name: Check out SteamWebAPI2
         uses: actions/checkout@v4
@@ -45,6 +47,7 @@ jobs:
           repository: ${{ env.STEAMWEBAPI_REPOSITORY }}
           ref: ${{ env.STEAMWEBAPI_REF }}
           path: SteamWebAPI2
+          persist-credentials: false
 
       # Build with the SDK the project targets. A newer SDK is what produced the
       # scoped-CSS hash mismatch that deploy-cfn.sh guards against.
@@ -86,16 +89,19 @@ jobs:
               exit 1
           fi
 
-      # appsettings.json holds production secrets; the server keeps its own copy.
+      # appsettings*.json is where credentials live; the server keeps its own copy.
       - name: Package
         id: package
         run: |
           tarball="ppsc-${{ steps.version.outputs.tag }}-linux-x64.tar.gz"
           tar -C "${RUNNER_TEMP}/publish" \
-              --exclude='./appsettings.json' \
-              --exclude='./appsettings.Development.json' \
+              --exclude='./appsettings*.json' \
               --exclude='*.pdb' \
               -czf "${tarball}" .
+          if tar tzf "${tarball}" | grep -iE '(^|/)(appsettings[^/]*\.json|secrets\.json|[^/]*\.(pfx|pem|key))$'; then
+              echo "::error::Release tarball contains a settings or key file"
+              exit 1
+          fi
           sha256sum "${tarball}" > "${tarball}.sha256"
           echo "tarball=${tarball}" >> "${GITHUB_OUTPUT}"
 
