@@ -23,7 +23,7 @@ public class PavlovStatisticsService : IDisposable
     public static readonly IReadOnlyDictionary<string, string> GunMap = new Dictionary<string, string>()
     {
         {
-            "Revolver", "Revolver"
+            "Revolver", "S&W Model 500"
         },
         {
             "AutoShotgun", "SPAS-12"
@@ -35,7 +35,7 @@ public class PavlovStatisticsService : IDisposable
             "cet9", "TEC-9"
         },
         {
-            "Shotgun", "M590"
+            "Shotgun", "Mossberg 590"
         },
         {
             "flash_ru", "Flashbang (Russian)"
@@ -50,13 +50,13 @@ public class PavlovStatisticsService : IDisposable
             "1911", "M1911A1"
         },
         {
-            "de", "Deagle"
+            "de", "Desert Eagle"
         },
         {
             "m16", "M16A2"
         },
         {
-            "sawedoff", "Sawed Off"
+            "sawedoff", "Sawed-off shotgun"
         },
         {
             "Grenade", "Explosive grenade (NATO)"
@@ -71,7 +71,7 @@ public class PavlovStatisticsService : IDisposable
             "AR", "M4"
         },
         {
-            "57", "Five-Seven"
+            "57", "FN Five-seveN"
         },
         {
             "killvolume", "Suicide by map trigger"
@@ -104,7 +104,7 @@ public class PavlovStatisticsService : IDisposable
             "flash", "Flashbang (NATO)"
         },
         {
-            "sock", "Glock 18C"
+            "sock", "Glock 17"
         },
         {
             "awp", "AWM"
@@ -128,16 +128,16 @@ public class PavlovStatisticsService : IDisposable
             "scur", "FN SCAR-20S"
         },
         {
-            "hunting", "Scout"
+            "hunting", "Remington 700"
         },
         {
             "vanas", "FAMAS F1"
         },
         {
-            "ar9", "AR9"
+            "ar9", "AR-9"
         },
         {
-            "kross", "Vector"
+            "kross", "KRISS Vector"
         },
         {
             "vzz", "VSS"
@@ -155,7 +155,7 @@ public class PavlovStatisticsService : IDisposable
             "galul", "Galil"
         },
         {
-            "kar98", "Kar98K"
+            "kar98", "Kar98k"
         },
         {
             "sks", "SKS"
@@ -176,7 +176,7 @@ public class PavlovStatisticsService : IDisposable
             "webley", "Webley Mk. VI"
         },
         {
-            "mp40", "GSG-MP40"
+            "mp40", "MP 40"
         },
         {
             "minedeath", "Mine"
@@ -188,7 +188,7 @@ public class PavlovStatisticsService : IDisposable
             "grenade_us", "Explosive grenade (US)"
         },
         {
-            "sten", "STEN"
+            "sten", "Sten Mk II"
         },
         {
             "tripalarm", "Trip mine"
@@ -323,7 +323,7 @@ public class PavlovStatisticsService : IDisposable
             "bayonet_held", "Bayonet"
         },
         {
-            "bayonet_kar98", "Bayonet (Kar98K)"
+            "bayonet_kar98", "Bayonet (Kar98k)"
         },
         {
             "bayonet_leeenfield", "Bayonet (Lee-Enfield)"
