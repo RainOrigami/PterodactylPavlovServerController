@@ -192,6 +192,183 @@ public class PavlovStatisticsService : IDisposable
         },
         {
             "tripalarm", "Trip mine"
+        },
+        {
+            "bar", "BAR M1918"
+        },
+        {
+            "bren", "Bren"
+        },
+        {
+            "dp27", "DP-27"
+        },
+        {
+            "g43", "Gewehr 43"
+        },
+        {
+            "leeenfield", "Lee-Enfield No. 4"
+        },
+        {
+            "luger", "Luger P08"
+        },
+        {
+            "mg42", "MG 42"
+        },
+        {
+            "pkm", "PKM"
+        },
+        {
+            "ppsh_drum", "PPSh-41 (drum)"
+        },
+        {
+            "skorpion", "Skorpion vz. 61"
+        },
+        {
+            "springfield", "Springfield M1903"
+        },
+        {
+            "svt40", "SVT-40"
+        },
+        {
+            "thompson", "Thompson"
+        },
+        {
+            "thompson_drum", "Thompson (drum)"
+        },
+        {
+            "tokarev", "Tokarev TT-33"
+        },
+        {
+            "silentcet9", "TEC-9 (suppressed)"
+        },
+        {
+            "detectivesmg", "Detective SMG"
+        },
+        {
+            "goldengun", "Golden gun"
+        },
+        {
+            "flaregun", "Flare gun"
+        },
+        {
+            "newtonlauncher", "Newton launcher"
+        },
+        {
+            "tranqgun", "Tranquilizer gun"
+        },
+        {
+            "taser", "Taser"
+        },
+        {
+            "rl_m1a1", "Bazooka M1A1"
+        },
+        {
+            "rl_panzer", "Panzerschreck"
+        },
+        {
+            "rl_piat", "PIAT"
+        },
+        {
+            "rl_rpg", "RPG-7"
+        },
+        {
+            "grenade_ger", "Explosive grenade (German)"
+        },
+        {
+            "grenade_svt", "Explosive grenade (Soviet)"
+        },
+        {
+            "grenade_aurora", "Explosive grenade (Aurora)"
+        },
+        {
+            "grenade_dis", "Disruptor grenade"
+        },
+        {
+            "flash_aurora", "Flashbang (Aurora)"
+        },
+        {
+            "antipersonnelmine", "Anti-personnel mine"
+        },
+        {
+            "antitankmine", "Anti-tank mine"
+        },
+        {
+            "auroraminedeath", "Mine (Aurora)"
+        },
+        {
+            "pushbomb", "Push bomb"
+        },
+        {
+            "tttc4", "C4 (TTT)"
+        },
+        {
+            "tttknife", "Knife (TTT)"
+        },
+        {
+            "ww2knife", "Knife (WW2)"
+        },
+        {
+            "knife_throw", "Thrown knife"
+        },
+        {
+            "hiddenblades", "Hidden blades"
+        },
+        {
+            "pipe", "Pipe"
+        },
+        {
+            "bayonet_charge", "Bayonet charge"
+        },
+        {
+            "bayonet_held", "Bayonet"
+        },
+        {
+            "bayonet_kar98", "Bayonet (Kar98K)"
+        },
+        {
+            "bayonet_leeenfield", "Bayonet (Lee-Enfield)"
+        },
+        {
+            "bayonet_m1garand", "Bayonet (M1 Garand)"
+        },
+        {
+            "bayonet_mosin", "Bayonet (Mosin-Nagant)"
+        },
+        {
+            "bayonet_springfield", "Bayonet (Springfield)"
+        },
+        {
+            "bayonet_trenchgun", "Bayonet (Winchester M97)"
+        },
+        {
+            "fire", "Fire"
+        },
+        {
+            "gas", "Gas"
+        },
+        {
+            "backblast", "Rocket backblast"
+        },
+        {
+            "outofbounds", "Out of bounds"
+        },
+        {
+            "adminslap", "Admin slap"
+        },
+        {
+            "vehicledeath", "Vehicle explosion"
+        },
+        {
+            "tankdeath", "Tank explosion"
+        },
+        {
+            "tankmg", "Tank machine gun"
+        },
+        {
+            "tankturret", "Tank cannon"
+        },
+        {
+            "tankrunover", "Run over by tank"
         }
     };
 
