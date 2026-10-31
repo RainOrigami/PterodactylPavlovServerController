@@ -43,6 +43,12 @@ public class WarmupRoundService
     private List<BaseLoadout> usedLoadouts = new();
     private BaseLoadout? currentLoadout = null;
 
+    // Server info arrives every second, but a warmup start or teardown takes several seconds. Overlapping
+    // runs all compared against a lastRoundState that had not been written yet, so one Ended -> StandBy
+    // transition could fire both the teardown and a fresh warmup start.
+    private readonly SemaphoreSlim updateLock = new(1, 1);
+    private volatile bool resetRequested = false;
+
     public WarmupRoundService(string apiKey, PavlovRconConnection connection, PavlovRconService pavlovRconService, IConfiguration configuration)
     {
         this.apiKey = apiKey;
@@ -51,33 +57,87 @@ public class WarmupRoundService
         this.pavlovServerContext = new(configuration);
 
         this.connection.OnServerInfoUpdated += this.Connection_OnServerInfoUpdated;
+        this.connection.OnServerOnlineStateChanged += this.Connection_OnServerOnlineStateChanged;
+    }
+
+    private void Connection_OnServerOnlineStateChanged(string serverId)
+    {
+        // A server restart can come back on the same map, which the map change check would not notice
+        if (this.connection.Online != true)
+        {
+            this.resetRequested = true;
+        }
     }
 
     private async void Connection_OnServerInfoUpdated(string serverId)
     {
+        // Skip the tick while a previous run is still busy. The next run compares against the last state
+        // that was actually processed, so a transition that completes in the meantime is still seen.
+        if (!this.updateLock.Wait(0))
+        {
+            return;
+        }
+
+        try
+        {
+            await this.processServerInfo();
+        }
+        catch (Exception ex)
+        {
+            await Console.Out.WriteLineAsync($"Warmup round update failed on {this.connection.ServerId}: {ex.Message}");
+        }
+        finally
+        {
+            this.updateLock.Release();
+        }
+    }
+
+    private async Task processServerInfo()
+    {
+        // ServerInfo is replaced on every poll; work from one snapshot so the state stored at the end
+        // is the state the decisions were made on, not whatever arrived while this run was busy
+        ServerInfo serverInfo = this.connection.ServerInfo!;
+
         ServerSettings? warmupEnabled = await this.pavlovServerContext.Settings.FirstOrDefaultAsync(s => s.ServerId == connection.ServerId && s.SettingName == ServerSettings.SETTING_WARMUP_ENABLED);
 
-        //await Console.Out.WriteLineAsync($"Pre-states: GameMode: {this.connection.ServerInfo!.GameMode}, RoundState: {this.connection.ServerInfo.RoundState}, MapLabel: {this.connection.ServerInfo.MapLabel}, WarmupEnabled: {warmupEnabled?.SettingValue}, lastMap: {lastMap}, lastRoundState: {lastRoundState}, isWarmupRound: {isWarmupRound}, isWarmupRoundEnding: {isWarmupRoundEnding}, isWarmupRoundStarted: {isWarmupRoundStarted}, mapJustChanged: {mapJustChanged}");
+        //await Console.Out.WriteLineAsync($"Pre-states: GameMode: {serverInfo.GameMode}, RoundState: {serverInfo.RoundState}, MapLabel: {serverInfo.MapLabel}, WarmupEnabled: {warmupEnabled?.SettingValue}, lastMap: {lastMap}, lastRoundState: {lastRoundState}, isWarmupRound: {isWarmupRound}, isWarmupRoundEnding: {isWarmupRoundEnding}, isWarmupRoundStarted: {isWarmupRoundStarted}, mapJustChanged: {mapJustChanged}");
 
-        if (lastMap == null || lastRoundState == null || this.connection.ServerInfo!.GameMode.ToUpper() != "SND" || warmupEnabled == null || !bool.TryParse(warmupEnabled.SettingValue, out bool isWarmupEnabled) || !isWarmupEnabled)
+        if (this.resetRequested)
+        {
+            this.resetRequested = false;
+            await Console.Out.WriteLineAsync($"Server {this.connection.ServerId} was offline, discarding warmup state");
+            await this.resetWarmupState();
+
+            // A restart begins a new match; the 0-0 score guard keeps this from firing after a mere blip
+            mapJustChanged = true;
+        }
+
+        // Checked before the game mode filter: a warmup never carries over to another map, and a DM map in
+        // between must not leave a half-finished warmup waiting to tear down the next SND map's first round
+        if (lastMap != null && serverInfo.MapLabel != lastMap)
+        {
+            await this.resetWarmupState();
+            mapJustChanged = true;
+            await Console.Out.WriteLineAsync($"Map just changed! mapJustChanged: {mapJustChanged}");
+        }
+
+        if (lastMap == null || lastRoundState == null || serverInfo.GameMode.ToUpper() != "SND" || warmupEnabled == null || !bool.TryParse(warmupEnabled.SettingValue, out bool isWarmupEnabled) || !isWarmupEnabled)
         {
             //await Console.Out.WriteLineAsync("Abort because ignored state");
 
-            lastMap = this.connection.ServerInfo!.MapLabel;
-            lastRoundState = this.connection.ServerInfo.RoundState;
+            lastMap = serverInfo.MapLabel;
+            lastRoundState = serverInfo.RoundState;
             return;
         }
 
         //await Console.Out.WriteLineAsync("Open state");
 
-        if (this.connection.ServerInfo!.MapLabel != lastMap)
-        {
-            mapJustChanged = true;
-            await Console.Out.WriteLineAsync($"Map just changed! mapJustChanged: {mapJustChanged}");
-        }
-
         if (this.connection.PlayerListPlayers?.Count == 0)
         {
+            // Keep tracking while empty, otherwise the first transition after someone joins is compared
+            // against a round state from before everyone left
+            lastMap = serverInfo.MapLabel;
+            lastRoundState = serverInfo.RoundState;
             return;
         }
 
@@ -108,9 +168,9 @@ public class WarmupRoundService
             }
         }
 
-        //await Console.Out.WriteLineAsync($"For safety: Team1Score: {this.connection.ServerInfo.Team1Score}, Team0Score: {this.connection.ServerInfo.Team0Score}");
+        //await Console.Out.WriteLineAsync($"For safety: Team1Score: {serverInfo.Team1Score}, Team0Score: {serverInfo.Team0Score}");
 
-        if (lastRoundState == "Ended" && this.connection.ServerInfo!.RoundState == "StandBy" && mapJustChanged && !isWarmupRound && /* for safety */ this.connection.ServerInfo.Team1Score == 0 && this.connection.ServerInfo.Team0Score == 0)
+        if (lastRoundState == "Ended" && serverInfo.RoundState == "StandBy" && mapJustChanged && !isWarmupRound && /* for safety */ serverInfo.Team1Score == 0 && serverInfo.Team0Score == 0)
         {
             await Console.Out.WriteLineAsync("Warmup round start");
 
@@ -234,7 +294,7 @@ public class WarmupRoundService
             }
         }
 
-        if (lastRoundState == "StandBy" && this.connection.ServerInfo.RoundState == "Started" && isWarmupRound && !isWarmupRoundStarted)
+        if (lastRoundState == "StandBy" && serverInfo.RoundState == "Started" && isWarmupRound && !isWarmupRoundStarted)
         {
             await Console.Out.WriteLineAsync("Warmup round started");
 
@@ -251,7 +311,7 @@ public class WarmupRoundService
             //});
         }
 
-        if (lastRoundState == "Started" && this.connection.ServerInfo.RoundState == "Ended" && isWarmupRound)
+        if (lastRoundState == "Started" && serverInfo.RoundState == "Ended" && isWarmupRound)
         {
             await Console.Out.WriteLineAsync("Warmup round ending");
             isWarmupRoundEnding = true;
@@ -260,7 +320,7 @@ public class WarmupRoundService
             //await this.pavlovRconService.SetBalanceTableURL(apiKey, connection.ServerId, "vankruptgames/BalancingTable/Beta_5.1");
         }
 
-        if (lastRoundState == "Ended" && this.connection.ServerInfo!.RoundState == "StandBy" && isWarmupRound && isWarmupRoundEnding)
+        if (lastRoundState == "Ended" && serverInfo.RoundState == "StandBy" && isWarmupRound && isWarmupRoundEnding)
         {
             await Console.Out.WriteLineAsync("Warmup round ended, SND Reset");
 
@@ -288,8 +348,37 @@ public class WarmupRoundService
             await this.pavlovRconService.ResetSND(apiKey, connection.ServerId);
         }
 
-        lastMap = this.connection.ServerInfo!.MapLabel;
-        lastRoundState = this.connection.ServerInfo.RoundState;
+        lastMap = serverInfo.MapLabel;
+        lastRoundState = serverInfo.RoundState;
+    }
+
+    /// <summary>
+    /// Drops any warmup in progress. If a loadout was still active its server-wide settings (gravity,
+    /// game speed, ...) are put back, since those may outlive the round that set them.
+    /// </summary>
+    private async Task resetWarmupState()
+    {
+        if (this.currentLoadout != null)
+        {
+            await Console.Out.WriteLineAsync($"Discarding unfinished warmup round ({this.currentLoadout.Name}) on {this.connection.ServerId}");
+
+            try
+            {
+                await this.currentLoadout.DisableRound(this.pavlovRconService, this.apiKey, this.connection.ServerId);
+            }
+            catch (Exception ex)
+            {
+                await Console.Out.WriteLineAsync($"Could not restore round settings after {this.currentLoadout.Name}: {ex.Message}");
+            }
+        }
+
+        this.currentLoadout = null;
+        this.isWarmupRound = false;
+        this.isWarmupRoundStarted = false;
+        this.isWarmupRoundEnding = false;
+        this.mapJustChanged = false;
+        this.ungodmodeAt = null;
+        this.alivePlayers.Clear();
     }
 
     /// <summary>
