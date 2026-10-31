@@ -80,6 +80,8 @@
         average = Math.Round(p.AveragePlayers, 1),
         max = p.MaxPlayers,
         matches = p.Matches,
+        averageMatches = Math.Round(p.AverageMatchesPerDay, 1),
+        peakMatches = p.PeakMatchesPerDay,
     }));
 
     string playerDataJson = JsonSerializer.Serialize(playerRows);
@@ -257,7 +259,7 @@
             @if (Population.Count > 1)
             {
                 <h4 class="stats-section">Population</h4>
-                <div class="mb-4" style="max-width: 900px; height: 320px;">
+                <div class="mb-4" style="width: 100%; height: 380px;">
                     <canvas id="populationChart"></canvas>
                 </div>
             }
@@ -323,8 +325,10 @@
                     {
                         string imageUrl = "https://pavlov.bloodisgood.net/gunimages/unknown.png";
                         string mapName = mapStats.MapId;
-                        string mapUrl = $"http://pavlovwiki.com/index.php/Default_Maps#{mapStats.MapId}";
-                        if (workshopModel != null)
+                        // A workshop map mod.io no longer knows keeps its card under
+                        // its UGC id, just without a link: there is nothing to link to.
+                        string? mapUrl = mapStats.MapId.StartsWith("UGC", StringComparison.OrdinalIgnoreCase) ? null : $"http://pavlovwiki.com/index.php/Default_Maps#{mapStats.MapId}";
+                        if (workshopModel is { Unavailable: false })
                         {
                             if (workshopModel.ImageURL != null) imageUrl = workshopModel.ImageURL;
                             mapName = workshopModel.Name;
@@ -511,48 +515,112 @@ document.addEventListener('DOMContentLoaded', function () {
     // ── Population trend ──
     const populationChartEl = document.getElementById('populationChart');
     if (populationChartEl && typeof Chart !== 'undefined' && _population.length) {
+        // Least-squares line through one series, so the direction is readable
+        // through the month-to-month noise.
+        function trendLine(values) {
+            const n = values.length;
+            const meanX = (n - 1) / 2;
+            const meanY = values.reduce((sum, v) => sum + v, 0) / n;
+            let numerator = 0;
+            let denominator = 0;
+            values.forEach(function (v, x) {
+                numerator += (x - meanX) * (v - meanY);
+                denominator += (x - meanX) * (x - meanX);
+            });
+            const slope = denominator === 0 ? 0 : numerator / denominator;
+            return values.map((v, x) => Math.round((meanY + slope * (x - meanX)) * 10) / 10);
+        }
+
+        // Players on the left axis, matches per day on the right: the two are
+        // different units and would otherwise squash each other.
+        const populationSeries = [
+            { label: 'Average players', values: _population.map(p => p.average), color: '13,202,240', axis: 'y', fill: true },
+            { label: 'Peak players', values: _population.map(p => p.max), color: '255,193,7', axis: 'y' },
+            { label: 'Average matches/day', values: _population.map(p => p.averageMatches), color: '25,135,84', axis: 'y1' },
+            { label: 'Peak matches/day', values: _population.map(p => p.peakMatches), color: '214,51,132', axis: 'y1' },
+        ];
+
+        const populationDatasets = populationSeries.map(s => ({
+            label: s.label,
+            data: s.values,
+            yAxisID: s.axis,
+            borderColor: 'rgba(' + s.color + ',1)',
+            backgroundColor: 'rgba(' + s.color + ',' + (s.fill ? '0.2' : '0.1') + ')',
+            fill: !!s.fill,
+            tension: 0.3,
+        }));
+
+        // One trend per series, after the series themselves so dataset i's trend
+        // sits at i + populationSeries.length.
+        populationSeries.forEach(s => populationDatasets.push({
+            label: s.label + ' trend',
+            data: trendLine(s.values),
+            yAxisID: s.axis,
+            borderColor: 'rgba(' + s.color + ',0.6)',
+            borderDash: [6, 4],
+            borderWidth: 1.5,
+            pointRadius: 0,
+            pointHoverRadius: 0,
+            fill: false,
+            tension: 0,
+            isTrend: true,
+        }));
+
         whenVisible(populationChartEl, function () {
             new Chart(populationChartEl, {
                 type: 'line',
                 data: {
                     labels: _population.map(p => p.label),
-                    datasets: [
-                        {
-                            label: 'Average players',
-                            data: _population.map(p => p.average),
-                            borderColor: 'rgba(13,202,240,1)',
-                            backgroundColor: 'rgba(13,202,240,0.2)',
-                            fill: true,
-                            tension: 0.3,
-                        },
-                        {
-                            label: 'Peak players',
-                            data: _population.map(p => p.max),
-                            borderColor: 'rgba(255,193,7,1)',
-                            backgroundColor: 'rgba(255,193,7,0.1)',
-                            borderDash: [5, 4],
-                            fill: false,
-                            tension: 0.3,
-                        },
-                    ]
+                    datasets: populationDatasets,
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
                     plugins: {
-                        legend: { labels: { color: '#dee2e6' } },
+                        legend: {
+                            labels: {
+                                color: '#dee2e6',
+                                // The trend lines share their series' colour and
+                                // need no legend entry of their own.
+                                filter: (item, data) => !data.datasets[item.datasetIndex].isTrend,
+                            },
+                            // Hiding a series hides its trend with it.
+                            onClick: function (e, legendItem, legend) {
+                                const chart = legend.chart;
+                                const index = legendItem.datasetIndex;
+                                const visible = !chart.isDatasetVisible(index);
+                                chart.setDatasetVisibility(index, visible);
+                                chart.setDatasetVisibility(index + populationSeries.length, visible);
+                                chart.update();
+                            },
+                        },
                         tooltip: {
+                            filter: item => !item.dataset.isTrend,
                             callbacks: {
-                                afterLabel: function (context) {
-                                    const point = _population[context.dataIndex];
-                                    return point ? point.matches + ' matches' : '';
+                                footer: function (items) {
+                                    const point = items.length ? _population[items[0].dataIndex] : null;
+                                    return point ? point.matches + ' matches this month' : '';
                                 }
                             }
                         }
                     },
                     scales: {
                         x: { ticks: { color: '#adb5bd' }, grid: { color: '#2b2f33' } },
-                        y: { beginAtZero: true, ticks: { color: '#dee2e6' }, grid: { color: '#2b2f33' } },
+                        y: {
+                            beginAtZero: true,
+                            position: 'left',
+                            title: { display: true, text: 'Players', color: '#adb5bd' },
+                            ticks: { color: '#dee2e6' },
+                            grid: { color: '#2b2f33' },
+                        },
+                        y1: {
+                            beginAtZero: true,
+                            position: 'right',
+                            title: { display: true, text: 'Matches per day', color: '#adb5bd' },
+                            ticks: { color: '#dee2e6' },
+                            grid: { drawOnChartArea: false },
+                        },
                     }
                 }
             });

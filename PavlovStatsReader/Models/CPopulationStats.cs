@@ -14,4 +14,14 @@ public class CPopulationStats : CBaseStats
     public int MaxPlayers { get; set; }
 
     public int Matches { get; set; }
+
+    /// <summary>
+    ///     Matches divided by the days of the month covered by the data.
+    /// </summary>
+    public double AverageMatchesPerDay { get; set; }
+
+    /// <summary>
+    ///     Most matches played on a single day of the month.
+    /// </summary>
+    public int PeakMatchesPerDay { get; set; }
 }

@@ -803,22 +803,45 @@ public class StatsCalculator
     }
 
     /// <summary>
-    ///     Average and peak player count per calendar month, for the trend chart.
+    ///     Average and peak player count, and average and peak matches per day,
+    ///     per calendar month, for the trend chart.
     /// </summary>
     public CPopulationStats[] CalculatePopulationStats(string serverId)
     {
-        return StatsCalculator.countedMatches(this.statsContext, serverId)
-            .AsEnumerable()
+        EndOfMapStats[] matches = StatsCalculator.countedMatches(this.statsContext, serverId).ToArray();
+        if (matches.Length == 0)
+        {
+            return Array.Empty<CPopulationStats>();
+        }
+
+        // The first month only counts from the first match on record and the
+        // current one only up to today; otherwise both would read as quiet months
+        // just because most of their days are not part of the data.
+        DateTime firstDay = matches.Min(m => m.LogEntryDate).Date;
+        DateTime today = DateTime.Now.Date;
+
+        return matches
             .GroupBy(m => new { m.LogEntryDate.Year, m.LogEntryDate.Month })
             .OrderBy(g => g.Key.Year)
             .ThenBy(g => g.Key.Month)
-            .Select(g => new CPopulationStats
+            .Select(g =>
             {
-                Year = g.Key.Year,
-                Month = g.Key.Month,
-                AveragePlayers = g.Average(m => m.PlayerCount),
-                MaxPlayers = g.Max(m => m.PlayerCount),
-                Matches = g.Count(),
+                DateTime monthStart = new(g.Key.Year, g.Key.Month, 1);
+                DateTime from = monthStart < firstDay ? firstDay : monthStart;
+                DateTime monthEnd = monthStart.AddMonths(1).AddDays(-1);
+                DateTime to = monthEnd > today ? today : monthEnd;
+                int days = Math.Max(1, (to - from).Days + 1);
+
+                return new CPopulationStats
+                {
+                    Year = g.Key.Year,
+                    Month = g.Key.Month,
+                    AveragePlayers = g.Average(m => m.PlayerCount),
+                    MaxPlayers = g.Max(m => m.PlayerCount),
+                    Matches = g.Count(),
+                    AverageMatchesPerDay = (double)g.Count() / days,
+                    PeakMatchesPerDay = g.GroupBy(m => m.LogEntryDate.Date).Max(d => d.Count()),
+                };
             })
             .ToArray();
     }
