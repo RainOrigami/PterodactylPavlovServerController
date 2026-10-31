@@ -25,6 +25,10 @@
                         @Title
                     </a>
                 }
+                else if (TitleDescription != null)
+                {
+                    <span class="stat-label" title="@TitleDescription">@Title</span>
+                }
                 else
                 {
                     @Title
@@ -112,6 +116,14 @@
     [Parameter]
     [EditorRequired]
     public string Title { get; set; } = string.Empty;
+
+    /// <summary>
+    ///     Tooltip for an unlinked title, for cards whose title is itself the stat
+    ///     (the map highlights). Passed in rather than looked up from the title, so
+    ///     a player or map that happens to share a stat's name gets no tooltip.
+    /// </summary>
+    [Parameter]
+    public string? TitleDescription { get; set; }
 
     [Parameter]
     [EditorRequired]

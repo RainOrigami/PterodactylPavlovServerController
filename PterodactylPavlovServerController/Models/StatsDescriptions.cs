@@ -49,8 +49,8 @@ public static class StatsDescriptions
         // ── matches ──
         ["Biggest blowout"] = "The match with the largest gap between the two final scores.",
         ["Nailbiters"] = "Matches decided by a single round.",
-        ["Most one-sided map"] = "Of maps with at least 5 decided matches in the last 3 months, the one where one team won the largest share.",
-        ["Most balanced map"] = "Of maps with at least 5 decided matches in the last 3 months, the one with the most even win split.",
+        ["Most one-sided map"] = "The map whose Balance is furthest from 50%: the same all-time match figure as on its map card. Only maps with at least 5 decided matches count; a tie goes to the map with more matches played.",
+        ["Most balanced map"] = "The map whose Balance is closest to 50%: the same all-time match figure as on its map card. Only maps with at least 5 decided matches count; a tie goes to the map with more matches played.",
 
         // ── teams ──
         ["Victories"] = "Matches this team won outright.",
@@ -59,19 +59,30 @@ public static class StatsDescriptions
 
         // ── maps ──
         ["Played"] = "Counted matches on this map and mode.",
-        ["Wins"] = "Match wins by each team on this map, all time.",
-        ["Balance"] = "Share of decided matches won by the stronger side on this map, all time.",
+        ["Wins"] = "Match wins by each team on this map, all time. Drawn matches count for neither side.",
+        ["Balance"] = "Share of this map's decided matches won by the side that won more of them, all time: the Wins line as a percentage. Drawn matches are left out. Dead even means both sides won equally often.",
         ["Round length"] = "Mean time from round start to round end on this map.",
         ["Rounds"] = "Rounds per match on this map: the average, the longest and the shortest.",
         ["Avg. players"] = "Mean number of players in a counted match on this map.",
         ["Kills/round"] = "Kills of an opponent per match round on this map.",
 
         // ── map highlights ──
+        // Highlight titles carry the selection rule; the figure under each one is
+        // described by its own label, the same one the map card uses.
+        ["Most played"] = "The map with the most counted matches.",
+        ["Crowd favourite"] = "The map with the most players per match, of maps with at least 3 counted matches.",
+        ["Hardest for blue"] = "Of maps red has won more matches on, the one with the highest red share. Uses the map card's Balance (all-time match wins); only maps with at least 5 decided matches count, and a tie goes to the map with more matches played.",
+        ["Hardest for red"] = "Of maps blue has won more matches on, the one with the highest blue share. Uses the map card's Balance (all-time match wins); only maps with at least 5 decided matches count, and a tie goes to the map with more matches played.",
+        ["Most even"] = "The map whose Balance is closest to 50%, using the map card's own figure (all-time match wins, draws left out). Only maps with at least 5 decided matches count; among equally even maps, the one with more matches played wins.",
+        ["Closest matches"] = "The map with the smallest average gap between the final scores, of maps with at least 3 counted matches.",
+        ["Bloodbath"] = "The map with the most kills per round, of maps with at least 40 rounds.",
+        ["Headshot heaven"] = "The map with the highest share of headshot kills, of maps with at least 200 kills.",
+        ["Quickest rounds"] = "The map with the shortest average round, of maps with at least 40 rounds.",
+        ["Slowest rounds"] = "The map with the longest average round, of maps with at least 40 rounds.",
+        ["Most explosive"] = "The map where the most rounds end in a detonation, of maps with at least 40 rounds.",
+        ["Defuser's paradise"] = "The map where the most planted bombs get defused, of maps with at least 20 rounds with a plant.",
         ["Map"] = "The map this card is about.",
         ["Matches"] = "Counted matches on this map and mode.",
-        ["Red rounds"] = "Share of rounds red won on this map over the last 3 months, of maps with at least 40 rounds in that time.",
-        ["Blue rounds"] = "Share of rounds blue won on this map over the last 3 months, of maps with at least 40 rounds in that time.",
-        ["Split"] = "Round wins by each side over the last 3 months, of maps with at least 40 rounds in that time. Closest to 50/50 wins.",
         ["Avg. margin"] = "Mean gap between the two final scores, of maps with at least 3 counted matches.",
         ["HS rate"] = "Share of kills that were headshots, of maps with at least 200 kills.",
         ["Explosions"] = "Share of rounds where a planted bomb detonated, of maps with at least 40 rounds.",

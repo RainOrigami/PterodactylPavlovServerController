@@ -20,6 +20,12 @@ public class PavlovStatisticsService : IDisposable
     private const int cardWidth = 300;
     private const int cardsPerRow = 4;
 
+    /// <summary>
+    ///     Decided matches a map needs before any side-balance superlative may
+    ///     pick it. Below that a 1-1 map would be "dead even" on two matches.
+    /// </summary>
+    private const int minimumBalanceMatches = 5;
+
     public static readonly IReadOnlyDictionary<string, string> GunMap = new Dictionary<string, string>()
     {
         {
@@ -964,29 +970,24 @@ public class PavlovStatisticsService : IDisposable
 
         matchStats.Add("Nailbiters", $"{serverStats.NailbiterMatches} decided by one round");
 
-        // Last three months only, and only maps played enough in that window for
-        // the split to mean anything: an all-time split is mostly a record of how
-        // the map played years ago.
-        CMapStats[] decidedMaps = allStats.OfType<CMapStats>().Where(m => m.RecentTeam0Wins + m.RecentTeam1Wins >= 5).ToArray();
+        // The same measure the map card shows as Balance, so the link lands on a
+        // card that says exactly the same thing. Ties go to the map with more
+        // matches behind it.
+        CMapStats[] decidedMaps = allStats.OfType<CMapStats>().Where(m => m.Team0Wins + m.Team1Wins >= PavlovStatisticsService.minimumBalanceMatches).ToArray();
         if (decidedMaps.Length > 0)
         {
-            double share(CMapStats map)
-            {
-                return this.calculateSafePercent(Math.Max(map.RecentTeam0Wins, map.RecentTeam1Wins), map.RecentTeam0Wins + map.RecentTeam1Wins);
-            }
-
-            CMapStats lopsided = decidedMaps.MaxBy(share)!;
-            CMapStats balanced = decidedMaps.MinBy(share)!;
+            CMapStats lopsided = decidedMaps.OrderByDescending(this.getLeaderShare).ThenByDescending(m => m.PlayCount).First();
+            CMapStats balanced = decidedMaps.OrderBy(this.getLeaderShare).ThenByDescending(m => m.PlayCount).First();
 
             matchStats.Add("Most one-sided map", new StatsLinkModel(
                 $"map-{lopsided.MapId}-{lopsided.GameMode}",
                 await this.getMapName(lopsided.MapId),
-                $"{Math.Round(share(lopsided), 0)}% {(lopsided.RecentTeam0Wins > lopsided.RecentTeam1Wins ? "blue" : "red")}, 3 months"));
+                this.formatBalance(lopsided)));
 
             matchStats.Add("Most balanced map", new StatsLinkModel(
                 $"map-{balanced.MapId}-{balanced.GameMode}",
                 await this.getMapName(balanced.MapId),
-                $"{Math.Round(share(balanced), 0)}% split, 3 months"));
+                this.formatBalance(balanced)));
         }
 
         return matchStats;
@@ -1071,13 +1072,9 @@ public class PavlovStatisticsService : IDisposable
         mapStatValues.Add("Played", $"{mapStats.PlayCount} time{(mapStats.PlayCount != 1 ? "s" : "")}");
         mapStatValues.Add("Wins", $"Blue {mapStats.Team0Wins}, Red {mapStats.Team1Wins}");
 
-        int decidedMatches = mapStats.Team0Wins + mapStats.Team1Wins;
-        if (decidedMatches > 0)
+        if (mapStats.Team0Wins + mapStats.Team1Wins > 0)
         {
-            int leaderWins = Math.Max(mapStats.Team0Wins, mapStats.Team1Wins);
-            double leaderShare = this.calculateSafePercent(leaderWins, decidedMatches);
-            string leader = mapStats.Team0Wins == mapStats.Team1Wins ? "even" : mapStats.Team0Wins > mapStats.Team1Wins ? "blue" : "red";
-            mapStatValues.Add("Balance", leader == "even" ? "Dead even" : $"{Math.Round(leaderShare, 0)}% {leader}");
+            mapStatValues.Add("Balance", this.formatBalance(mapStats));
         }
 
         if (mapStats.AverageRoundSeconds > 0)
@@ -1096,6 +1093,30 @@ public class PavlovStatisticsService : IDisposable
         }
 
         return mapStatValues;
+    }
+
+    /// <summary>
+    ///     Share of a map's decided matches won by whichever side won more of them,
+    ///     all time: 50 is dead even, 100 is one side winning every match.
+    /// </summary>
+    private double getLeaderShare(CMapStats mapStats)
+    {
+        return this.calculateSafePercent(Math.Max(mapStats.Team0Wins, mapStats.Team1Wins), mapStats.Team0Wins + mapStats.Team1Wins);
+    }
+
+    /// <summary>
+    ///     The map card's Balance line. Everything else on the page that states a
+    ///     map's side split goes through here too, so a highlight always reads
+    ///     exactly like the card it links to, rounding included.
+    /// </summary>
+    private string formatBalance(CMapStats mapStats)
+    {
+        if (mapStats.Team0Wins == mapStats.Team1Wins)
+        {
+            return "Dead even";
+        }
+
+        return $"{Math.Round(this.getLeaderShare(mapStats), 0)}% {(mapStats.Team0Wins > mapStats.Team1Wins ? "blue" : "red")}";
     }
 
     /// <summary>
@@ -1128,24 +1149,32 @@ public class PavlovStatisticsService : IDisposable
             }));
         }
 
-        double share(int wins, int otherWins)
+        // The first map of an ordering, or none at all; FirstOrDefault would hand
+        // back an empty tuple rather than null.
+        (MapWorkshopModel? workshop, CMapStats mapStats, Dictionary<string, object> items)? first(IEnumerable<(MapWorkshopModel? workshop, CMapStats mapStats, Dictionary<string, object> items)> ordered)
         {
-            return this.calculateSafePercent(wins, wins + otherWins);
+            foreach ((MapWorkshopModel? workshop, CMapStats mapStats, Dictionary<string, object> items) map in ordered)
+            {
+                return map;
+            }
+
+            return null;
         }
 
         var regulars = mapStatistics.Where(m => m.mapStats.PlayCount >= minimumMatches).ToArray();
         var wellRounded = mapStatistics.Where(m => m.mapStats.RoundCount >= minimumRounds).ToArray();
-        var recentlyDecided = mapStatistics.Where(m => m.mapStats.RecentTeam0RoundWins + m.mapStats.RecentTeam1RoundWins >= minimumRounds).ToArray();
+        var decided = mapStatistics.Where(m => m.mapStats.Team0Wins + m.mapStats.Team1Wins >= PavlovStatisticsService.minimumBalanceMatches).ToArray();
 
         add("Most played", mapStatistics.Count == 0 ? null : mapStatistics.MaxBy(m => m.mapStats.PlayCount), "Matches", m => $"{m.PlayCount}");
         add("Crowd favourite", regulars.Length == 0 ? null : regulars.MaxBy(m => m.mapStats.AveragePlayers), "Avg. players", m => $"{Math.Round(m.AveragePlayers, 1):0.0}");
 
-        // Only a map one side actually loses more often than not is hard for it.
-        var hardestForBlue = recentlyDecided.Where(m => m.mapStats.RecentTeam1RoundWins > m.mapStats.RecentTeam0RoundWins).ToArray();
-        add("Hardest for blue", hardestForBlue.Length == 0 ? null : hardestForBlue.MaxBy(m => share(m.mapStats.RecentTeam1RoundWins, m.mapStats.RecentTeam0RoundWins)), "Red rounds", m => $"{Math.Round(share(m.RecentTeam1RoundWins, m.RecentTeam0RoundWins), 0)}%, 3 months");
-        var hardestForRed = recentlyDecided.Where(m => m.mapStats.RecentTeam0RoundWins > m.mapStats.RecentTeam1RoundWins).ToArray();
-        add("Hardest for red", hardestForRed.Length == 0 ? null : hardestForRed.MaxBy(m => share(m.mapStats.RecentTeam0RoundWins, m.mapStats.RecentTeam1RoundWins)), "Blue rounds", m => $"{Math.Round(share(m.RecentTeam0RoundWins, m.RecentTeam1RoundWins), 0)}%, 3 months");
-        add("Most even", recentlyDecided.Length == 0 ? null : recentlyDecided.MinBy(m => Math.Abs(50 - share(m.mapStats.RecentTeam0RoundWins, m.mapStats.RecentTeam1RoundWins))), "Split", m => $"{Math.Round(share(m.RecentTeam0RoundWins, m.RecentTeam1RoundWins), 0)}% blue, {Math.Round(share(m.RecentTeam1RoundWins, m.RecentTeam0RoundWins), 0)}% red");
+        // Side balance is the map card's own Balance figure, worded the same, so
+        // a highlight never contradicts the card it points at. Only a map one
+        // side actually loses more often than not is hard for it. Ties go to the
+        // map with more matches behind it.
+        add("Hardest for blue", first(decided.Where(m => m.mapStats.Team1Wins > m.mapStats.Team0Wins).OrderByDescending(m => this.getLeaderShare(m.mapStats)).ThenByDescending(m => m.mapStats.PlayCount)), "Balance", this.formatBalance);
+        add("Hardest for red", first(decided.Where(m => m.mapStats.Team0Wins > m.mapStats.Team1Wins).OrderByDescending(m => this.getLeaderShare(m.mapStats)).ThenByDescending(m => m.mapStats.PlayCount)), "Balance", this.formatBalance);
+        add("Most even", first(decided.OrderBy(m => this.getLeaderShare(m.mapStats)).ThenByDescending(m => m.mapStats.PlayCount)), "Balance", this.formatBalance);
 
         add("Closest matches", regulars.Length == 0 ? null : regulars.MinBy(m => m.mapStats.AverageScoreMargin), "Avg. margin", m => $"{Math.Round(m.AverageScoreMargin, 1):0.0} rounds");
         add("Bloodbath", wellRounded.Length == 0 ? null : wellRounded.MaxBy(m => (double)m.mapStats.Kills / m.mapStats.RoundCount), "Kills/round", m => $"{Math.Round((double)m.Kills / m.RoundCount, 1):0.0}");

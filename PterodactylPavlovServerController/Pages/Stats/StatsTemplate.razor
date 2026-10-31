@@ -316,7 +316,7 @@
                     <div class="d-flex flex-wrap justify-content-center gap-3">
                         @foreach ((string title, string imageUrl, Dictionary<string, object> items) in MapHighlights)
                         {
-                            <StatsCard ServerId="@ServerId" ImageURL="@imageUrl" Title="@title" Items="@items" ImageHeight="169" />
+                            <StatsCard ServerId="@ServerId" ImageURL="@imageUrl" Title="@title" TitleDescription="@StatsDescriptions.For(title)" Items="@items" ImageHeight="169" />
                         }
                     </div>
                     <h4 class="stats-section">All maps</h4>
