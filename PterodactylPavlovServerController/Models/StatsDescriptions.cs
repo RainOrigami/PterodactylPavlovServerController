@@ -9,9 +9,10 @@
 public static class StatsDescriptions
 {
     /// <summary>
-    ///     Most numbers on the page come from match rounds only: warmup rounds and
-    ///     pre-match noise are excluded, as are matches with fewer than two players
-    ///     or fewer than ten rounds.
+    ///     Most numbers on the page come from match rounds only: warmup rounds,
+    ///     pre-match noise and rounds shorter than 10 seconds are excluded, as are
+    ///     push and deathmatch games and matches with fewer than two players or
+    ///     fewer than ten rounds.
     /// </summary>
     private static readonly Dictionary<string, string> descriptions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -19,7 +20,7 @@ public static class StatsDescriptions
         ["Unique maps/modes"] = "Distinct map and game mode combinations that have been played.",
         ["Total matches"] = "Completed matches with at least 2 players and at least 10 rounds.",
         ["Unique players"] = "Everyone who has ever appeared in an end-of-match report on this server.",
-        ["Total rounds"] = "Every round of every counted match, added up from the final scorelines.",
+        ["Total rounds"] = "Every match round on record. Warmups, rounds shorter than 10 seconds, push and deathmatch are left out.",
         ["Total chickens"] = "Chickens killed by everyone, from the per-match chicken counter.",
         ["Total points"] = "Experience points earned by all players across all counted matches.",
         ["Total kills"] = "Every kill logged during match rounds, teamkills and suicides included.",
@@ -59,6 +60,19 @@ public static class StatsDescriptions
         ["Balance"] = "Share of decided matches won by the stronger side on this map, all time.",
         ["Round length"] = "Mean time from round start to round end on this map.",
         ["Rounds"] = "Rounds per match on this map: the average, the longest and the shortest.",
+        ["Avg. players"] = "Mean number of players in a counted match on this map.",
+        ["Kills/round"] = "Kills of an opponent per match round on this map.",
+
+        // ── map highlights ──
+        ["Map"] = "The map this card is about.",
+        ["Matches"] = "Counted matches on this map and mode.",
+        ["Red rounds"] = "Share of rounds red won on this map over the last 3 months, of maps with at least 40 rounds in that time.",
+        ["Blue rounds"] = "Share of rounds blue won on this map over the last 3 months, of maps with at least 40 rounds in that time.",
+        ["Split"] = "Round wins by each side over the last 3 months, of maps with at least 40 rounds in that time. Closest to 50/50 wins.",
+        ["Avg. margin"] = "Mean gap between the two final scores, of maps with at least 3 counted matches.",
+        ["HS rate"] = "Share of kills that were headshots, of maps with at least 200 kills.",
+        ["Explosions"] = "Share of rounds where a planted bomb detonated, of maps with at least 40 rounds.",
+        ["Defused"] = "Share of rounds with a plant where the bomb was defused, of maps with at least 20 such rounds.",
 
         // ── guns ──
         ["Kills"] = "Kills of an opponent. Teamkills and suicides are counted separately.",

@@ -307,6 +307,17 @@
         @if (isSnd)
         {
             <div class="tab-pane fade" id="tab-maps" role="tabpanel">
+                @if (MapHighlights.Count > 0)
+                {
+                    <h4 class="stats-section">Highlights</h4>
+                    <div class="d-flex flex-wrap justify-content-center gap-3">
+                        @foreach ((string title, string imageUrl, Dictionary<string, object> items) in MapHighlights)
+                        {
+                            <StatsCard ServerId="@ServerId" ImageURL="@imageUrl" Title="@title" Items="@items" ImageHeight="169" />
+                        }
+                    </div>
+                    <h4 class="stats-section">All maps</h4>
+                }
                 <div class="d-flex flex-wrap justify-content-center gap-3">
                     @foreach ((MapWorkshopModel? workshopModel, CMapStats mapStats, Dictionary<string, object> items) in MapStatistics)
                     {
@@ -762,6 +773,7 @@ document.addEventListener('DOMContentLoaded', function () {
     [Parameter] public List<(string title, PlayerSummaryModel summary, Dictionary<string, object> items)> Rivalries { get; set; } = new();
     [Parameter] public List<CPopulationStats> Population { get; set; } = new();
     [Parameter] public List<(MapWorkshopModel? workshop, CMapStats mapStats, Dictionary<string, object> items)> MapStatistics { get; set; } = new();
+    [Parameter] public List<(string title, string imageUrl, Dictionary<string, object> items)> MapHighlights { get; set; } = new();
     [Parameter][EditorRequired] public List<(CGunStats gunStats, Dictionary<string, object> items)> GunStatistics { get; set; } = new();
     [Parameter][EditorRequired] public List<(PlayerSummaryModel summary, CPlayerStats playerStats, Dictionary<string, object> items)> PlayerStatistics { get; set; } = new();
     [Parameter] public Dictionary<string, object> Team0Stats { get; set; } = new();

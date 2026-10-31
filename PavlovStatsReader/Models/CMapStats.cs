@@ -26,4 +26,36 @@ public class CMapStats : CBaseStats
     public int RecentTeam1Wins { get; set; }
 
     public DateTime? LastPlayed { get; set; }
+
+    public double AveragePlayers { get; set; }
+
+    /// <summary>
+    ///     Mean gap between the two final scores. Small means the matches on this
+    ///     map tend to go down to the wire.
+    /// </summary>
+    public double AverageScoreMargin { get; set; }
+
+    /// <summary>
+    ///     Everything below is counted from the individual match rounds, so short
+    ///     rounds and warmups are already gone.
+    /// </summary>
+    public int RoundCount { get; set; }
+
+    public int Kills { get; set; }
+
+    public int Headshots { get; set; }
+
+    public int RoundsWithPlant { get; set; }
+
+    public int RoundsWithExplosion { get; set; }
+
+    public int RoundsWithDefuse { get; set; }
+
+    /// <summary>
+    ///     Round wins over the last three months. Rounds rather than matches give
+    ///     enough samples for a side-balance figure inside that window.
+    /// </summary>
+    public int RecentTeam0RoundWins { get; set; }
+
+    public int RecentTeam1RoundWins { get; set; }
 }

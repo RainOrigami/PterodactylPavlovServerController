@@ -2,11 +2,29 @@
 using PavlovStatsReader.Models;
 using System.Diagnostics;
 using System.Linq;
+using System.Linq.Expressions;
 
 namespace PavlovStatsReader;
 
 public class StatsCalculator
 {
+    /// <summary>
+    ///     Rounds shorter than this are not real rounds: an admin skip, a reset, or
+    ///     one side leaving the moment the round began. Their kills and outcome
+    ///     would only add noise.
+    /// </summary>
+    private const int minimumRoundSeconds = 10;
+
+    /// <summary>
+    ///     Push and the deathmatch family (DM, TDM, TANKTDM, ...) play nothing like
+    ///     search and destroy, so their rounds, kills and scores stay off the page.
+    ///     Written as an expression so it translates to SQL for the queries and can
+    ///     still be compiled for the in-memory pass over map sessions.
+    /// </summary>
+    private static readonly Expression<Func<EndOfMapStats, bool>> isCountedGameMode = m => !m.GameMode.ToUpper().Contains("PUSH") && !m.GameMode.ToUpper().EndsWith("DM");
+
+    private static readonly Func<EndOfMapStats, bool> isCountedGameModeCompiled = StatsCalculator.isCountedGameMode.Compile();
+
     private readonly IConfiguration configuration;
     private readonly StatsContext statsContext;
 
@@ -82,10 +100,13 @@ public class StatsCalculator
         List<BombData> bombData = new();
         List<RoundWindow> matchRounds = new();
         DateTime sessionStart = DateTime.MinValue;
+        int shortRounds = 0;
         foreach (EndOfMapStats eoms in endOfMapStats)
         {
+            // Excluded modes still delimit a session, so their rounds cannot leak
+            // into the match that follows.
             int realRoundCount = eoms.Team0Score + eoms.Team1Score;
-            if (realRoundCount < 4)
+            if (realRoundCount < 4 || !StatsCalculator.isCountedGameModeCompiled(eoms))
             {
                 sessionStart = eoms.LogEntryDate;
                 continue;
@@ -114,8 +135,16 @@ public class StatsCalculator
                 sessionRounds = sessionRounds.Skip(runStart).ToList();
             }
 
+            // Short rounds are dropped only now: they still took a slot on the
+            // scoreboard, so they have to be part of lining the rounds up with it.
             foreach (var round in sessionRounds.TakeLast(realRoundCount))
             {
+                if ((round.End - round.Start).TotalSeconds < StatsCalculator.minimumRoundSeconds)
+                {
+                    shortRounds++;
+                    continue;
+                }
+
                 killData.AddRange(round.Kills);
                 bombData.AddRange(round.Bombs);
                 matchRounds.Add(new RoundWindow(round.Start, round.End, round.WinningTeam, eoms.MapLabel, eoms.GameMode, round.Kills, round.Bombs));
@@ -123,6 +152,8 @@ public class StatsCalculator
 
             sessionStart = eoms.LogEntryDate;
         }
+
+        Console.WriteLine($"Dropped {shortRounds} round(s) shorter than {StatsCalculator.minimumRoundSeconds}s");
 
         List<Stats> playerStats = this.statsContext.PlayerStats.Where(m => m.ServerId == serverId).SelectMany(m => m.Stats).ToList();
 
@@ -150,23 +181,23 @@ public class StatsCalculator
 
     public CServerStats CalculateServerStats(string serverId, List<KillData> killData, List<BombData> bombData, List<RoundWindow> matchRounds)
     {
-        int uniqueMapCount = this.statsContext.EndOfMapStats.Where(m => m.ServerId == serverId).GroupBy(m => new
+        int uniqueMapCount = StatsCalculator.matches(this.statsContext, serverId).GroupBy(m => new
         {
             m.MapLabel,
             m.GameMode,
         }).Count();
-        int uniquePlayerCount = this.statsContext.PlayerStats.Where(m => m.ServerId == serverId).GroupBy(m => m.UniqueId).Count();
-        int totalMatches = this.statsContext.EndOfMapStats.Count(m => m.ServerId == serverId && m.PlayerCount >= 2 && m.Team0Score + m.Team1Score >= 10);
+        int uniquePlayerCount = StatsCalculator.matches(this.statsContext, serverId).SelectMany(m => m.PlayerStats).Select(p => p.UniqueId).Distinct().Count();
+        int totalMatches = StatsCalculator.countedMatches(this.statsContext, serverId).Count();
         int totalKills = killData.Count();
         int totalHeadshots = killData.Count(m => m.Headshot);
-        int totalAssists = this.statsContext.EndOfMapStats.Where(m => m.ServerId == serverId).SelectMany(m => m.PlayerStats).SelectMany(m => m.Stats).Where(m => m.StatType == "Assist").Sum(m => m.Amount);
+        int totalAssists = StatsCalculator.matches(this.statsContext, serverId).SelectMany(m => m.PlayerStats).SelectMany(m => m.Stats).Where(m => m.StatType == "Assist").Sum(m => m.Amount);
         int totalTeamkills = killData.Count(m => m.KilledTeamID == m.KillerTeamID);
         int totalBombPlants = bombData.Count(m => m.BombInteraction == "BombPlanted");
         int totalBombDefuses = bombData.Count(m => m.BombInteraction == "BombDefused");
         int totalBombExplosions = bombData.Count(m => m.BombInteraction == "BombExploded");
-        int totalChickensKilled = this.statsContext.EndOfMapStats.Where(m => m.ServerId == serverId).SelectMany(m => m.PlayerStats).SelectMany(m => m.Stats).Where(m => m.StatType == "ChickenKilled").Sum(m => m.Amount);
-        int totalPoints = this.statsContext.EndOfMapStats.Where(m => m.ServerId == serverId).SelectMany(m => m.PlayerStats).SelectMany(m => m.Stats).Where(s => s.StatType == "Experience").Sum(m => m.Amount);
-        int totalRoundsPlayed = this.statsContext.EndOfMapStats.Where(m => m.ServerId == serverId).Sum(m => m.Team0Score + m.Team1Score);
+        int totalChickensKilled = StatsCalculator.matches(this.statsContext, serverId).SelectMany(m => m.PlayerStats).SelectMany(m => m.Stats).Where(m => m.StatType == "ChickenKilled").Sum(m => m.Amount);
+        int totalPoints = StatsCalculator.matches(this.statsContext, serverId).SelectMany(m => m.PlayerStats).SelectMany(m => m.Stats).Where(s => s.StatType == "Experience").Sum(m => m.Amount);
+        int totalRoundsPlayed = matchRounds.Count;
 
         var mostKillsByGun = killData.GroupBy(k => k.KilledBy).Select(k => new
         {
@@ -194,7 +225,7 @@ public class StatsCalculator
 
         double[] roundSeconds = matchRounds.Select(r => (r.End - r.Start).TotalSeconds).Where(seconds => seconds is > 0 and < 3600).ToArray();
 
-        EndOfMapStats[] realMatches = this.statsContext.EndOfMapStats.Where(m => m.ServerId == serverId && m.PlayerCount >= 2 && m.Team0Score + m.Team1Score >= 10).ToArray();
+        EndOfMapStats[] realMatches = StatsCalculator.countedMatches(this.statsContext, serverId).ToArray();
         EndOfMapStats? blowout = realMatches.MaxBy(m => Math.Abs(m.Team0Score - m.Team1Score));
         int nailbiters = realMatches.Count(m => Math.Abs(m.Team0Score - m.Team1Score) == 1);
 
@@ -232,17 +263,17 @@ public class StatsCalculator
         List<CTeamStats> teamStats = new();
         for (int i = 0; i < 2; i++)
         {
-            IQueryable<PlayerStats> teamPlayerStats = this.statsContext.EndOfMapStats.Where(m => m.ServerId == serverId && m.PlayerCount >= 2 && m.Team0Score + m.Team1Score >= 10).SelectMany(m => m.PlayerStats).Where(m => m.TeamId == i);
+            IQueryable<PlayerStats> teamPlayerStats = StatsCalculator.countedMatches(this.statsContext, serverId).SelectMany(m => m.PlayerStats).Where(m => m.TeamId == i);
             IQueryable<Stats> teamPlayerStatsStats = teamPlayerStats.SelectMany(p => p.Stats);
 
             int winCount;
             if (i == 0)
             {
-                winCount = this.statsContext.EndOfMapStats.Where(m => m.ServerId == serverId && m.PlayerCount >= 2 && m.Team0Score + m.Team1Score >= 10).Count(m => m.Team0Score > m.Team1Score);
+                winCount = StatsCalculator.countedMatches(this.statsContext, serverId).Count(m => m.Team0Score > m.Team1Score);
             }
             else
             {
-                winCount = this.statsContext.EndOfMapStats.Where(m => m.ServerId == serverId && m.PlayerCount >= 2 && m.Team0Score + m.Team1Score >= 10).Count(m => m.Team1Score > m.Team0Score);
+                winCount = StatsCalculator.countedMatches(this.statsContext, serverId).Count(m => m.Team1Score > m.Team0Score);
             }
 
             var bestPlayer = teamPlayerStats.AsEnumerable().Where(t => relevantPlayers.Contains(t.UniqueId)).GroupBy(t => t.UniqueId).Select(g => new
@@ -332,12 +363,12 @@ public class StatsCalculator
 
         if (serverStatMode?.Value == "SND")
         {
-            PlayerStats[] pstats = this.statsContext.EndOfMapStats.Where(m => m.ServerId == serverId && m.PlayerCount >= 2 && m.Team0Score + m.Team1Score >= 10).SelectMany(m => m.PlayerStats).Where(p => relevantPlayers.Contains(p.UniqueId)).ToArray();
+            PlayerStats[] pstats = StatsCalculator.countedMatches(this.statsContext, serverId).SelectMany(m => m.PlayerStats).Where(p => relevantPlayers.Contains(p.UniqueId)).ToArray();
 
             pstats.GroupBy(p => p.UniqueId).AsParallel().ForAll(pgrp =>
             {
                 using StatsContext statsContext = new(this.configuration);
-                IGrouping<ulong, PlayerStats> playerGrouping = statsContext.EndOfMapStats.Where(m => m.ServerId == serverId && m.PlayerCount >= 2 && m.Team0Score + m.Team1Score >= 10).SelectMany(m => m.PlayerStats).Where(p => p.UniqueId == pgrp.Key).AsEnumerable().GroupBy(p => p.UniqueId).First();
+                IGrouping<ulong, PlayerStats> playerGrouping = StatsCalculator.countedMatches(statsContext, serverId).SelectMany(m => m.PlayerStats).Where(p => p.UniqueId == pgrp.Key).AsEnumerable().GroupBy(p => p.UniqueId).First();
                 int teamKills = killData.Count(k => k.Killer == playerGrouping.Key && k.KilledTeamID == k.KillerTeamID && k.Killer != k.Killed);
                 int suicides = killData.Count(k => k.Killer == playerGrouping.Key && k.Killed == playerGrouping.Key);
                 int kills = killData.Count(k => k.Killer == playerGrouping.Key && k.KilledTeamID != k.KillerTeamID && k.Killer != k.Killed);
@@ -441,7 +472,7 @@ public class StatsCalculator
 
     public CMapStats[] CalculateMapStats(string serverId, ulong[] relevantPlayers, List<RoundWindow> matchRounds)
     {
-        EndOfMapStats[] eoms = this.statsContext.EndOfMapStats.Where(m => m.ServerId == serverId).ToArray();
+        EndOfMapStats[] eoms = StatsCalculator.matches(this.statsContext, serverId).ToArray();
 
         Dictionary<(string map, string mode), double> averageRoundSeconds = matchRounds
             .Select(r => new { Key = (map: r.MapLabel, mode: r.GameMode.ToLower()), Seconds = (r.End - r.Start).TotalSeconds })
@@ -451,18 +482,37 @@ public class StatsCalculator
 
         DateTime recentCutoff = DateTime.Now.AddMonths(-3);
 
+        Dictionary<(string map, string mode), MapRoundStats> roundStats = matchRounds
+            .GroupBy(r => (map: r.MapLabel, mode: r.GameMode.ToLower()))
+            .ToDictionary(g => g.Key, g =>
+            {
+                KillData[] enemyKills = g.SelectMany(r => r.EnemyKills()).ToArray();
+                return new MapRoundStats
+                {
+                    Rounds = g.Count(),
+                    Kills = enemyKills.Length,
+                    Headshots = enemyKills.Count(k => k.Headshot),
+                    RoundsWithPlant = g.Count(r => r.Bombs.Any(b => b.BombInteraction == "BombPlanted")),
+                    RoundsWithExplosion = g.Count(r => r.Bombs.Any(b => b.BombInteraction == "BombExploded")),
+                    RoundsWithDefuse = g.Count(r => r.Bombs.Any(b => b.BombInteraction == "BombDefused")),
+                    RecentTeam0RoundWins = g.Count(r => r.Start >= recentCutoff && r.WinningTeam == 0),
+                    RecentTeam1RoundWins = g.Count(r => r.Start >= recentCutoff && r.WinningTeam == 1),
+                };
+            });
+
         List<CMapStats> mapsStats = new();
 
         eoms.Where(m => m.PlayerCount >= 2 && m.Team0Score + m.Team1Score >= 10).GroupBy(m => (mapLabel: m.MapLabel, gameMode: m.GameMode)).AsParallel().ForAll(mgrp =>
         {
             using StatsContext statsContext = new(this.configuration);
-            IGrouping<(string mapLabel, string gameMode), EndOfMapStats> mapGrouping = statsContext.EndOfMapStats.Where(m => m.ServerId == serverId && m.PlayerCount >= 2 && m.Team0Score + m.Team1Score >= 10 && m.MapLabel == mgrp.Key.mapLabel && m.GameMode.ToLower() == mgrp.Key.gameMode.ToLower()).ToArray().GroupBy(m => (mapLabel: m.MapLabel, gameMode: m.GameMode)).First();
+            IGrouping<(string mapLabel, string gameMode), EndOfMapStats> mapGrouping = StatsCalculator.countedMatches(statsContext, serverId).Where(m => m.MapLabel == mgrp.Key.mapLabel && m.GameMode.ToLower() == mgrp.Key.gameMode.ToLower()).ToArray().GroupBy(m => (mapLabel: m.MapLabel, gameMode: m.GameMode)).First();
             int[] totalScore = mapGrouping.Select(e => e.Team0Score + e.Team1Score).ToArray();
             IGrouping<ulong, (PlayerStats player, int score)>[] playerStats = mapGrouping.SelectMany(e => e.PlayerStats).Where(p => relevantPlayers.Contains(p.UniqueId)).Select(e => (player: e, score: this.calculatePlayerScore(e))).GroupBy(p => p.player.UniqueId).ToArray();
 
             IGrouping<ulong, (PlayerStats player, int score)>? bestPlayerGrouping = playerStats.MaxBy(g => g.Average(p => p.score));
             ulong? bestPlayer = bestPlayerGrouping?.Key;
             double maxAveragePlayerScore = bestPlayerGrouping?.Average(p => p.score) ?? 0;
+            MapRoundStats rounds = roundStats.GetValueOrDefault((mapGrouping.Key.mapLabel, mapGrouping.Key.gameMode.ToLower())) ?? new MapRoundStats();
 
             lock (mapsStats)
             {
@@ -482,6 +532,16 @@ public class StatsCalculator
                     RecentTeam0Wins = mapGrouping.Count(e => e.LogEntryDate >= recentCutoff && e.Team0Score > e.Team1Score),
                     RecentTeam1Wins = mapGrouping.Count(e => e.LogEntryDate >= recentCutoff && e.Team1Score > e.Team0Score),
                     LastPlayed = mapGrouping.Max(e => e.LogEntryDate),
+                    AveragePlayers = mapGrouping.Average(e => e.PlayerCount),
+                    AverageScoreMargin = mapGrouping.Average(e => Math.Abs(e.Team0Score - e.Team1Score)),
+                    RoundCount = rounds.Rounds,
+                    Kills = rounds.Kills,
+                    Headshots = rounds.Headshots,
+                    RoundsWithPlant = rounds.RoundsWithPlant,
+                    RoundsWithExplosion = rounds.RoundsWithExplosion,
+                    RoundsWithDefuse = rounds.RoundsWithDefuse,
+                    RecentTeam0RoundWins = rounds.RecentTeam0RoundWins,
+                    RecentTeam1RoundWins = rounds.RecentTeam1RoundWins,
                 });
             }
         });
@@ -747,8 +807,7 @@ public class StatsCalculator
     /// </summary>
     public CPopulationStats[] CalculatePopulationStats(string serverId)
     {
-        return this.statsContext.EndOfMapStats
-            .Where(m => m.ServerId == serverId && m.PlayerCount >= 2 && m.Team0Score + m.Team1Score >= 10)
+        return StatsCalculator.countedMatches(this.statsContext, serverId)
             .AsEnumerable()
             .GroupBy(m => new { m.LogEntryDate.Year, m.LogEntryDate.Month })
             .OrderBy(g => g.Key.Year)
@@ -762,6 +821,25 @@ public class StatsCalculator
                 Matches = g.Count(),
             })
             .ToArray();
+    }
+
+    private sealed class MapRoundStats
+    {
+        public int Rounds { get; set; }
+
+        public int Kills { get; set; }
+
+        public int Headshots { get; set; }
+
+        public int RoundsWithPlant { get; set; }
+
+        public int RoundsWithExplosion { get; set; }
+
+        public int RoundsWithDefuse { get; set; }
+
+        public int RecentTeam0RoundWins { get; set; }
+
+        public int RecentTeam1RoundWins { get; set; }
     }
 
     private sealed class PlayerDuelStats
@@ -790,6 +868,23 @@ public class StatsCalculator
         public int PlantsMade { get; set; }
 
         public int PlantsConverted { get; set; }
+    }
+
+    /// <summary>
+    ///     Every end-of-match report of this server in a counted game mode.
+    /// </summary>
+    private static IQueryable<EndOfMapStats> matches(StatsContext statsContext, string serverId)
+    {
+        return statsContext.EndOfMapStats.Where(m => m.ServerId == serverId).Where(StatsCalculator.isCountedGameMode);
+    }
+
+    /// <summary>
+    ///     Matches that were actually played out: at least two players and at
+    ///     least ten rounds, in a counted game mode.
+    /// </summary>
+    private static IQueryable<EndOfMapStats> countedMatches(StatsContext statsContext, string serverId)
+    {
+        return StatsCalculator.matches(statsContext, serverId).Where(m => m.PlayerCount >= 2 && m.Team0Score + m.Team1Score >= 10);
     }
 
     private int calculatePlayerScore(PlayerStats playerStats)

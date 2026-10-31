@@ -619,6 +619,7 @@ public class PavlovStatisticsService : IDisposable
                     mapStatistics.Add((mapWorkshop, mapStats, items));
                 }
                 templateRenderer.Set(m => m.MapStatistics, mapStatistics);
+                templateRenderer.Set(m => m.MapHighlights, this.getMapHighlights(mapStatistics));
 
                 templateRenderer.Set(m => m.Team0Stats, await getTeamStats(0, allStats, serverStatsType));
                 templateRenderer.Set(m => m.Team1Stats, await getTeamStats(1, allStats, serverStatsType));
@@ -1083,6 +1084,11 @@ public class PavlovStatisticsService : IDisposable
         {
             mapStatValues.Add("Round length", formatDuration(mapStats.AverageRoundSeconds));
         }
+        mapStatValues.Add("Avg. players", $"{Math.Round(mapStats.AveragePlayers, 1):0.0}");
+        if (mapStats.RoundCount > 0)
+        {
+            mapStatValues.Add("Kills/round", $"{Math.Round((double)mapStats.Kills / mapStats.RoundCount, 1):0.0}");
+        }
         mapStatValues.Add("Rounds", $"{Math.Round(mapStats.AverageRounds, 2)} avg, {mapStats.MaxRounds} max, {mapStats.MinRounds} min");
         if (mapStats.BestPlayer != null)
         {
@@ -1090,6 +1096,73 @@ public class PavlovStatisticsService : IDisposable
         }
 
         return mapStatValues;
+    }
+
+    /// <summary>
+    ///     Superlatives across the maps, shown above the map cards. Every one of
+    ///     them needs enough games behind it that a single odd match cannot win it,
+    ///     and a card is left out entirely when no map qualifies.
+    /// </summary>
+    private List<(string title, string imageUrl, Dictionary<string, object> items)> getMapHighlights(List<(MapWorkshopModel? workshop, CMapStats mapStats, Dictionary<string, object> items)> mapStatistics)
+    {
+        const int minimumMatches = 3;
+        const int minimumRounds = 40;
+        const int minimumKills = 200;
+        const int minimumPlants = 20;
+
+        List<(string title, string imageUrl, Dictionary<string, object> items)> highlights = new();
+
+        void add(string title, (MapWorkshopModel? workshop, CMapStats mapStats, Dictionary<string, object> items)? map, string metric, Func<CMapStats, string> value)
+        {
+            if (map == null)
+            {
+                return;
+            }
+
+            (MapWorkshopModel? workshop, CMapStats mapStats, _) = map.Value;
+
+            highlights.Add((title, workshop?.ImageURL ?? "https://pavlov.bloodisgood.net/gunimages/unknown.png", new Dictionary<string, object>
+            {
+                { "Map", new StatsLinkModel($"map-{mapStats.MapId}-{mapStats.GameMode}", workshop?.Name ?? mapStats.MapId, null) },
+                { metric, value(mapStats) },
+            }));
+        }
+
+        double share(int wins, int otherWins)
+        {
+            return this.calculateSafePercent(wins, wins + otherWins);
+        }
+
+        var regulars = mapStatistics.Where(m => m.mapStats.PlayCount >= minimumMatches).ToArray();
+        var wellRounded = mapStatistics.Where(m => m.mapStats.RoundCount >= minimumRounds).ToArray();
+        var recentlyDecided = mapStatistics.Where(m => m.mapStats.RecentTeam0RoundWins + m.mapStats.RecentTeam1RoundWins >= minimumRounds).ToArray();
+
+        add("Most played", mapStatistics.Count == 0 ? null : mapStatistics.MaxBy(m => m.mapStats.PlayCount), "Matches", m => $"{m.PlayCount}");
+        add("Crowd favourite", regulars.Length == 0 ? null : regulars.MaxBy(m => m.mapStats.AveragePlayers), "Avg. players", m => $"{Math.Round(m.AveragePlayers, 1):0.0}");
+
+        // Only a map one side actually loses more often than not is hard for it.
+        var hardestForBlue = recentlyDecided.Where(m => m.mapStats.RecentTeam1RoundWins > m.mapStats.RecentTeam0RoundWins).ToArray();
+        add("Hardest for blue", hardestForBlue.Length == 0 ? null : hardestForBlue.MaxBy(m => share(m.mapStats.RecentTeam1RoundWins, m.mapStats.RecentTeam0RoundWins)), "Red rounds", m => $"{Math.Round(share(m.RecentTeam1RoundWins, m.RecentTeam0RoundWins), 0)}%, 3 months");
+        var hardestForRed = recentlyDecided.Where(m => m.mapStats.RecentTeam0RoundWins > m.mapStats.RecentTeam1RoundWins).ToArray();
+        add("Hardest for red", hardestForRed.Length == 0 ? null : hardestForRed.MaxBy(m => share(m.mapStats.RecentTeam0RoundWins, m.mapStats.RecentTeam1RoundWins)), "Blue rounds", m => $"{Math.Round(share(m.RecentTeam0RoundWins, m.RecentTeam1RoundWins), 0)}%, 3 months");
+        add("Most even", recentlyDecided.Length == 0 ? null : recentlyDecided.MinBy(m => Math.Abs(50 - share(m.mapStats.RecentTeam0RoundWins, m.mapStats.RecentTeam1RoundWins))), "Split", m => $"{Math.Round(share(m.RecentTeam0RoundWins, m.RecentTeam1RoundWins), 0)}% blue, {Math.Round(share(m.RecentTeam1RoundWins, m.RecentTeam0RoundWins), 0)}% red");
+
+        add("Closest matches", regulars.Length == 0 ? null : regulars.MinBy(m => m.mapStats.AverageScoreMargin), "Avg. margin", m => $"{Math.Round(m.AverageScoreMargin, 1):0.0} rounds");
+        add("Bloodbath", wellRounded.Length == 0 ? null : wellRounded.MaxBy(m => (double)m.mapStats.Kills / m.mapStats.RoundCount), "Kills/round", m => $"{Math.Round((double)m.Kills / m.RoundCount, 1):0.0}");
+
+        var headshotMaps = mapStatistics.Where(m => m.mapStats.Kills >= minimumKills).ToArray();
+        add("Headshot heaven", headshotMaps.Length == 0 ? null : headshotMaps.MaxBy(m => (double)m.mapStats.Headshots / m.mapStats.Kills), "HS rate", m => $"{Math.Round(this.calculateSafePercent(m.Headshots, m.Kills), 1)}%");
+
+        var timedMaps = wellRounded.Where(m => m.mapStats.AverageRoundSeconds > 0).ToArray();
+        add("Quickest rounds", timedMaps.Length == 0 ? null : timedMaps.MinBy(m => m.mapStats.AverageRoundSeconds), "Round length", m => formatDuration(m.AverageRoundSeconds));
+        add("Slowest rounds", timedMaps.Length == 0 ? null : timedMaps.MaxBy(m => m.mapStats.AverageRoundSeconds), "Round length", m => formatDuration(m.AverageRoundSeconds));
+
+        add("Most explosive", wellRounded.Length == 0 ? null : wellRounded.MaxBy(m => (double)m.mapStats.RoundsWithExplosion / m.mapStats.RoundCount), "Explosions", m => $"{Math.Round(this.calculateSafePercent(m.RoundsWithExplosion, m.RoundCount), 1)}% of rounds");
+
+        var plantedMaps = mapStatistics.Where(m => m.mapStats.RoundsWithPlant >= minimumPlants).ToArray();
+        add("Defuser's paradise", plantedMaps.Length == 0 ? null : plantedMaps.MaxBy(m => (double)m.mapStats.RoundsWithDefuse / m.mapStats.RoundsWithPlant), "Defused", m => $"{Math.Round(this.calculateSafePercent(m.RoundsWithDefuse, m.RoundsWithPlant), 1)}% of plants");
+
+        return highlights;
     }
 
     private IEnumerable<CGunStats> getGuns(CBaseStats[] allStats, string serverStatsType)
